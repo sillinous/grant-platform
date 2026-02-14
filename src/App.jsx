@@ -96,9 +96,16 @@ const API = {
   },
 
   async getGrantDetail(oppId) {
+    // Grants.gov deprecated the detail REST endpoint. Use the search API with oppNum for enrichment.
     try {
-      const r = await fetch(`https://apply07.grants.gov/grantsws/rest/opportunity/details?oppId=${oppId}`);
-      return r.ok ? await r.json() : null;
+      const r = await fetch("https://apply07.grants.gov/grantsws/rest/opportunities/search", {
+        method: "POST", headers: { "Content-Type":"application/json" },
+        body: JSON.stringify({ oppNum: oppId, rows: 1 }),
+      });
+      if (!r.ok) return null;
+      const data = await r.json();
+      const hit = data.oppHits?.[0];
+      return hit || null;
     } catch { return null; }
   },
 
@@ -583,10 +590,17 @@ Narratives: ${PROFILE.narratives.founder}`;
   };
 
   // ─── FETCH DETAIL ───
-  const loadDetail = async (oppId) => {
+  const loadDetail = async (oppId, searchHit) => {
     if (detailData[oppId]) return;
-    const data = await API.getGrantDetail(oppId);
-    if (data) setDetailData(prev => ({ ...prev, [oppId]:data }));
+    // Store the search hit data immediately so it never shows "Loading..."
+    if (searchHit) {
+      setDetailData(prev => ({ ...prev, [oppId]: searchHit }));
+    }
+    // Try to enrich via oppNum search (may return extra fields)
+    if (searchHit?.number) {
+      const data = await API.getGrantDetail(searchHit.number);
+      if (data) setDetailData(prev => ({ ...prev, [oppId]: { ...searchHit, ...data } }));
+    }
   };
 
   // ─── SAVE / TRACK ───
@@ -846,7 +860,7 @@ Narratives: ${PROFILE.narratives.founder}`;
                       {/* Content */}
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:4 }}>
-                          <div style={{ flex:1, minWidth:0, cursor:"pointer" }} onClick={() => { setExpanded(isExpanded ? null : i); if (!isExpanded && oppId) loadDetail(oppId); }}>
+                          <div style={{ flex:1, minWidth:0, cursor:"pointer" }} onClick={() => { setExpanded(isExpanded ? null : i); if (!isExpanded && oppId) loadDetail(oppId, opp); }}>
                             <div style={{ fontSize:14, fontWeight:600, color: isTracked ? T.mute : T.text, lineHeight:1.3, marginBottom:3 }}>
                               {title.slice(0, 80)}{title.length > 80 ? "..." : ""}
                               {isTracked && <span style={{ fontSize:10, color:T.mute, marginLeft:6 }}>✓ Tracked</span>}
@@ -884,29 +898,35 @@ Narratives: ${PROFILE.narratives.founder}`;
                         {isExpanded && (
                           <div style={{ padding:12, background:T.panel, borderRadius:6, marginBottom:8, marginTop:8 }}>
                             {detail ? (
-                              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, fontSize:11 }}>
-                                {detail.opportunityCategory && <div><span style={{ color:T.mute }}>Category:</span> <span style={{ color:T.text }}>{detail.opportunityCategory}</span></div>}
-                                {detail.fundingInstrumentType && <div><span style={{ color:T.mute }}>Instrument:</span> <span style={{ color:T.text }}>{detail.fundingInstrumentType}</span></div>}
-                                {detail.categoryOfFundingActivity && <div><span style={{ color:T.mute }}>Funding Area:</span> <span style={{ color:T.text }}>{detail.categoryOfFundingActivity}</span></div>}
-                                {detail.cfdaNumber && <div><span style={{ color:T.mute }}>CFDA:</span> <span style={{ color:T.text }}>{detail.cfdaNumber}</span></div>}
-                                {detail.eligibleApplicants && <div style={{ gridColumn:"1/3" }}><span style={{ color:T.mute }}>Eligibility:</span> <span style={{ color:T.text }}>{detail.eligibleApplicants}</span></div>}
-                                {detail.additionalInformationUrl && <div style={{ gridColumn:"1/3" }}><a href={detail.additionalInformationUrl} target="_blank" rel="noopener noreferrer" style={{ color:T.blue }}>🔗 More Info</a></div>}
-                                {(detail.awardFloor || detail.awardCeiling) && (
-                                  <div><span style={{ color:T.mute }}>Range:</span> <span style={{ color:T.text }}>{fmt(detail.awardFloor||0)} — {fmt(detail.awardCeiling||0)}</span></div>
-                                )}
+                              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, fontSize:11 }}>
+                                {detail.number && <div><span style={{ color:T.mute }}>Opp Number:</span> <span style={{ color:T.text, fontWeight:600 }}>{detail.number}</span></div>}
+                                {detail.agencyCode && <div><span style={{ color:T.mute }}>Agency Code:</span> <span style={{ color:T.text }}>{detail.agencyCode}</span></div>}
+                                {(detail.cfdaList || detail.cfdaNumber) && <div><span style={{ color:T.mute }}>CFDA:</span> <span style={{ color:T.text }}>{Array.isArray(detail.cfdaList) ? detail.cfdaList.join(", ") : detail.cfdaNumber || ""}</span></div>}
+                                {detail.oppStatus && <div><span style={{ color:T.mute }}>Status:</span> <Badge color={detail.oppStatus === "posted" ? T.green : T.yellow}>{detail.oppStatus}</Badge></div>}
+                                {detail.docType && <div><span style={{ color:T.mute }}>Type:</span> <span style={{ color:T.text }}>{detail.docType}</span></div>}
+                                {detail.openDate && <div><span style={{ color:T.mute }}>Open Date:</span> <span style={{ color:T.text }}>{detail.openDate}</span></div>}
+                                {detail.closeDate && <div><span style={{ color:T.mute }}>Close Date:</span> <span style={{ color:T.text, fontWeight:600 }}>{detail.closeDate}</span></div>}
+                                {(detail.awardFloor || detail.awardCeiling) && <div><span style={{ color:T.mute }}>Award Range:</span> <span style={{ color:T.text }}>{fmt(detail.awardFloor||0)} — {fmt(detail.awardCeiling||0)}</span></div>}
                                 {detail.estimatedTotalProgramFunding && <div><span style={{ color:T.mute }}>Total Program:</span> <span style={{ color:T.green, fontWeight:600 }}>{fmt(detail.estimatedTotalProgramFunding)}</span></div>}
                                 {detail.expectedNumberOfAwards && <div><span style={{ color:T.mute }}>Expected Awards:</span> <span style={{ color:T.text }}>{detail.expectedNumberOfAwards}</span></div>}
-                                {detail.agencyContactInfo && <div style={{ gridColumn:"1/3" }}><span style={{ color:T.mute }}>Contact:</span> <span style={{ color:T.text }}>{typeof detail.agencyContactInfo === "string" ? detail.agencyContactInfo.slice(0,200) : JSON.stringify(detail.agencyContactInfo).slice(0,200)}</span></div>}
+                                {detail.fundingInstrumentType && <div><span style={{ color:T.mute }}>Instrument:</span> <span style={{ color:T.text }}>{detail.fundingInstrumentType}</span></div>}
+                                {detail.categoryOfFundingActivity && <div><span style={{ color:T.mute }}>Funding Area:</span> <span style={{ color:T.text }}>{detail.categoryOfFundingActivity}</span></div>}
+                                {detail.eligibleApplicants && <div style={{ gridColumn:"1/3" }}><span style={{ color:T.mute }}>Eligibility:</span> <span style={{ color:T.text }}>{detail.eligibleApplicants}</span></div>}
                               </div>
                             ) : (
-                              <div style={{ color:T.mute, fontSize:11 }}>Loading details...</div>
-                            )}
-                            {oppId && (
-                              <div style={{ marginTop:8 }}>
-                                <a href={`https://www.grants.gov/search-results-detail/${oppId}`} target="_blank" rel="noopener noreferrer"
-                                  style={{ fontSize:11, color:T.blue }}>🔗 View on Grants.gov</a>
+                              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, fontSize:11 }}>
+                                {opp.agencyCode && <div><span style={{ color:T.mute }}>Agency Code:</span> <span style={{ color:T.text }}>{opp.agencyCode}</span></div>}
+                                {opp.number && <div><span style={{ color:T.mute }}>Opp Number:</span> <span style={{ color:T.text, fontWeight:600 }}>{opp.number}</span></div>}
+                                {opp.oppStatus && <div><span style={{ color:T.mute }}>Status:</span> <Badge color={opp.oppStatus === "posted" ? T.green : T.yellow}>{opp.oppStatus}</Badge></div>}
+                                {opp.docType && <div><span style={{ color:T.mute }}>Type:</span> <span style={{ color:T.text }}>{opp.docType}</span></div>}
+                                {opp.openDate && <div><span style={{ color:T.mute }}>Open Date:</span> <span style={{ color:T.text }}>{opp.openDate}</span></div>}
+                                {opp.cfdaList && <div><span style={{ color:T.mute }}>CFDA:</span> <span style={{ color:T.text }}>{opp.cfdaList.join(", ")}</span></div>}
                               </div>
                             )}
+                            <div style={{ display:"flex", gap:8, marginTop:10 }}>
+                              <a href={`https://www.grants.gov/search-results-detail/${oppId}`} target="_blank" rel="noopener noreferrer"
+                                style={{ fontSize:12, color:T.blue, fontWeight:600 }}>🔗 View Full Details on Grants.gov</a>
+                            </div>
                           </div>
                         )}
 
@@ -918,7 +938,7 @@ Narratives: ${PROFILE.narratives.founder}`;
                           <Btn size="sm" variant={isSaved ? "ghost" : "default"} onClick={() => !isSaved && saveResult(opp)} disabled={isSaved}>
                             {isSaved ? "⭐ Saved" : "☆ Save"}
                           </Btn>
-                          <Btn size="sm" variant="ghost" onClick={() => { setExpanded(isExpanded ? null : i); if (!isExpanded && oppId) loadDetail(oppId); }}>
+                          <Btn size="sm" variant="ghost" onClick={() => { setExpanded(isExpanded ? null : i); if (!isExpanded && oppId) loadDetail(oppId, opp); }}>
                             {isExpanded ? "▲ Less" : "▼ More"}
                           </Btn>
                         </div>
