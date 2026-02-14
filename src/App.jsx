@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 
 // ════════════════════════════════════════════════════════════════════════
-// GRANT LIFECYCLE PLATFORM v3.0 — UNLESS
+// GRANT LIFECYCLE PLATFORM v5.0 — UNLESS
 // ════════════════════════════════════════════════════════════════════════
 // 48 modules · 23+ APIs · 22 cross-module data flows · AI-powered
 // NEW: Timeline Calendar, Document Vault, Financial Impact Projector,
@@ -412,13 +412,13 @@ const Dashboard = ({ grants, docs, contacts, vaultDocs, events, navigate }) => {
         <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
           <Btn variant="primary" size="sm" onClick={() => navigate("discovery")}>🔍 Find Grants</Btn>
           <Btn size="sm" onClick={() => navigate("pipeline")}>📋 Pipeline</Btn>
-          <Btn size="sm" onClick={() => navigate("calendar")}>📅 Calendar</Btn>
+          <Btn size="sm" onClick={() => navigate("intel_feed")}>🧿 Intel Feed</Btn>
           <Btn size="sm" onClick={() => navigate("rfp_parser")}>📑 Parse RFP</Btn>
           <Btn size="sm" onClick={() => navigate("ai_drafter")}>✍️ AI Drafter</Btn>
-          <Btn size="sm" onClick={() => navigate("vault")}>🗄️ Doc Vault</Btn>
-          <Btn size="sm" onClick={() => navigate("tasks")}>📝 Tasks</Btn>
-          <Btn size="sm" onClick={() => navigate("reports")}>📄 Reports</Btn>
-          <Btn size="sm" onClick={() => navigate("projector")}>💰 Projector</Btn>
+          <Btn size="sm" onClick={() => navigate("templates")}>📋 Templates</Btn>
+          <Btn size="sm" onClick={() => navigate("advisor")}>🧠 AI Advisor</Btn>
+          <Btn size="sm" onClick={() => navigate("budget")}>💵 Budget</Btn>
+          <Btn size="sm" onClick={() => navigate("export")}>📤 Export</Btn>
         </div>
       </Card>
     </div>
@@ -3542,6 +3542,842 @@ const CollaborationHub = ({ grants }) => {
 };
 
 // ════════════════════════════════════════════════════════════════════════
+// MODULE: DOCUMENT ASSEMBLER
+// ════════════════════════════════════════════════════════════════════════
+const DocumentAssembler = ({ grants, vaultDocs }) => {
+  const [selectedGrant, setSelectedGrant] = useState("");
+  const [sections, setSections] = useState([]);
+  const [assembled, setAssembled] = useState("");
+  const library = LS.get("section_library", []);
+
+  const STANDARD_SECTIONS = [
+    { id:"cover", label:"Cover Letter", order:1 },
+    { id:"abstract", label:"Abstract / Executive Summary", order:2 },
+    { id:"need", label:"Statement of Need", order:3 },
+    { id:"goals", label:"Goals & Objectives", order:4 },
+    { id:"methodology", label:"Methodology / Approach", order:5 },
+    { id:"timeline", label:"Project Timeline", order:6 },
+    { id:"evaluation", label:"Evaluation Plan", order:7 },
+    { id:"capacity", label:"Organizational Capacity", order:8 },
+    { id:"sustainability", label:"Sustainability Plan", order:9 },
+    { id:"budget_narrative", label:"Budget Narrative", order:10 },
+    { id:"personnel", label:"Key Personnel", order:11 },
+    { id:"partnerships", label:"Partnerships & Letters", order:12 },
+    { id:"dissemination", label:"Dissemination Plan", order:13 },
+  ];
+
+  const addSection = (section) => {
+    if (sections.some(s => s.id === section.id)) return;
+    // Try to find matching content from vault or library
+    const vaultMatch = (vaultDocs || []).find(d => d.category === section.id || d.title.toLowerCase().includes(section.label.toLowerCase()));
+    const libMatch = library.find(l => l.category === section.id);
+    setSections(prev => [...prev, {
+      ...section, content: vaultMatch?.content || libMatch?.content || "",
+      source: vaultMatch ? "vault" : libMatch ? "library" : "empty",
+      included: true,
+    }].sort((a,b) => a.order - b.order));
+  };
+
+  const updateSection = (id, updates) => setSections(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+  const removeSection = (id) => setSections(prev => prev.filter(s => s.id !== id));
+
+  const assemble = () => {
+    const grant = grants.find(g => g.id === selectedGrant);
+    const included = sections.filter(s => s.included);
+    const doc = included.map(s => {
+      const divider = "═".repeat(60);
+      return `${divider}\n${s.label.toUpperCase()}\n${divider}\n\n${s.content || "[SECTION NOT YET WRITTEN]"}\n`;
+    }).join("\n\n");
+
+    const header = `${"═".repeat(60)}\n${grant?.title || "GRANT APPLICATION"}\n${grant?.agency || ""}\nAssembled: ${new Date().toLocaleDateString()}\nSections: ${included.length}\n${"═".repeat(60)}\n\n`;
+    setAssembled(header + doc);
+  };
+
+  const wordCount = sections.filter(s => s.included).reduce((sum, s) => sum + (s.content?.split(/\s+/).filter(Boolean).length || 0), 0);
+  const completeSections = sections.filter(s => s.included && s.content && s.content.length > 50).length;
+  const totalSections = sections.filter(s => s.included).length;
+
+  return (
+    <div>
+      <Card style={{ marginBottom:16 }}>
+        <div style={{ fontSize:13, fontWeight:600, color:T.text, marginBottom:8 }}>📦 Application Assembler</div>
+        <div style={{ fontSize:11, color:T.sub, marginBottom:12 }}>Build a complete grant application by assembling sections from your Document Vault, Section Library, and custom content. Drag sections in order and export the full package.</div>
+        <Select value={selectedGrant} onChange={setSelectedGrant} style={{ marginBottom:8 }}
+          options={[{ value:"", label:"Select grant to assemble for..." }, ...grants.map(g => ({ value:g.id, label:`${g.title?.slice(0,50)} — ${g.agency}` }))]} />
+      </Card>
+
+      <div style={{ display:"grid", gridTemplateColumns:"280px 1fr", gap:16 }}>
+        {/* Section Picker */}
+        <div>
+          <Card>
+            <div style={{ fontSize:12, fontWeight:600, color:T.text, marginBottom:8 }}>📋 Standard Sections</div>
+            {STANDARD_SECTIONS.map(s => {
+              const added = sections.some(x => x.id === s.id);
+              const hasContent = (vaultDocs||[]).some(d => d.category === s.id) || library.some(l => l.category === s.id);
+              return (
+                <div key={s.id} onClick={() => !added && addSection(s)} style={{
+                  display:"flex", justifyContent:"space-between", alignItems:"center", padding:"6px 8px",
+                  borderRadius:4, cursor: added ? "default" : "pointer", marginBottom:2,
+                  background: added ? T.green+"10" : "transparent", opacity: added ? 0.6 : 1,
+                }}>
+                  <span style={{ fontSize:11, color: added ? T.green : T.text }}>{added ? "☑" : "☐"} {s.label}</span>
+                  {hasContent && !added && <Badge color={T.blue} style={{ fontSize:8 }}>content</Badge>}
+                </div>
+              );
+            })}
+          </Card>
+          <Card style={{ marginTop:8 }}>
+            <Stat label="Sections" value={`${completeSections}/${totalSections}`} color={completeSections === totalSections && totalSections > 0 ? T.green : T.yellow} />
+            <div style={{ marginTop:8 }}><Stat label="Word Count" value={wordCount.toLocaleString()} color={T.blue} /></div>
+          </Card>
+        </div>
+
+        {/* Assembly Area */}
+        <div>
+          {sections.length === 0 ? <Empty icon="📦" title="Add sections to begin" sub="Click sections from the left panel to build your application" /> :
+            <div>
+              {sections.filter(s=>s.included).map(s => (
+                <Card key={s.id} style={{ marginBottom:8 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      <span style={{ fontSize:12, fontWeight:600, color:T.text }}>{s.order}. {s.label}</span>
+                      <Badge color={s.source === "vault" ? T.green : s.source === "library" ? T.blue : T.mute}>
+                        {s.source === "vault" ? "From Vault" : s.source === "library" ? "From Library" : "Empty"}
+                      </Badge>
+                    </div>
+                    <div style={{ display:"flex", gap:4 }}>
+                      <button onClick={() => updateSection(s.id, { included:!s.included })} style={{ background:"none", border:"none", color:s.included?T.green:T.mute, cursor:"pointer" }}>{s.included?"☑":"☐"}</button>
+                      <button onClick={() => removeSection(s.id)} style={{ background:"none", border:"none", color:T.red, cursor:"pointer", fontSize:11 }}>✕</button>
+                    </div>
+                  </div>
+                  <TextArea value={s.content || ""} onChange={v => updateSection(s.id, { content:v })} rows={4} placeholder={`Write or paste your ${s.label} content here...`} />
+                  <div style={{ fontSize:10, color:T.dim, marginTop:4 }}>{s.content?.split(/\s+/).filter(Boolean).length || 0} words</div>
+                </Card>
+              ))}
+              <div style={{ display:"flex", gap:8, marginTop:12 }}>
+                <Btn variant="primary" onClick={assemble}>📦 Assemble Full Application</Btn>
+                <Btn variant="ghost" onClick={() => setSections([])}>🗑️ Clear All</Btn>
+              </div>
+            </div>
+          }
+
+          {assembled && (
+            <Card style={{ marginTop:16 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+                <span style={{ fontSize:13, fontWeight:600, color:T.text }}>📄 Assembled Application</span>
+                <Btn size="sm" variant="ghost" onClick={() => navigator.clipboard?.writeText(assembled)}>📋 Copy All</Btn>
+              </div>
+              <div style={{ fontSize:11, color:T.sub, lineHeight:1.6, whiteSpace:"pre-wrap", padding:12, background:T.panel, borderRadius:6, maxHeight:500, overflow:"auto", fontFamily:"monospace" }}>{assembled}</div>
+            </Card>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════════════════════════
+// MODULE: OUTCOME TRACKER
+// ════════════════════════════════════════════════════════════════════════
+const OutcomeTracker = ({ grants, updateGrant }) => {
+  const awarded = grants.filter(g => ["awarded","active","closeout"].includes(g.stage));
+  const [selectedId, setSelectedId] = useState(null);
+
+  const getOutcomes = (grant) => grant.outcomes || { kpis:[], milestones:[], deliverables:[], narrative:"" };
+
+  const updateOutcomes = (grantId, updates) => {
+    const grant = grants.find(g => g.id === grantId);
+    if (!grant) return;
+    updateGrant(grantId, { outcomes:{ ...getOutcomes(grant), ...updates } });
+  };
+
+  const addKPI = (grantId) => {
+    const o = getOutcomes(grants.find(g=>g.id===grantId));
+    updateOutcomes(grantId, { kpis:[...o.kpis, { id:uid(), name:"", target:0, current:0, unit:"", period:"quarterly" }] });
+  };
+
+  const updateKPI = (grantId, kpiId, updates) => {
+    const o = getOutcomes(grants.find(g=>g.id===grantId));
+    updateOutcomes(grantId, { kpis:o.kpis.map(k => k.id === kpiId ? { ...k, ...updates } : k) });
+  };
+
+  const removeKPI = (grantId, kpiId) => {
+    const o = getOutcomes(grants.find(g=>g.id===grantId));
+    updateOutcomes(grantId, { kpis:o.kpis.filter(k => k.id !== kpiId) });
+  };
+
+  const addMilestone = (grantId) => {
+    const o = getOutcomes(grants.find(g=>g.id===grantId));
+    updateOutcomes(grantId, { milestones:[...o.milestones, { id:uid(), title:"", dueDate:"", status:"pending", notes:"" }] });
+  };
+
+  const updateMilestone = (grantId, msId, updates) => {
+    const o = getOutcomes(grants.find(g=>g.id===grantId));
+    updateOutcomes(grantId, { milestones:o.milestones.map(m => m.id === msId ? { ...m, ...updates } : m) });
+  };
+
+  const selected = selectedId ? grants.find(g => g.id === selectedId) : null;
+  const selOutcomes = selected ? getOutcomes(selected) : null;
+
+  // Aggregate stats
+  const totalKPIs = awarded.reduce((s,g) => s + (getOutcomes(g).kpis?.length || 0), 0);
+  const metKPIs = awarded.reduce((s,g) => s + (getOutcomes(g).kpis?.filter(k => k.current >= k.target).length || 0), 0);
+  const totalMilestones = awarded.reduce((s,g) => s + (getOutcomes(g).milestones?.length || 0), 0);
+  const completedMilestones = awarded.reduce((s,g) => s + (getOutcomes(g).milestones?.filter(m => m.status === "complete").length || 0), 0);
+
+  return (
+    <div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:8, marginBottom:16 }}>
+        <Card><Stat label="Active Awards" value={awarded.length} color={T.green} /></Card>
+        <Card><Stat label="KPIs Met" value={`${metKPIs}/${totalKPIs}`} color={totalKPIs > 0 && metKPIs === totalKPIs ? T.green : T.yellow} /></Card>
+        <Card><Stat label="Milestones" value={`${completedMilestones}/${totalMilestones}`} color={T.blue} /></Card>
+        <Card><Stat label="On Track" value={awarded.filter(g => {
+          const o = getOutcomes(g);
+          const overdue = (o.milestones||[]).filter(m => m.dueDate && daysUntil(m.dueDate) < 0 && m.status !== "complete").length;
+          return overdue === 0;
+        }).length} color={T.green} /></Card>
+      </div>
+
+      {awarded.length === 0 ? <Empty icon="📊" title="No active awards to track" sub="Outcomes tracking begins when grants are awarded" /> :
+        <div style={{ display:"grid", gridTemplateColumns:"280px 1fr", gap:16 }}>
+          {/* Grant List */}
+          <div>
+            {awarded.map(g => {
+              const o = getOutcomes(g);
+              const kpiProg = o.kpis?.length > 0 ? (o.kpis.filter(k=>k.current>=k.target).length / o.kpis.length) * 100 : 0;
+              return (
+                <Card key={g.id} onClick={() => setSelectedId(g.id)} style={{ marginBottom:6, cursor:"pointer", borderColor: selectedId === g.id ? T.amber+"66" : T.border }}>
+                  <div style={{ fontSize:12, fontWeight:600, color:T.text }}>{g.title?.slice(0,30)}</div>
+                  <div style={{ fontSize:10, color:T.mute }}>{o.kpis?.length || 0} KPIs · {o.milestones?.length || 0} milestones</div>
+                  <Progress value={kpiProg} max={100} color={kpiProg === 100 ? T.green : T.yellow} height={3} />
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Outcome Detail */}
+          <div>
+            {!selected ? <Card><div style={{ color:T.mute, fontSize:12, textAlign:"center", padding:32 }}>Select an award to manage outcomes</div></Card> : (
+              <div>
+                <Card style={{ marginBottom:12 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+                    <div style={{ fontSize:14, fontWeight:600, color:T.text }}>{selected.title?.slice(0,40)}</div>
+                    <Btn size="sm" onClick={() => addKPI(selected.id)}>+ KPI</Btn>
+                  </div>
+                  {(selOutcomes?.kpis || []).length === 0 ? <div style={{ color:T.mute, fontSize:11 }}>No KPIs defined. Add key performance indicators to track progress.</div> :
+                    (selOutcomes.kpis).map(k => (
+                      <div key={k.id} style={{ padding:"8px 0", borderBottom:`1px solid ${T.border}` }}>
+                        <div style={{ display:"grid", gridTemplateColumns:"1fr 80px 80px 80px 30px", gap:6, alignItems:"center" }}>
+                          <Input value={k.name} onChange={v => updateKPI(selected.id, k.id, { name:v })} placeholder="KPI name" style={{ fontSize:11 }} />
+                          <Input type="number" value={k.target} onChange={v => updateKPI(selected.id, k.id, { target:Number(v) })} placeholder="Target" style={{ fontSize:11 }} />
+                          <Input type="number" value={k.current} onChange={v => updateKPI(selected.id, k.id, { current:Number(v) })} placeholder="Current" style={{ fontSize:11 }} />
+                          <Input value={k.unit} onChange={v => updateKPI(selected.id, k.id, { unit:v })} placeholder="Unit" style={{ fontSize:11 }} />
+                          <button onClick={() => removeKPI(selected.id, k.id)} style={{ background:"none", border:"none", color:T.red, cursor:"pointer" }}>✕</button>
+                        </div>
+                        <Progress value={k.current} max={k.target || 1} color={k.current >= k.target ? T.green : T.yellow} height={3} />
+                      </div>
+                    ))
+                  }
+                </Card>
+
+                <Card style={{ marginBottom:12 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+                    <div style={{ fontSize:13, fontWeight:600, color:T.text }}>📅 Milestones</div>
+                    <Btn size="sm" onClick={() => addMilestone(selected.id)}>+ Milestone</Btn>
+                  </div>
+                  {(selOutcomes?.milestones || []).map(m => (
+                    <div key={m.id} style={{ display:"flex", gap:8, alignItems:"center", padding:"6px 0", borderBottom:`1px solid ${T.border}` }}>
+                      <button onClick={() => updateMilestone(selected.id, m.id, { status: m.status === "complete" ? "pending" : "complete" })}
+                        style={{ background:"none", border:"none", cursor:"pointer", fontSize:14, color: m.status === "complete" ? T.green : T.mute }}>{m.status === "complete" ? "☑" : "☐"}</button>
+                      <Input value={m.title} onChange={v => updateMilestone(selected.id, m.id, { title:v })} placeholder="Milestone" style={{ flex:1, fontSize:11 }} />
+                      <Input type="date" value={m.dueDate || ""} onChange={v => updateMilestone(selected.id, m.id, { dueDate:v })} style={{ width:130, fontSize:11 }} />
+                      <Select value={m.status} onChange={v => updateMilestone(selected.id, m.id, { status:v })} style={{ fontSize:10, width:100 }}
+                        options={[{value:"pending",label:"Pending"},{value:"inprogress",label:"In Progress"},{value:"complete",label:"Complete"},{value:"overdue",label:"Overdue"}]} />
+                    </div>
+                  ))}
+                  {(selOutcomes?.milestones || []).length === 0 && <div style={{ color:T.mute, fontSize:11 }}>No milestones yet</div>}
+                </Card>
+
+                <Card>
+                  <div style={{ fontSize:13, fontWeight:600, color:T.text, marginBottom:8 }}>📝 Outcome Narrative</div>
+                  <TextArea value={selOutcomes?.narrative || ""} onChange={v => updateOutcomes(selected.id, { narrative:v })} rows={4} placeholder="Describe outcomes achieved, impact on community, lessons learned..." />
+                </Card>
+              </div>
+            )}
+          </div>
+        </div>
+      }
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════════════════════════
+// MODULE: GRANT TEMPLATES
+// ════════════════════════════════════════════════════════════════════════
+const GrantTemplates = ({ grants, addGrant }) => {
+  const [templates] = useState([
+    { id:"sbir", name:"SBIR/STTR Phase I", icon:"🔬", agency:"SBA / NSF / NIH / DOD / DOE",
+      sections:["abstract","specific_aims","significance","innovation","approach","timeline","budget","bio","facilities"],
+      tips:["Focus on innovation and commercial potential","Phase I is $150K-275K for 6-12 months","Must be a small business with <500 employees","PI must be primarily employed by the company"],
+      tags:["small business","innovation","technology","research"], typicalAmount:250000, typicalDuration:"6-12 months" },
+    { id:"cdbg", name:"Community Development Block Grant", icon:"🏘️", agency:"HUD",
+      sections:["need","goals","activities","timeline","budget","capacity","impact"],
+      tips:["Must benefit low/moderate income persons (51%+)","Strong community needs data is essential","Partnership letters strengthen applications","Focus on measurable outcomes"],
+      tags:["community","housing","infrastructure","low-income"], typicalAmount:500000, typicalDuration:"12-24 months" },
+    { id:"usda_rbdg", name:"USDA Rural Business Development", icon:"🌾", agency:"USDA Rural Development",
+      sections:["need","goals","methodology","evaluation","sustainability","budget","capacity"],
+      tips:["Must serve rural areas (population <50,000)","Newton, IL qualifies as rural","Economic development focus preferred","Training and technical assistance eligible"],
+      tags:["rural","business","economic development","training"], typicalAmount:100000, typicalDuration:"12 months" },
+    { id:"eda", name:"EDA Economic Development", icon:"📊", agency:"Economic Development Administration",
+      sections:["need","strategy","scope","budget","timeline","sustainability","outcomes"],
+      tips:["Must align with regional CEDS","Strong job creation/retention metrics","Infrastructure and capacity building","Match requirement varies by program"],
+      tags:["economic development","jobs","infrastructure","regional"], typicalAmount:750000, typicalDuration:"24-36 months" },
+    { id:"neh", name:"NEH Digital Humanities", icon:"📚", agency:"National Endowment for the Humanities",
+      sections:["abstract","narrative","work_plan","staff","budget","data_management"],
+      tips:["Technology must serve humanities research","Strong interdisciplinary teams","Clear digital methodology","Open access to results preferred"],
+      tags:["humanities","digital","technology","research"], typicalAmount:100000, typicalDuration:"12-36 months" },
+    { id:"dol_eta", name:"DOL Workforce Innovation", icon:"👷", agency:"Department of Labor / ETA",
+      sections:["need","program_design","partnerships","outcomes","sustainability","budget","management"],
+      tips:["Must align with WIOA priorities","Industry partnerships strengthen proposals","Focus on underserved populations","Evidence-based program models preferred"],
+      tags:["workforce","training","employment","underserved"], typicalAmount:500000, typicalDuration:"24-48 months" },
+    { id:"samhsa", name:"SAMHSA Community Grant", icon:"🧠", agency:"SAMHSA",
+      sections:["abstract","need","proposed_approach","staff","evaluation","budget","data_collection"],
+      tips:["Evidence-based practices required","Cultural competency is critical","Must address health disparities","Community partnerships essential"],
+      tags:["mental health","substance abuse","community","health"], typicalAmount:400000, typicalDuration:"12-60 months" },
+    { id:"nsf_i_corps", name:"NSF I-Corps", icon:"🚀", agency:"National Science Foundation",
+      sections:["abstract","team","technology","hypothesis","plan","budget"],
+      tips:["Entrepreneurial team required (EL, PI, IM)","Customer discovery is the core activity","100+ customer interviews expected","$50K for 7 weeks of intensive training"],
+      tags:["entrepreneurship","technology","customer discovery","startup"], typicalAmount:50000, typicalDuration:"2 months" },
+  ]);
+
+  const [selected, setSelected] = useState(null);
+
+  const useTemplate = (template) => {
+    addGrant({
+      id: uid(), title: `[TEMPLATE] ${template.name}`, agency: template.agency,
+      amount: template.typicalAmount, stage: "preparing", description: template.tips.join("\n"),
+      category: template.name, tags: template.tags, createdAt: new Date().toISOString(),
+      notes: `Template: ${template.name}\nDuration: ${template.typicalDuration}\nSections: ${template.sections.join(", ")}`,
+      templateId: template.id, requiredSections: template.sections,
+    });
+  };
+
+  return (
+    <div>
+      <Card style={{ marginBottom:16 }}>
+        <div style={{ fontSize:13, fontWeight:600, color:T.text, marginBottom:4 }}>📋 Grant Application Templates</div>
+        <div style={{ fontSize:11, color:T.sub }}>Pre-configured templates for common federal grant programs. Each includes required sections, expert tips, and typical award amounts. Click "Use Template" to add one to your pipeline.</div>
+      </Card>
+
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(300px, 1fr))", gap:12 }}>
+        {templates.map(t => (
+          <Card key={t.id} style={{ cursor:"pointer" }} onClick={() => setSelected(t.id === selected?.id ? null : t)}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8 }}>
+              <div>
+                <div style={{ fontSize:22, marginBottom:4 }}>{t.icon}</div>
+                <div style={{ fontSize:14, fontWeight:600, color:T.text }}>{t.name}</div>
+                <div style={{ fontSize:11, color:T.mute }}>{t.agency}</div>
+              </div>
+              <div style={{ textAlign:"right" }}>
+                <div style={{ fontSize:14, fontWeight:700, color:T.green }}>{fmt(t.typicalAmount)}</div>
+                <div style={{ fontSize:10, color:T.mute }}>{t.typicalDuration}</div>
+              </div>
+            </div>
+            <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:8 }}>
+              {t.tags.map(tag => <Badge key={tag} color={T.blue}>{tag}</Badge>)}
+            </div>
+            {/* Profile Match Indicator */}
+            {(() => {
+              const matchCount = t.tags.filter(tag => PROFILE.tags.some(pt => pt.includes(tag) || tag.includes(pt.replace(/-/g," ")))).length;
+              const matchPct = (matchCount / t.tags.length) * 100;
+              return (
+                <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:8 }}>
+                  <Progress value={matchPct} max={100} color={matchPct >= 50 ? T.green : T.yellow} height={4} />
+                  <span style={{ fontSize:10, color: matchPct >= 50 ? T.green : T.yellow }}>{Math.round(matchPct)}% match</span>
+                </div>
+              );
+            })()}
+
+            {selected?.id === t.id && (
+              <div style={{ marginTop:8, paddingTop:8, borderTop:`1px solid ${T.border}` }}>
+                <div style={{ fontSize:11, fontWeight:600, color:T.amber, marginBottom:6 }}>Required Sections ({t.sections.length})</div>
+                <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:8 }}>
+                  {t.sections.map(s => <Badge key={s} color={T.purple}>{s.replace(/_/g," ")}</Badge>)}
+                </div>
+                <div style={{ fontSize:11, fontWeight:600, color:T.amber, marginBottom:6 }}>Expert Tips</div>
+                {t.tips.map((tip, i) => <div key={i} style={{ fontSize:11, color:T.sub, padding:"2px 0" }}>💡 {tip}</div>)}
+                <Btn variant="primary" size="sm" onClick={(e) => { e.stopPropagation(); useTemplate(t); }} style={{ marginTop:8 }}>📋 Use This Template</Btn>
+              </div>
+            )}
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════════════════════════
+// MODULE: EXPORT CENTER
+// ════════════════════════════════════════════════════════════════════════
+const ExportCenter = ({ grants, vaultDocs, contacts, events }) => {
+  const [exported, setExported] = useState("");
+
+  const exportCSV = () => {
+    const headers = "ID,Title,Agency,Amount,Stage,Deadline,Category,Tags,Created,Notes";
+    const rows = grants.map(g => `"${g.id}","${(g.title||"").replace(/"/g,'""')}","${g.agency||""}",${g.amount||0},"${g.stage}","${g.deadline||""}","${g.category||""}","${(g.tags||[]).join(";")}","${g.createdAt||""}","${(g.notes||"").replace(/"/g,'""').replace(/\n/g," ")}"`);
+    const csv = headers + "\n" + rows.join("\n");
+    downloadFile(csv, "grants-export.csv", "text/csv");
+  };
+
+  const exportJSON = () => {
+    const data = {
+      exportDate: new Date().toISOString(), platform: "UNLESS Grant Lifecycle Platform v4.0",
+      grants, documents: vaultDocs || [], contacts: contacts || [], events: events || [],
+      sections: LS.get("section_library", []), tasks: LS.get("tasks", []),
+      budgets: LS.get("budgets", {}), peers: LS.get("peers", []),
+      profile: PROFILE,
+    };
+    downloadFile(JSON.stringify(data, null, 2), "unless-full-export.json", "application/json");
+  };
+
+  const exportICal = () => {
+    const icalEvents = [];
+    // Grant deadlines
+    grants.filter(g => g.deadline).forEach(g => {
+      const d = new Date(g.deadline);
+      const dateStr = d.toISOString().replace(/[-:]/g,"").split(".")[0] + "Z";
+      icalEvents.push(`BEGIN:VEVENT\nDTSTART:${dateStr}\nSUMMARY:Grant Deadline: ${g.title}\nDESCRIPTION:${g.agency} — ${fmt(g.amount||0)}\nEND:VEVENT`);
+    });
+    // Custom events
+    (events || []).forEach(e => {
+      const d = new Date(e.date);
+      const dateStr = d.toISOString().replace(/[-:]/g,"").split(".")[0] + "Z";
+      icalEvents.push(`BEGIN:VEVENT\nDTSTART:${dateStr}\nSUMMARY:${e.title}\nDESCRIPTION:${e.type}${e.notes ? " — " + e.notes : ""}\nEND:VEVENT`);
+    });
+    const ical = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//UNLESS//Grant Platform//EN\n${icalEvents.join("\n")}\nEND:VCALENDAR`;
+    downloadFile(ical, "unless-deadlines.ics", "text/calendar");
+  };
+
+  const exportContacts = () => {
+    const headers = "Name,Organization,Role,Email,Type,Notes";
+    const rows = (contacts||[]).map(c => `"${c.name}","${c.org||""}","${c.role||""}","${c.email||""}","${c.type||""}","${(c.notes||"").replace(/"/g,'""')}"`);
+    downloadFile(headers + "\n" + rows.join("\n"), "contacts-export.csv", "text/csv");
+  };
+
+  const downloadFile = (content, filename, type) => {
+    const blob = new Blob([content], { type });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+    setExported(filename);
+    setTimeout(() => setExported(""), 3000);
+  };
+
+  const tasks = LS.get("tasks", []);
+  const library = LS.get("section_library", []);
+
+  return (
+    <div>
+      <Card style={{ marginBottom:16 }}>
+        <div style={{ fontSize:13, fontWeight:600, color:T.text, marginBottom:4 }}>📤 Export Center</div>
+        <div style={{ fontSize:11, color:T.sub }}>Export your data in various formats for backup, sharing, or integration with other tools.</div>
+        {exported && <Badge color={T.green} style={{ marginTop:6 }}>✅ Exported: {exported}</Badge>}
+      </Card>
+
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(250px, 1fr))", gap:12 }}>
+        <Card onClick={exportJSON} style={{ cursor:"pointer" }}>
+          <div style={{ fontSize:28, marginBottom:8 }}>💾</div>
+          <div style={{ fontSize:14, fontWeight:600, color:T.text }}>Full Platform Backup</div>
+          <div style={{ fontSize:11, color:T.mute, marginTop:4 }}>JSON — all grants, docs, contacts, events, tasks, sections, budgets</div>
+          <div style={{ fontSize:10, color:T.amber, marginTop:8 }}>{grants.length} grants · {(vaultDocs||[]).length} docs · {(contacts||[]).length} contacts</div>
+        </Card>
+
+        <Card onClick={exportCSV} style={{ cursor:"pointer" }}>
+          <div style={{ fontSize:28, marginBottom:8 }}>📊</div>
+          <div style={{ fontSize:14, fontWeight:600, color:T.text }}>Grants → CSV</div>
+          <div style={{ fontSize:11, color:T.mute, marginTop:4 }}>Spreadsheet-ready export of all grants with stage, amount, deadlines</div>
+          <div style={{ fontSize:10, color:T.amber, marginTop:8 }}>{grants.length} rows</div>
+        </Card>
+
+        <Card onClick={exportICal} style={{ cursor:"pointer" }}>
+          <div style={{ fontSize:28, marginBottom:8 }}>📅</div>
+          <div style={{ fontSize:14, fontWeight:600, color:T.text }}>Deadlines → iCal</div>
+          <div style={{ fontSize:11, color:T.mute, marginTop:4 }}>Import deadlines and events into Google Calendar, Outlook, or Apple Calendar</div>
+          <div style={{ fontSize:10, color:T.amber, marginTop:8 }}>{grants.filter(g=>g.deadline).length + (events||[]).length} events</div>
+        </Card>
+
+        <Card onClick={exportContacts} style={{ cursor:"pointer" }}>
+          <div style={{ fontSize:28, marginBottom:8 }}>👥</div>
+          <div style={{ fontSize:14, fontWeight:600, color:T.text }}>Contacts → CSV</div>
+          <div style={{ fontSize:11, color:T.mute, marginTop:4 }}>Export CRM contacts for use in email campaigns or other tools</div>
+          <div style={{ fontSize:10, color:T.amber, marginTop:8 }}>{(contacts||[]).length} contacts</div>
+        </Card>
+
+        <Card onClick={() => {
+          const report = `UNLESS PLATFORM ANALYTICS\n${"═".repeat(40)}\nExported: ${new Date().toLocaleDateString()}\n\nGrants: ${grants.length}\nDocuments: ${(vaultDocs||[]).length}\nContacts: ${(contacts||[]).length}\nTasks: ${tasks.length} (${tasks.filter(t=>t.status==="done").length} done)\nSection Library: ${library.length}\nCalendar Events: ${(events||[]).length}\n\nPIPELINE:\n${STAGES.map(s => `  ${s.icon} ${s.label}: ${grants.filter(g=>g.stage===s.id).length}`).filter(x=>!x.endsWith(": 0")).join("\n")}\n\nTOTAL SOUGHT: ${fmt(grants.reduce((s,g)=>s+(g.amount||0),0))}\nTOTAL AWARDED: ${fmt(grants.filter(g=>["awarded","active"].includes(g.stage)).reduce((s,g)=>s+(g.amount||0),0))}`;
+          navigator.clipboard?.writeText(report);
+          setExported("Analytics (copied to clipboard)");
+          setTimeout(() => setExported(""), 3000);
+        }} style={{ cursor:"pointer" }}>
+          <div style={{ fontSize:28, marginBottom:8 }}>📈</div>
+          <div style={{ fontSize:14, fontWeight:600, color:T.text }}>Quick Analytics</div>
+          <div style={{ fontSize:11, color:T.mute, marginTop:4 }}>Copy platform summary stats to clipboard</div>
+        </Card>
+
+        <Card onClick={() => {
+          const data = { grants: LS.get("grants",[]), vault_docs: LS.get("vault_docs",[]), contacts: LS.get("contacts",[]), events: LS.get("events",[]), tasks: LS.get("tasks",[]), section_library: LS.get("section_library",[]), budgets: LS.get("budgets",{}), peers: LS.get("peers",[]), saved_funders: LS.get("saved_funders",[]), match_alerts: LS.get("match_alerts",[]), watch_terms: LS.get("watch_terms",[]) };
+          downloadFile(JSON.stringify(data), `unless-backup-${new Date().toISOString().split("T")[0]}.json`, "application/json");
+        }} style={{ cursor:"pointer" }}>
+          <div style={{ fontSize:28, marginBottom:8 }}>🔐</div>
+          <div style={{ fontSize:14, fontWeight:600, color:T.text }}>Raw localStorage Backup</div>
+          <div style={{ fontSize:11, color:T.mute, marginTop:4 }}>Complete backup of all localStorage data for migration or restoration</div>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════════════════════════
+// MODULE: STRATEGIC AI ADVISOR
+// ════════════════════════════════════════════════════════════════════════
+const StrategicAdvisor = ({ grants, vaultDocs, contacts }) => {
+  const [analysis, setAnalysis] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState("portfolio");
+
+  const MODES = [
+    { id:"portfolio", label:"🎯 Portfolio Strategy", prompt:"Analyze my entire grant portfolio. Evaluate diversification, risk concentration, pipeline health, conversion potential, and strategic gaps. Provide a prioritized action plan for the next 30/60/90 days." },
+    { id:"targeting", label:"🔍 Targeting Strategy", prompt:"Based on my profile, businesses, and demographics, what types of federal grants should I prioritize? What agencies and programs are the best fit? What areas am I underexploring?" },
+    { id:"narrative", label:"✍️ Narrative Strategy", prompt:"Review my profile and suggest the strongest narrative angles I should use across applications. What's my most compelling story? How should I frame my rural location, disability, and multiple ventures as strengths?" },
+    { id:"capacity", label:"🏢 Capacity Building", prompt:"What organizational capacity gaps might reviewers identify? What should I address before submitting more applications? Suggest specific improvements to strengthen my competitive position." },
+    { id:"timeline", label:"📅 Timeline Optimization", prompt:"Look at my pipeline deadlines, stages, and workload. Am I overcommitted? Should I drop any grants? What's the optimal sequence for completing applications to maximize quality?" },
+    { id:"growth", label:"📈 Growth Plan", prompt:"Design a 12-month grant strategy growth plan. How many grants should I apply for per quarter? What's a realistic funded portfolio target? How should my strategy evolve as I win more awards?" },
+  ];
+
+  const analyze = async () => {
+    setLoading(true);
+    const context = buildPortfolioContext(grants, vaultDocs, contacts);
+    const grantDetails = grants.map(g => `- ${g.title} | ${STAGE_MAP[g.stage]?.label} | ${fmt(g.amount||0)} | ${g.agency} | Deadline: ${g.deadline ? fmtDate(g.deadline) : 'none'}`).join("\n");
+    const selectedMode = MODES.find(m => m.id === mode);
+
+    const sys = `You are an elite grant strategy consultant with 20+ years of experience advising small organizations and rural entrepreneurs on federal funding. You specialize in building sustainable grant portfolios for underserved communities.
+
+${context}
+
+DETAILED GRANTS:
+${grantDetails}
+
+Provide specific, actionable, data-driven advice. Reference the user's actual portfolio data. Include timelines and metrics. Structure your response with clear headers and priorities.`;
+
+    const result = await API.callAI([{ role:"user", content: selectedMode.prompt }], sys);
+    setAnalysis({ mode: selectedMode, text: result.error ? `Error: ${result.error}` : result.text, date: new Date().toISOString() });
+    setLoading(false);
+  };
+
+  return (
+    <div>
+      <Card style={{ marginBottom:16 }}>
+        <div style={{ fontSize:13, fontWeight:600, color:T.text, marginBottom:8 }}>🧠 AI Strategic Advisor</div>
+        <div style={{ fontSize:11, color:T.sub, marginBottom:12 }}>Deep strategic analysis powered by AI. Select an analysis mode and get specific, actionable recommendations based on your entire portfolio.</div>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(180px, 1fr))", gap:8, marginBottom:12 }}>
+          {MODES.map(m => (
+            <div key={m.id} onClick={() => setMode(m.id)} style={{
+              padding:10, borderRadius:6, cursor:"pointer",
+              border:`1px solid ${mode === m.id ? T.amber+"66" : T.border}`,
+              background: mode === m.id ? T.amber+"08" : T.panel,
+            }}>
+              <div style={{ fontSize:12, fontWeight:600, color: mode === m.id ? T.amber : T.text }}>{m.label}</div>
+            </div>
+          ))}
+        </div>
+        <Btn variant="primary" onClick={analyze} disabled={loading}>{loading ? "⏳ Analyzing portfolio..." : `🧠 Run ${MODES.find(m=>m.id===mode)?.label}`}</Btn>
+      </Card>
+
+      {analysis && (
+        <Card>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+            <div>
+              <div style={{ fontSize:14, fontWeight:600, color:T.text }}>{analysis.mode.label}</div>
+              <div style={{ fontSize:10, color:T.mute }}>Generated {fmtDate(analysis.date)}</div>
+            </div>
+            <Btn size="sm" variant="ghost" onClick={() => navigator.clipboard?.writeText(analysis.text)}>📋 Copy</Btn>
+          </div>
+          <div style={{ fontSize:12, color:T.sub, lineHeight:1.7, whiteSpace:"pre-wrap", padding:12, background:T.panel, borderRadius:6, maxHeight:600, overflow:"auto" }}>{analysis.text}</div>
+        </Card>
+      )}
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════════════════════════
+// MODULE: INTELLIGENCE FEED (Cross-Module)
+// ════════════════════════════════════════════════════════════════════════
+const IntelligenceFeed = ({ grants, vaultDocs, contacts, events }) => {
+  const insights = useMemo(() => {
+    const items = [];
+    const now = new Date();
+
+    // Deadline alerts
+    grants.filter(g => g.deadline && !["declined","closeout","awarded","active"].includes(g.stage)).forEach(g => {
+      const days = daysUntil(g.deadline);
+      if (days < 0) items.push({ priority:1, type:"overdue", icon:"🚨", color:T.red, title:`OVERDUE: ${g.title?.slice(0,35)}`, detail:`${Math.abs(days)} days past deadline`, action:"pipeline" });
+      else if (days <= 3) items.push({ priority:2, type:"critical", icon:"🔴", color:T.red, title:`Due in ${days}d: ${g.title?.slice(0,35)}`, detail:fmtDate(g.deadline), action:"pipeline" });
+      else if (days <= 7) items.push({ priority:3, type:"urgent", icon:"🟡", color:T.yellow, title:`Due in ${days}d: ${g.title?.slice(0,35)}`, detail:fmtDate(g.deadline), action:"pipeline" });
+    });
+
+    // Stalled grants
+    grants.filter(g => g.stage === "discovered" && g.createdAt && (now - new Date(g.createdAt)) / 86400000 > 14).forEach(g => {
+      items.push({ priority:5, type:"stalled", icon:"⏸️", color:T.mute, title:`Stalled: "${g.title?.slice(0,30)}" in Discovery 14+ days`, detail:"Consider qualifying or removing", action:"pipeline" });
+    });
+
+    // Empty vault
+    if ((vaultDocs || []).length === 0) items.push({ priority:6, type:"tip", icon:"📝", color:T.blue, title:"Document Vault is empty", detail:"Add reusable narratives to speed up applications", action:"vault" });
+
+    // No contacts
+    if ((contacts || []).length === 0) items.push({ priority:6, type:"tip", icon:"👥", color:T.purple, title:"No contacts in CRM", detail:"Add program officers and partners to build your network", action:"network" });
+
+    // Drafting bottleneck
+    const drafting = grants.filter(g => g.stage === "drafting").length;
+    if (drafting > 3) items.push({ priority:4, type:"warning", icon:"⚠️", color:T.yellow, title:`${drafting} grants in Drafting`, detail:"Consider focusing to improve quality — spread too thin", action:"pipeline" });
+
+    // Win rate concern
+    const won = grants.filter(g=>["awarded","active","closeout"].includes(g.stage)).length;
+    const lost = grants.filter(g=>g.stage==="declined").length;
+    if (lost > 5 && won === 0) items.push({ priority:4, type:"warning", icon:"📉", color:T.red, title:"High decline rate with no awards", detail:"Review targeting strategy — consider using Match Scorer", action:"match_scorer" });
+
+    // Positive signals
+    if (won > 0 && won > lost) items.push({ priority:8, type:"positive", icon:"🏆", color:T.green, title:`Win rate above 50%!`, detail:`${won} won vs ${lost} declined — strong performance`, action:"winloss" });
+
+    // Award management
+    grants.filter(g => g.awardData?.period?.end && ["awarded","active"].includes(g.stage)).forEach(g => {
+      const days = daysUntil(g.awardData.period.end);
+      if (days >= 0 && days <= 30) items.push({ priority:3, type:"award_ending", icon:"⏰", color:T.orange, title:`Award period ending: ${g.title?.slice(0,30)}`, detail:`${days} days remaining — start closeout planning`, action:"awards" });
+    });
+
+    // Match alerts
+    const alerts = LS.get("match_alerts", []).filter(a => !a.dismissed);
+    if (alerts.length > 0) items.push({ priority:4, type:"matches", icon:"🔔", color:T.amber, title:`${alerts.length} new grant matches found`, detail:"Review potential opportunities", action:"match_alerts" });
+
+    // Tasks overdue
+    const tasks = LS.get("tasks", []);
+    const overdueTasks = tasks.filter(t => t.dueDate && daysUntil(t.dueDate) < 0 && t.status !== "done").length;
+    if (overdueTasks > 0) items.push({ priority:3, type:"tasks", icon:"📝", color:T.red, title:`${overdueTasks} overdue task${overdueTasks>1?"s":""}`, detail:"Review and update your action plan", action:"tasks" });
+
+    return items.sort((a,b) => a.priority - b.priority);
+  }, [grants, vaultDocs, contacts, events]);
+
+  return (
+    <div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:8, marginBottom:16 }}>
+        <Card><Stat label="Critical" value={insights.filter(i=>i.priority<=2).length} color={T.red} /></Card>
+        <Card><Stat label="Warnings" value={insights.filter(i=>i.priority>2&&i.priority<=4).length} color={T.yellow} /></Card>
+        <Card><Stat label="Tips" value={insights.filter(i=>i.priority>4&&i.priority<=6).length} color={T.blue} /></Card>
+        <Card><Stat label="Positive" value={insights.filter(i=>i.priority>6).length} color={T.green} /></Card>
+      </div>
+
+      {insights.length === 0 ? <Empty icon="✅" title="All clear!" sub="No issues detected across your portfolio" /> :
+        insights.map((insight, i) => (
+          <Card key={i} style={{ marginBottom:6, borderColor: insight.color+"33" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <div style={{ width:36, height:36, borderRadius:"50%", background:insight.color+"15", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, flexShrink:0 }}>{insight.icon}</div>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:12, fontWeight:600, color:T.text }}>{insight.title}</div>
+                <div style={{ fontSize:11, color:T.mute }}>{insight.detail}</div>
+              </div>
+              <Badge color={insight.color}>{insight.type}</Badge>
+            </div>
+          </Card>
+        ))
+      }
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════════════════════════
+// MODULE: READINESS ASSESSMENT
+// ════════════════════════════════════════════════════════════════════════
+const ReadinessAssessment = ({ grants, vaultDocs, contacts }) => {
+  const active = grants.filter(g => ["preparing","drafting","reviewing"].includes(g.stage));
+  const library = LS.get("section_library", []);
+
+  const assessGrant = (grant) => {
+    const scores = {};
+    let total = 0;
+    let max = 0;
+
+    // Compliance checklist
+    const cl = grant.checklist || [];
+    const clDone = cl.filter(c => c.done).length;
+    const clTotal = cl.length || 20;
+    scores.compliance = { score: cl.length > 0 ? Math.round((clDone/clTotal)*100) : 0, label:"Compliance Checklist", max:100 };
+    total += scores.compliance.score; max += 100;
+
+    // Has deadline
+    scores.deadline = { score: grant.deadline ? 100 : 0, label:"Deadline Set", max:100 };
+    total += scores.deadline.score; max += 100;
+
+    // Has budget
+    const budgets = LS.get("budgets", {});
+    const hasBudget = budgets[grant.id]?.items?.length > 0;
+    scores.budget = { score: hasBudget ? 100 : 0, label:"Budget Built", max:100 };
+    total += scores.budget.score; max += 100;
+
+    // Has documents linked
+    const hasDocuments = (vaultDocs||[]).some(d => d.grantIds?.includes(grant.id));
+    scores.documents = { score: hasDocuments ? 100 : (vaultDocs||[]).length > 0 ? 50 : 0, label:"Documents Linked", max:100 };
+    total += scores.documents.score; max += 100;
+
+    // Has contacts
+    const hasContacts = (contacts||[]).some(c => c.org === grant.agency);
+    scores.contacts = { score: hasContacts ? 100 : 0, label:"Agency Contact", max:100 };
+    total += scores.contacts.score; max += 100;
+
+    // Narrative content
+    scores.narrative = { score: library.length >= 3 ? 100 : library.length > 0 ? 50 : 0, label:"Section Library", max:100 };
+    total += scores.narrative.score; max += 100;
+
+    // Notes / description
+    scores.details = { score: (grant.notes?.length || 0) > 50 ? 100 : (grant.description?.length || 0) > 50 ? 50 : 0, label:"Grant Details", max:100 };
+    total += scores.details.score; max += 100;
+
+    const overall = max > 0 ? Math.round((total/max) * 100) : 0;
+    return { scores, overall, total, max };
+  };
+
+  return (
+    <div>
+      <Card style={{ marginBottom:16 }}>
+        <div style={{ fontSize:13, fontWeight:600, color:T.text, marginBottom:4 }}>🎯 Submission Readiness Assessment</div>
+        <div style={{ fontSize:11, color:T.sub }}>Evaluates how ready each in-progress grant is for submission across 7 dimensions. Green = ready, yellow = needs work, red = critical gaps.</div>
+      </Card>
+
+      {active.length === 0 ? <Empty icon="🎯" title="No grants in preparation" sub="Grants in Preparing, Drafting, or Reviewing stages will appear here" /> :
+        active.map(g => {
+          const assessment = assessGrant(g);
+          return (
+            <Card key={g.id} style={{ marginBottom:12, borderColor: assessment.overall >= 80 ? T.green+"33" : assessment.overall >= 50 ? T.yellow+"33" : T.red+"33" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+                <div>
+                  <div style={{ fontSize:14, fontWeight:600, color:T.text }}>{g.title?.slice(0,45)}</div>
+                  <div style={{ fontSize:11, color:T.mute }}>{g.agency} · {STAGE_MAP[g.stage]?.label}{g.deadline ? ` · Due ${fmtDate(g.deadline)}` : ""}</div>
+                </div>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <div style={{ fontSize:32, fontWeight:700, color: assessment.overall >= 80 ? T.green : assessment.overall >= 50 ? T.yellow : T.red }}>{assessment.overall}</div>
+                  <div style={{ fontSize:10, color:T.mute }}>/ 100</div>
+                </div>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(140px, 1fr))", gap:6 }}>
+                {Object.entries(assessment.scores).map(([key, data]) => (
+                  <div key={key} style={{ padding:6, background:T.panel, borderRadius:4 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, marginBottom:3 }}>
+                      <span style={{ color:T.sub }}>{data.label}</span>
+                      <span style={{ color: data.score >= 80 ? T.green : data.score >= 50 ? T.yellow : T.red, fontWeight:600 }}>{data.score}%</span>
+                    </div>
+                    <Progress value={data.score} max={100} color={data.score >= 80 ? T.green : data.score >= 50 ? T.yellow : T.red} height={3} />
+                  </div>
+                ))}
+              </div>
+            </Card>
+          );
+        })
+      }
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════════════════════════
+// MODULE: SAM REGISTRATION WIZARD
+// ════════════════════════════════════════════════════════════════════════
+const SAMWizard = () => {
+  const [step, setStep] = useState(0);
+  const [checklist, setChecklist] = useState(() => LS.get("sam_checklist", {
+    uei: false, ein: false, duns_transition: false, cage: false,
+    sam_account: false, core_data: false, assertions: false,
+    reps_certs: false, pocs: false, financial: false, review: false, active: false,
+  }));
+
+  useEffect(() => { LS.set("sam_checklist", checklist); }, [checklist]);
+
+  const toggle = (key) => setChecklist(prev => ({ ...prev, [key]: !prev[key] }));
+  const completedCount = Object.values(checklist).filter(Boolean).length;
+  const totalSteps = Object.keys(checklist).length;
+
+  const STEPS = [
+    { key:"uei", title:"Get UEI Number", icon:"🔢",
+      detail:"The Unique Entity Identifier (UEI) replaced DUNS in April 2022. Request one through SAM.gov during entity registration. It's assigned automatically — no separate application needed.",
+      link:"https://sam.gov/content/entity-registration", tip:"Takes 1-2 business days to be assigned" },
+    { key:"ein", title:"Obtain EIN (Tax ID)", icon:"🏛️",
+      detail:"You need an Employer Identification Number from the IRS. If you already have one for any of your businesses, you can use that. Apply online at IRS.gov for instant issuance.",
+      link:"https://www.irs.gov/businesses/small-businesses-self-employed/apply-for-an-employer-identification-number-ein-online", tip:"Can be obtained instantly online" },
+    { key:"duns_transition", title:"Verify DUNS Migration", icon:"🔄",
+      detail:"If you had a DUNS number, it was migrated to UEI. Verify the migration completed successfully and your entity data transferred correctly.",
+      tip:"Check sam.gov for your entity to confirm" },
+    { key:"cage", title:"CAGE Code Assignment", icon:"📋",
+      detail:"The Commercial and Government Entity (CAGE) code is assigned automatically during SAM registration. No separate application needed for domestic entities.",
+      tip:"Assigned within 48 hours of registration" },
+    { key:"sam_account", title:"Create SAM.gov Account", icon:"🔑",
+      detail:"Go to SAM.gov and create a user account. You'll need a Login.gov account first. Use your personal email, not a shared one.",
+      link:"https://sam.gov", tip:"Use Login.gov for authentication" },
+    { key:"core_data", title:"Complete Core Data", icon:"📝",
+      detail:"Enter your entity's legal business name, physical address, mailing address, start date, fiscal year end, and other foundational information.",
+      tip:"Must match IRS records exactly" },
+    { key:"assertions", title:"Entity Assertions", icon:"✅",
+      detail:"Complete assertions about your entity type, size, organization structure, and goods/services. Indicate if you're a small business, disadvantaged, etc.",
+      tip:"Claim all applicable socioeconomic statuses" },
+    { key:"reps_certs", title:"Representations & Certifications", icon:"📜",
+      detail:"Complete required federal certifications including debarment status, lobbying restrictions, and various compliance representations.",
+      tip:"Review carefully — false claims have legal consequences" },
+    { key:"pocs", title:"Points of Contact", icon:"👤",
+      detail:"Designate Electronic Business (EB) and Government Business (GB) points of contact. The EB POC has admin access to your registration.",
+      tip:"EB POC can update all registration data" },
+    { key:"financial", title:"Financial Information", icon:"💰",
+      detail:"Enter banking information for Electronic Funds Transfer (EFT) if you want to receive payments via direct deposit. Optional but recommended.",
+      tip:"Enables faster grant payments" },
+    { key:"review", title:"Review & Submit", icon:"👁️",
+      detail:"Review all entered information carefully. Check for typos, mismatched data, and completeness. Submit for processing.",
+      tip:"Processing takes 7-10 business days" },
+    { key:"active", title:"Registration Active!", icon:"🎉",
+      detail:"Your SAM registration is active and valid for 365 days. Set a calendar reminder to renew before expiration — many grants require active SAM registration at time of award.",
+      tip:"Set renewal reminder for 30 days before expiration" },
+  ];
+
+  return (
+    <div>
+      <Card style={{ marginBottom:16 }}>
+        <div style={{ fontSize:13, fontWeight:600, color:T.text, marginBottom:8 }}>🏛️ SAM.gov Registration Wizard</div>
+        <div style={{ fontSize:11, color:T.sub, marginBottom:8 }}>Step-by-step guide through federal SAM.gov registration. Required for all federal grant applications.</div>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <Progress value={completedCount} max={totalSteps} color={completedCount === totalSteps ? T.green : T.amber} height={8} />
+          <span style={{ fontSize:13, fontWeight:600, color: completedCount === totalSteps ? T.green : T.amber, marginLeft:12 }}>{completedCount}/{totalSteps}</span>
+        </div>
+      </Card>
+
+      {STEPS.map((s, i) => (
+        <Card key={s.key} style={{ marginBottom:6, borderColor: checklist[s.key] ? T.green+"33" : step === i ? T.amber+"44" : T.border, opacity: checklist[s.key] ? 0.7 : 1 }}>
+          <div style={{ display:"flex", alignItems:"flex-start", gap:10, cursor:"pointer" }} onClick={() => setStep(i)}>
+            <button onClick={(e) => { e.stopPropagation(); toggle(s.key); }}
+              style={{ background:"none", border:"none", cursor:"pointer", fontSize:18, color: checklist[s.key] ? T.green : T.mute, flexShrink:0, marginTop:2 }}>
+              {checklist[s.key] ? "☑" : "☐"}
+            </button>
+            <div style={{ flex:1 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                <span style={{ fontSize:14 }}>{s.icon}</span>
+                <span style={{ fontSize:13, fontWeight:600, color: checklist[s.key] ? T.mute : T.text, textDecoration: checklist[s.key] ? "line-through" : "none" }}>Step {i+1}: {s.title}</span>
+              </div>
+              {step === i && (
+                <div style={{ marginTop:8 }}>
+                  <div style={{ fontSize:12, color:T.sub, lineHeight:1.6 }}>{s.detail}</div>
+                  <div style={{ fontSize:11, color:T.amber, marginTop:6 }}>💡 {s.tip}</div>
+                  {s.link && <a href={s.link} target="_blank" rel="noopener noreferrer" style={{ fontSize:11, color:T.blue, marginTop:4, display:"inline-block" }}>🔗 {s.link}</a>}
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════════════════════════
 // MAIN APPLICATION
 // ════════════════════════════════════════════════════════════════════════
 export default function App() {
@@ -3571,22 +4407,29 @@ export default function App() {
     { id:"pipeline", icon:"📋", label:"Pipeline", group:"core" },
     { id:"calendar", icon:"📅", label:"Calendar", group:"core" },
     { id:"watchdog", icon:"⏰", label:"Deadline Watchdog", group:"core" },
+    { id:"intel_feed", icon:"🧿", label:"Intelligence Feed", group:"core" },
     { id:"rfp_parser", icon:"📑", label:"RFP Parser", group:"analysis" },
     { id:"match_scorer", icon:"🎯", label:"Match Scorer", group:"analysis" },
     { id:"match_alerts", icon:"🔔", label:"Match Alerts", group:"analysis" },
+    { id:"readiness", icon:"✅", label:"Readiness Check", group:"analysis" },
     { id:"ai_drafter", icon:"✍️", label:"AI Drafter", group:"writing" },
     { id:"narrative_scorer", icon:"📝", label:"Narrative Scorer", group:"writing" },
     { id:"section_library", icon:"📚", label:"Section Library", group:"writing" },
     { id:"letter_gen", icon:"✉️", label:"Letter Generator", group:"writing" },
     { id:"census", icon:"📊", label:"Census Narratives", group:"writing" },
+    { id:"assembler", icon:"📦", label:"Doc Assembler", group:"writing" },
     { id:"budget", icon:"💵", label:"Budget Builder", group:"docs" },
     { id:"vault", icon:"🗄️", label:"Document Vault", group:"docs" },
+    { id:"templates", icon:"📋", label:"Grant Templates", group:"docs" },
     { id:"compliance", icon:"✅", label:"Compliance", group:"management" },
     { id:"tasks", icon:"📝", label:"Action Plan", group:"management" },
     { id:"awards", icon:"🏆", label:"Award Mgmt", group:"management" },
+    { id:"outcomes", icon:"📊", label:"Outcome Tracker", group:"management" },
     { id:"collab", icon:"💬", label:"Collaboration", group:"management" },
+    { id:"sam_wizard", icon:"🏛️", label:"SAM Wizard", group:"management" },
     { id:"projector", icon:"💰", label:"Financial Projector", group:"intelligence" },
     { id:"forecast", icon:"📈", label:"Funding Forecast", group:"intelligence" },
+    { id:"advisor", icon:"🧠", label:"AI Advisor", group:"intelligence" },
     { id:"network", icon:"🕸️", label:"Relationship Map", group:"intelligence" },
     { id:"peers", icon:"🔎", label:"Peer Prospecting", group:"intelligence" },
     { id:"funder_research", icon:"🏛️", label:"Funder Research", group:"intelligence" },
@@ -3594,6 +4437,7 @@ export default function App() {
     { id:"winloss", icon:"📉", label:"Win/Loss Analysis", group:"intelligence" },
     { id:"impact", icon:"📈", label:"Impact Portfolio", group:"intelligence" },
     { id:"reports", icon:"📄", label:"Report Generator", group:"output" },
+    { id:"export", icon:"📤", label:"Export Center", group:"output" },
     { id:"activity", icon:"📜", label:"Activity Log", group:"output" },
     { id:"settings", icon:"⚙️", label:"Settings", group:"system" },
   ];
@@ -3605,22 +4449,29 @@ export default function App() {
       case "pipeline": return <Pipeline grants={grants} updateGrant={updateGrant} deleteGrant={deleteGrant} />;
       case "calendar": return <TimelineCalendar grants={grants} events={events} setEvents={setEvents} />;
       case "watchdog": return <DeadlineWatchdog grants={grants} events={events} />;
+      case "intel_feed": return <IntelligenceFeed grants={grants} vaultDocs={vaultDocs} contacts={contacts} events={events} />;
       case "rfp_parser": return <RFPParser grants={grants} onUpdate={updateGrant} />;
       case "match_scorer": return <MatchScorer grants={grants} />;
       case "match_alerts": return <MatchAlerts grants={grants} addGrant={addGrant} />;
+      case "readiness": return <ReadinessAssessment grants={grants} vaultDocs={vaultDocs} contacts={contacts} />;
       case "ai_drafter": return <AIDrafter grants={grants} vaultDocs={vaultDocs} />;
       case "narrative_scorer": return <NarrativeScorer grants={grants} />;
       case "section_library": return <SectionLibrary vaultDocs={vaultDocs} />;
       case "letter_gen": return <LetterGenerator grants={grants} contacts={contacts} />;
       case "census": return <CensusNarrative />;
+      case "assembler": return <DocumentAssembler grants={grants} vaultDocs={vaultDocs} />;
       case "budget": return <BudgetBuilder grants={grants} />;
       case "vault": return <DocumentVault vaultDocs={vaultDocs} setVaultDocs={setVaultDocs} grants={grants} />;
+      case "templates": return <GrantTemplates grants={grants} addGrant={addGrant} />;
       case "compliance": return <ComplianceTracker grants={grants} updateGrant={updateGrant} />;
       case "tasks": return <ActionPlan grants={grants} />;
       case "awards": return <AwardManagement grants={grants} updateGrant={updateGrant} />;
+      case "outcomes": return <OutcomeTracker grants={grants} updateGrant={updateGrant} />;
       case "collab": return <CollaborationHub grants={grants} />;
+      case "sam_wizard": return <SAMWizard />;
       case "projector": return <FinancialProjector grants={grants} />;
       case "forecast": return <FundingForecast grants={grants} />;
+      case "advisor": return <StrategicAdvisor grants={grants} vaultDocs={vaultDocs} contacts={contacts} />;
       case "network": return <RelationshipMap grants={grants} contacts={contacts} setContacts={setContacts} />;
       case "peers": return <PeerProspecting />;
       case "funder_research": return <FunderResearch />;
@@ -3628,6 +4479,7 @@ export default function App() {
       case "winloss": return <WinLossAnalysis grants={grants} />;
       case "impact": return <ImpactPortfolio grants={grants} />;
       case "reports": return <ReportGenerator grants={grants} vaultDocs={vaultDocs} contacts={contacts} />;
+      case "export": return <ExportCenter grants={grants} vaultDocs={vaultDocs} contacts={contacts} events={events} />;
       case "activity": return <ActivityLog grants={grants} />;
       case "settings": return <Settings />;
       default: return <Dashboard grants={grants} docs={vaultDocs} contacts={contacts} vaultDocs={vaultDocs} events={events} navigate={setPage} />;
@@ -3676,7 +4528,7 @@ export default function App() {
         </div>
         {sidebarOpen && (
           <div style={{ padding:12, borderTop:`1px solid ${T.border}`, fontSize:10, color:T.dim }}>
-            v4.0 · {grants.length} grants · {(vaultDocs||[]).length} docs · 30 modules
+            v5.0 · {grants.length} grants · {(vaultDocs||[]).length} docs · 38 modules
           </div>
         )}
       </div>
