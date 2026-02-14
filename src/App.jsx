@@ -19,25 +19,30 @@ const T = {
 };
 
 // ─── PROFILE ───────────────────────────────────────────────────────────
-const PROFILE = {
-  name: "Travis", loc: "Newton, Illinois", rural: true, disabled: true,
-  poverty: true, selfEmployed: true,
-  tags: ["disabled","below-poverty","rural-il","tech-entrepreneur","economically-disadvantaged",
-    "il-resident","self-employed","ai-technology","multiple-ventures"],
-  businesses: [
-    { n:"AEGIS", d:"Autonomous business framework — DAO governance + AI agent economies", st:"active", sec:"AI/Automation", monthly:0 },
-    { n:"ToyVault", d:"Business OS for toy collecting — auctions, live sales, membership", st:"active", sec:"E-commerce", monthly:0 },
-    { n:"Synthetic Records", d:"AI music label using SUNO + RESONANCE viral marketing", st:"active", sec:"Music/Entertainment", monthly:0 },
-    { n:"IdeaForge", d:"AI-powered ideation pipeline — concept to business plan", st:"active", sec:"AI/SaaS", monthly:0 },
-    { n:"RESONANCE", d:"Viral marketing engine for automated content distribution", st:"active", sec:"MarTech", monthly:0 },
-    { n:"LaunchFlow", d:"AI-enhanced service marketplace", st:"dev", sec:"SaaS", monthly:0 },
-    { n:"Shrimp Farming", d:"Tech-augmented aquaculture venture", st:"research", sec:"AgTech", monthly:0 },
-  ],
+const DEFAULT_PROFILE = {
+  name: "", loc: "", rural: false, disabled: false,
+  poverty: false, selfEmployed: false,
+  tags: [],
+  businesses: [],
   narratives: {
-    founder: `Travis is an entrepreneur and technologist based in rural Newton, Illinois, building autonomous business systems and AI-powered platforms that create economic opportunity in underserved communities.`,
-    need: `Operating from a rural community with limited economic infrastructure, Travis faces the compounding challenges of disability, poverty, and geographic isolation that restrict access to capital, mentorship, and market opportunities.`,
-    impact: `Each venture is designed to demonstrate that AI-augmented entrepreneurship can thrive anywhere — creating templates for rural economic development that don't require proximity to tech hubs.`,
+    founder: "",
+    need: "",
+    impact: "",
   },
+};
+
+// Dynamic profile — loads from localStorage, falls back to defaults
+let PROFILE = (() => {
+  try {
+    const saved = localStorage.getItem("gp_profile");
+    if (saved) return { ...DEFAULT_PROFILE, ...JSON.parse(saved) };
+  } catch {}
+  return { ...DEFAULT_PROFILE };
+})();
+
+const saveProfile = (updates) => {
+  PROFILE = { ...PROFILE, ...updates };
+  try { localStorage.setItem("gp_profile", JSON.stringify(PROFILE)); } catch {}
 };
 
 // ─── UTILITIES ─────────────────────────────────────────────────────────
@@ -353,6 +358,19 @@ const Dashboard = ({ grants, docs, contacts, vaultDocs, events, navigate }) => {
 
   return (
     <div>
+      {/* New User Welcome */}
+      {!PROFILE.name && (
+        <Card style={{ marginBottom:16, borderColor:T.amber+"66" }} glow>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <div>
+              <div style={{ fontSize:16, fontWeight:700, color:T.amber, marginBottom:4 }}>👋 Welcome to UNLESS Grant Platform</div>
+              <div style={{ fontSize:12, color:T.sub, lineHeight:1.5 }}>Set up your profile first — it powers grant matching, AI narratives, and personalized recommendations across all 39 modules.</div>
+            </div>
+            <Btn variant="primary" onClick={() => navigate("settings")}>⚙️ Set Up Profile</Btn>
+          </div>
+        </Card>
+      )}
+
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(140px, 1fr))", gap:12, marginBottom:20 }}>
         <Card><Stat label="Active Grants" value={active.length} color={T.blue} /></Card>
         <Card><Stat label="Total Sought" value={fmt(totalSought)} color={T.amber} /></Card>
@@ -1311,58 +1329,409 @@ const AIDrafter = ({ grants, vaultDocs }) => {
 };
 
 // ════════════════════════════════════════════════════════════════════════
-// MODULE: SETTINGS
+// MODULE: SETTINGS & PROFILE EDITOR
 // ════════════════════════════════════════════════════════════════════════
 const Settings = () => {
   const [apiKey, setApiKey] = useState(LS.get("anthropic_key", ""));
   const [saved, setSaved] = useState(false);
+  const [tab, setTab] = useState("profile");
 
-  const save = () => {
+  // Profile state — editable copy
+  const [profile, setProfile] = useState({ ...PROFILE });
+  const [showAddBiz, setShowAddBiz] = useState(false);
+  const [newBiz, setNewBiz] = useState({ n:"", d:"", st:"active", sec:"", monthly:0 });
+  const [newTag, setNewTag] = useState("");
+  const [profileSaved, setProfileSaved] = useState(false);
+
+  const saveApiKey = () => {
     LS.set("anthropic_key", apiKey);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
 
+  const updateProfile = (field, value) => {
+    setProfile(prev => ({ ...prev, [field]: value }));
+  };
+
+  const updateNarrative = (field, value) => {
+    setProfile(prev => ({ ...prev, narratives: { ...prev.narratives, [field]: value } }));
+  };
+
+  const addTag = () => {
+    if (!newTag.trim() || profile.tags.includes(newTag.trim())) return;
+    setProfile(prev => ({ ...prev, tags: [...prev.tags, newTag.trim().toLowerCase().replace(/\s+/g, "-")] }));
+    setNewTag("");
+  };
+
+  const removeTag = (tag) => {
+    setProfile(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tag) }));
+  };
+
+  const addBusiness = () => {
+    if (!newBiz.n) return;
+    setProfile(prev => ({ ...prev, businesses: [...prev.businesses, { ...newBiz }] }));
+    setNewBiz({ n:"", d:"", st:"active", sec:"", monthly:0 });
+    setShowAddBiz(false);
+  };
+
+  const updateBusiness = (idx, updates) => {
+    setProfile(prev => ({
+      ...prev, businesses: prev.businesses.map((b, i) => i === idx ? { ...b, ...updates } : b),
+    }));
+  };
+
+  const removeBusiness = (idx) => {
+    setProfile(prev => ({ ...prev, businesses: prev.businesses.filter((_, i) => i !== idx) }));
+  };
+
+  const saveProfileData = () => {
+    // Auto-generate tags from demographics
+    const autoTags = [];
+    if (profile.disabled) autoTags.push("disabled");
+    if (profile.poverty) autoTags.push("below-poverty", "economically-disadvantaged");
+    if (profile.rural) autoTags.push("rural");
+    if (profile.selfEmployed) autoTags.push("self-employed");
+    if (profile.loc) {
+      const state = profile.loc.split(",").pop()?.trim().toLowerCase();
+      if (state) autoTags.push(`${state}-resident`);
+    }
+    // Merge auto-tags with manual tags (no duplicates)
+    const manualTags = profile.tags.filter(t => !autoTags.includes(t));
+    const merged = { ...profile, tags: [...new Set([...autoTags, ...manualTags])] };
+
+    saveProfile(merged);
+    setProfile({ ...PROFILE }); // Re-read from updated global
+    setProfileSaved(true);
+    setTimeout(() => setProfileSaved(false), 2000);
+  };
+
   const clearData = () => {
-    if (confirm("⚠️ This will delete ALL your grant data, documents, and contacts. Are you sure?")) {
-      ["grants","vault_docs","contacts","events","runway"].forEach(k => LS.del(k));
+    if (confirm("⚠️ This will delete ALL your grant data, documents, contacts, and settings. Are you sure?")) {
+      const keys = ["grants","vault_docs","contacts","events","runway","tasks","section_library",
+        "budgets","peers","saved_funders","match_alerts","watch_terms","match_analyses",
+        "score_history","collab_notes","activity_log","sam_checklist","anthropic_key"];
+      keys.forEach(k => LS.del(k));
       location.reload();
     }
   };
 
+  const importData = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const data = JSON.parse(ev.target.result);
+          if (data.grants) LS.set("grants", data.grants);
+          if (data.vault_docs || data.documents) LS.set("vault_docs", data.vault_docs || data.documents);
+          if (data.contacts) LS.set("contacts", data.contacts);
+          if (data.events) LS.set("events", data.events);
+          if (data.tasks) LS.set("tasks", data.tasks);
+          if (data.section_library || data.sections) LS.set("section_library", data.section_library || data.sections);
+          if (data.budgets) LS.set("budgets", data.budgets);
+          if (data.peers) LS.set("peers", data.peers);
+          if (data.profile) saveProfile(data.profile);
+          alert("✅ Data imported successfully! Reloading...");
+          location.reload();
+        } catch { alert("❌ Failed to parse import file"); }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  };
+
+  const isNewUser = !PROFILE.name;
+
+  const SUGGESTED_TAGS = [
+    "tech-entrepreneur","ai-technology","multiple-ventures","veteran","minority-owned",
+    "woman-owned","lgbtq-owned","first-generation","immigrant","hbcu-affiliated",
+    "tribal-community","hub-zone","8a-certified","workforce-development","stem-education",
+    "agriculture","aquaculture","manufacturing","healthcare","clean-energy",
+    "social-enterprise","nonprofit","community-development","youth-services",
+  ];
+
+  const BIZ_SECTORS = [
+    "AI/Automation","E-commerce","Music/Entertainment","AI/SaaS","MarTech","SaaS",
+    "AgTech","FinTech","EdTech","HealthTech","CleanTech","Manufacturing",
+    "Consulting","Nonprofit","Food/Beverage","Real Estate","Media","Other",
+  ];
+
   return (
     <div>
-      <Card style={{ marginBottom:16 }}>
-        <div style={{ fontSize:14, fontWeight:600, color:T.text, marginBottom:12 }}>🔑 AI Configuration</div>
-        <div style={{ fontSize:12, color:T.sub, marginBottom:8 }}>Enter your Anthropic API key to enable AI-powered features (drafter, analysis, chat).</div>
-        <div style={{ display:"flex", gap:8 }}>
-          <Input type="password" value={apiKey} onChange={setApiKey} placeholder="sk-ant-..." style={{ flex:1 }} />
-          <Btn variant="primary" onClick={save}>{saved ? "✅ Saved!" : "💾 Save"}</Btn>
-        </div>
-        <div style={{ fontSize:11, color:T.mute, marginTop:8 }}>Your key is stored locally in your browser only. Never sent to any server.</div>
-      </Card>
+      {/* Tabs */}
+      <div style={{ display:"flex", gap:4, marginBottom:16 }}>
+        {[
+          { id:"profile", label:"👤 Profile" },
+          { id:"businesses", label:"🏢 Businesses" },
+          { id:"narratives", label:"📝 Narratives" },
+          { id:"ai", label:"🔑 AI Config" },
+          { id:"data", label:"💾 Data" },
+        ].map(t => (
+          <Btn key={t.id} variant={tab === t.id ? "primary" : "ghost"} size="sm" onClick={() => setTab(t.id)}>{t.label}</Btn>
+        ))}
+      </div>
 
-      <Card style={{ marginBottom:16 }}>
-        <div style={{ fontSize:14, fontWeight:600, color:T.text, marginBottom:12 }}>👤 Profile</div>
-        <div style={{ fontSize:12, color:T.sub }}>
-          <div>Name: {PROFILE.name}</div>
-          <div>Location: {PROFILE.loc}</div>
-          <div>Tags: {PROFILE.tags.join(", ")}</div>
-          <div>Businesses: {PROFILE.businesses.length}</div>
-        </div>
-      </Card>
+      {/* New User Welcome */}
+      {isNewUser && tab === "profile" && (
+        <Card style={{ marginBottom:16, borderColor:T.amber+"44" }} glow>
+          <div style={{ fontSize:14, fontWeight:600, color:T.amber, marginBottom:8 }}>👋 Welcome to UNLESS!</div>
+          <div style={{ fontSize:12, color:T.sub, lineHeight:1.6 }}>
+            Set up your profile below. This information is used across the platform to match you with grants, generate narratives, and provide personalized recommendations. All data stays in your browser — nothing is sent to any server.
+          </div>
+        </Card>
+      )}
 
-      <Card style={{ marginBottom:16 }}>
-        <div style={{ fontSize:14, fontWeight:600, color:T.text, marginBottom:12 }}>📊 Data Management</div>
-        <div style={{ display:"flex", gap:8 }}>
-          <Btn size="sm" onClick={() => {
-            const data = { grants: LS.get("grants",[]), vault_docs: LS.get("vault_docs",[]), contacts: LS.get("contacts",[]), events: LS.get("events",[]) };
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type:"application/json" });
-            const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `grant-platform-backup-${new Date().toISOString().split("T")[0]}.json`; a.click();
-          }}>📥 Export All Data</Btn>
-          <Btn size="sm" variant="danger" onClick={clearData}>🗑️ Clear All Data</Btn>
+      {/* ─── PROFILE TAB ─── */}
+      {tab === "profile" && (
+        <div>
+          <Card style={{ marginBottom:16 }}>
+            <div style={{ fontSize:14, fontWeight:600, color:T.text, marginBottom:12 }}>👤 Personal Information</div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
+              <div>
+                <label style={{ fontSize:10, color:T.mute, display:"block", marginBottom:4 }}>Full Name *</label>
+                <Input value={profile.name} onChange={v => updateProfile("name", v)} placeholder="Your full name" />
+              </div>
+              <div>
+                <label style={{ fontSize:10, color:T.mute, display:"block", marginBottom:4 }}>Location *</label>
+                <Input value={profile.loc} onChange={v => updateProfile("loc", v)} placeholder="City, State (e.g., Newton, Illinois)" />
+              </div>
+            </div>
+
+            <div style={{ fontSize:12, fontWeight:600, color:T.text, marginBottom:8 }}>Demographics & Eligibility</div>
+            <div style={{ fontSize:11, color:T.mute, marginBottom:8 }}>These help match you with grants targeting specific populations. Check all that apply.</div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(200px, 1fr))", gap:6 }}>
+              {[
+                { key:"rural", label:"Rural Community (pop. <50,000)", icon:"🌾" },
+                { key:"disabled", label:"Person with Disability", icon:"♿" },
+                { key:"poverty", label:"Below Poverty Line", icon:"📉" },
+                { key:"selfEmployed", label:"Self-Employed / Sole Proprietor", icon:"💼" },
+              ].map(d => (
+                <div key={d.key} onClick={() => updateProfile(d.key, !profile[d.key])} style={{
+                  display:"flex", alignItems:"center", gap:8, padding:"8px 12px", borderRadius:6, cursor:"pointer",
+                  background: profile[d.key] ? T.green+"10" : T.panel, border:`1px solid ${profile[d.key] ? T.green+"44" : T.border}`,
+                }}>
+                  <span style={{ fontSize:16, color: profile[d.key] ? T.green : T.mute }}>{profile[d.key] ? "☑" : "☐"}</span>
+                  <span style={{ fontSize:12, color: profile[d.key] ? T.text : T.sub }}>{d.icon} {d.label}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card style={{ marginBottom:16 }}>
+            <div style={{ fontSize:14, fontWeight:600, color:T.text, marginBottom:8 }}>🏷️ Profile Tags</div>
+            <div style={{ fontSize:11, color:T.mute, marginBottom:8 }}>Tags are used for grant matching and AI context. Demographic tags are auto-generated from checkboxes above.</div>
+            <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:8 }}>
+              {profile.tags.map(t => (
+                <Badge key={t} color={T.blue} style={{ cursor:"pointer" }} onClick={() => removeTag(t)}>{t} ✕</Badge>
+              ))}
+              {profile.tags.length === 0 && <span style={{ fontSize:11, color:T.mute }}>No tags yet — add some below or check demographics above</span>}
+            </div>
+            <div style={{ display:"flex", gap:8, marginBottom:8 }}>
+              <Input value={newTag} onChange={setNewTag} placeholder="Add custom tag..." style={{ flex:1 }} onKeyDown={e => e.key === "Enter" && addTag()} />
+              <Btn size="sm" onClick={addTag}>+ Add</Btn>
+            </div>
+            <div style={{ fontSize:10, color:T.mute, marginBottom:4 }}>Suggested tags (click to add):</div>
+            <div style={{ display:"flex", gap:3, flexWrap:"wrap" }}>
+              {SUGGESTED_TAGS.filter(t => !profile.tags.includes(t)).slice(0, 16).map(t => (
+                <Badge key={t} color={T.mute} style={{ cursor:"pointer", fontSize:9 }}
+                  onClick={() => setProfile(prev => ({ ...prev, tags:[...prev.tags, t] }))}>{t}</Badge>
+              ))}
+            </div>
+          </Card>
+
+          <div style={{ display:"flex", gap:8 }}>
+            <Btn variant="primary" onClick={saveProfileData}>{profileSaved ? "✅ Saved!" : "💾 Save Profile"}</Btn>
+          </div>
         </div>
-      </Card>
+      )}
+
+      {/* ─── BUSINESSES TAB ─── */}
+      {tab === "businesses" && (
+        <div>
+          <Card style={{ marginBottom:16 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+              <div>
+                <div style={{ fontSize:14, fontWeight:600, color:T.text }}>🏢 Businesses & Ventures</div>
+                <div style={{ fontSize:11, color:T.mute }}>These are included in AI-generated narratives and grant matching</div>
+              </div>
+              <Btn variant="primary" size="sm" onClick={() => setShowAddBiz(true)}>+ Add Business</Btn>
+            </div>
+
+            {profile.businesses.length === 0 ? (
+              <Empty icon="🏢" title="No businesses added" sub="Add your businesses to improve grant matching and AI-generated content" action={<Btn variant="primary" size="sm" onClick={() => setShowAddBiz(true)}>+ Add First Business</Btn>} />
+            ) : profile.businesses.map((b, idx) => (
+              <Card key={idx} style={{ marginBottom:8 }}>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 120px 100px 40px", gap:8, alignItems:"center" }}>
+                  <div>
+                    <label style={{ fontSize:9, color:T.mute }}>Name</label>
+                    <Input value={b.n} onChange={v => updateBusiness(idx, { n:v })} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize:9, color:T.mute }}>Sector</label>
+                    <Select value={b.sec} onChange={v => updateBusiness(idx, { sec:v })}
+                      options={BIZ_SECTORS.map(s => ({ value:s, label:s }))} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize:9, color:T.mute }}>Status</label>
+                    <Select value={b.st} onChange={v => updateBusiness(idx, { st:v })}
+                      options={[{value:"active",label:"🟢 Active"},{value:"dev",label:"🟡 Development"},{value:"research",label:"🔵 Research"},{value:"paused",label:"⚪ Paused"}]} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize:9, color:T.mute }}>Monthly Rev</label>
+                    <Input type="number" value={b.monthly} onChange={v => updateBusiness(idx, { monthly:Number(v) })} />
+                  </div>
+                  <button onClick={() => removeBusiness(idx)} style={{ background:"none", border:"none", color:T.red, cursor:"pointer", fontSize:14, marginTop:12 }}>✕</button>
+                </div>
+                <div style={{ marginTop:6 }}>
+                  <label style={{ fontSize:9, color:T.mute }}>Description</label>
+                  <Input value={b.d} onChange={v => updateBusiness(idx, { d:v })} placeholder="Brief description for grant narratives..." />
+                </div>
+              </Card>
+            ))}
+          </Card>
+
+          <Btn variant="primary" onClick={saveProfileData}>{profileSaved ? "✅ Saved!" : "💾 Save Profile"}</Btn>
+
+          <Modal open={showAddBiz} onClose={() => setShowAddBiz(false)} title="Add Business">
+            <div style={{ display:"grid", gap:12 }}>
+              <Input value={newBiz.n} onChange={v => setNewBiz({...newBiz, n:v})} placeholder="Business name" />
+              <Input value={newBiz.d} onChange={v => setNewBiz({...newBiz, d:v})} placeholder="Brief description" />
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                <Select value={newBiz.sec} onChange={v => setNewBiz({...newBiz, sec:v})}
+                  options={[{value:"",label:"Select sector..."},...BIZ_SECTORS.map(s => ({ value:s, label:s }))]} />
+                <Select value={newBiz.st} onChange={v => setNewBiz({...newBiz, st:v})}
+                  options={[{value:"active",label:"🟢 Active"},{value:"dev",label:"🟡 Development"},{value:"research",label:"🔵 Research"},{value:"paused",label:"⚪ Paused"}]} />
+              </div>
+              <div>
+                <label style={{ fontSize:10, color:T.mute }}>Monthly Revenue ($)</label>
+                <Input type="number" value={newBiz.monthly} onChange={v => setNewBiz({...newBiz, monthly:Number(v)})} />
+              </div>
+              <Btn variant="primary" onClick={addBusiness}>Add Business</Btn>
+            </div>
+          </Modal>
+        </div>
+      )}
+
+      {/* ─── NARRATIVES TAB ─── */}
+      {tab === "narratives" && (
+        <div>
+          <Card style={{ marginBottom:16 }}>
+            <div style={{ fontSize:14, fontWeight:600, color:T.text, marginBottom:4 }}>📝 Narrative Templates</div>
+            <div style={{ fontSize:11, color:T.mute, marginBottom:12 }}>These narratives are injected into AI-generated content and used by the Impact Portfolio module. Write them in third person for maximum flexibility.</div>
+
+            <div style={{ marginBottom:16 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:T.amber, display:"block", marginBottom:4 }}>Founder Story</label>
+              <div style={{ fontSize:10, color:T.mute, marginBottom:4 }}>A brief narrative about who you are and what you do (2-3 sentences)</div>
+              <TextArea value={profile.narratives?.founder || ""} onChange={v => updateNarrative("founder", v)} rows={3}
+                placeholder="e.g., [Name] is an entrepreneur and technologist based in [Location], building [what you do] that [impact]." />
+            </div>
+
+            <div style={{ marginBottom:16 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:T.amber, display:"block", marginBottom:4 }}>Statement of Need</label>
+              <div style={{ fontSize:10, color:T.mute, marginBottom:4 }}>Describes the challenges you face and why funding is needed</div>
+              <TextArea value={profile.narratives?.need || ""} onChange={v => updateNarrative("need", v)} rows={3}
+                placeholder="e.g., Operating from a [rural/urban] community with [challenges], [Name] faces [specific barriers] that restrict access to [resources]." />
+            </div>
+
+            <div style={{ marginBottom:16 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:T.amber, display:"block", marginBottom:4 }}>Impact Vision</label>
+              <div style={{ fontSize:10, color:T.mute, marginBottom:4 }}>Your broader impact and what you're trying to achieve</div>
+              <TextArea value={profile.narratives?.impact || ""} onChange={v => updateNarrative("impact", v)} rows={3}
+                placeholder="e.g., Each venture is designed to demonstrate that [approach] can [outcome], creating [broader impact]." />
+            </div>
+          </Card>
+
+          <Btn variant="primary" onClick={saveProfileData}>{profileSaved ? "✅ Saved!" : "💾 Save Profile"}</Btn>
+        </div>
+      )}
+
+      {/* ─── AI CONFIG TAB ─── */}
+      {tab === "ai" && (
+        <div>
+          <Card style={{ marginBottom:16 }}>
+            <div style={{ fontSize:14, fontWeight:600, color:T.text, marginBottom:12 }}>🔑 Anthropic API Key</div>
+            <div style={{ fontSize:12, color:T.sub, marginBottom:8 }}>Required for AI-powered features: AI Drafter, Narrative Scorer, Strategic Advisor, RFP Parser, Letter Generator, and AI Chat.</div>
+            <div style={{ display:"flex", gap:8 }}>
+              <Input type="password" value={apiKey} onChange={setApiKey} placeholder="sk-ant-..." style={{ flex:1 }} />
+              <Btn variant="primary" onClick={saveApiKey}>{saved ? "✅ Saved!" : "💾 Save"}</Btn>
+            </div>
+            <div style={{ fontSize:11, color:T.mute, marginTop:8 }}>Your key is stored locally in your browser only. Never sent to any server except Anthropic's API.</div>
+            <div style={{ fontSize:11, color:T.blue, marginTop:4 }}>
+              <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" style={{ color:T.blue }}>🔗 Get an API key from console.anthropic.com</a>
+            </div>
+          </Card>
+
+          <Card>
+            <div style={{ fontSize:14, fontWeight:600, color:T.text, marginBottom:8 }}>🤖 AI-Powered Modules</div>
+            <div style={{ fontSize:12, color:T.sub }}>These modules require an API key to function:</div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(200px, 1fr))", gap:6, marginTop:8 }}>
+              {["AI Drafter","Narrative Scorer","Strategic Advisor","RFP Parser","Letter Generator","AI Chat","Match Scorer (Deep)","Report Generator (AI mode)"].map(m => (
+                <div key={m} style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 8px", borderRadius:4, background:T.panel }}>
+                  <span style={{ color: apiKey ? T.green : T.red, fontSize:12 }}>{apiKey ? "✅" : "⚠️"}</span>
+                  <span style={{ fontSize:11, color:T.text }}>{m}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* ─── DATA TAB ─── */}
+      {tab === "data" && (
+        <div>
+          <Card style={{ marginBottom:16 }}>
+            <div style={{ fontSize:14, fontWeight:600, color:T.text, marginBottom:12 }}>💾 Data Management</div>
+            <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+              <Btn size="sm" onClick={() => {
+                const data = { profile:PROFILE, grants:LS.get("grants",[]), vault_docs:LS.get("vault_docs",[]), contacts:LS.get("contacts",[]), events:LS.get("events",[]), tasks:LS.get("tasks",[]), section_library:LS.get("section_library",[]), budgets:LS.get("budgets",{}) };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type:"application/json" });
+                const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `unless-backup-${new Date().toISOString().split("T")[0]}.json`; a.click();
+              }}>📥 Export All Data</Btn>
+              <Btn size="sm" onClick={importData}>📤 Import Data</Btn>
+              <Btn size="sm" variant="danger" onClick={clearData}>🗑️ Clear All Data</Btn>
+              <Btn size="sm" variant="danger" onClick={() => {
+                if (confirm("Reset profile to blank? Your grant data will be kept.")) {
+                  saveProfile(DEFAULT_PROFILE);
+                  setProfile({ ...DEFAULT_PROFILE });
+                }
+              }}>🔄 Reset Profile</Btn>
+            </div>
+          </Card>
+
+          <Card style={{ marginBottom:16 }}>
+            <div style={{ fontSize:14, fontWeight:600, color:T.text, marginBottom:8 }}>📊 Storage Usage</div>
+            {[
+              { key:"grants", label:"Grants" }, { key:"vault_docs", label:"Documents" },
+              { key:"contacts", label:"Contacts" }, { key:"events", label:"Events" },
+              { key:"tasks", label:"Tasks" }, { key:"section_library", label:"Section Library" },
+              { key:"budgets", label:"Budgets" }, { key:"peers", label:"Peers" },
+              { key:"saved_funders", label:"Saved Funders" }, { key:"match_alerts", label:"Match Alerts" },
+              { key:"collab_notes", label:"Collaboration Notes" }, { key:"sam_checklist", label:"SAM Checklist" },
+            ].map(item => {
+              const data = LS.get(item.key, item.key === "budgets" ? {} : []);
+              const count = Array.isArray(data) ? data.length : Object.keys(data).length;
+              const size = JSON.stringify(data).length;
+              return (
+                <div key={item.key} style={{ display:"flex", justifyContent:"space-between", padding:"4px 0", borderBottom:`1px solid ${T.border}`, fontSize:11 }}>
+                  <span style={{ color:T.text }}>{item.label}</span>
+                  <span style={{ color:T.mute }}>{count} items · {(size / 1024).toFixed(1)}KB</span>
+                </div>
+              );
+            })}
+          </Card>
+
+          <Card>
+            <div style={{ fontSize:14, fontWeight:600, color:T.text, marginBottom:8 }}>🔒 Privacy</div>
+            <div style={{ fontSize:12, color:T.sub, lineHeight:1.6 }}>
+              All data is stored locally in your browser's localStorage. Nothing is sent to any server except your API key (sent only to Anthropic when using AI features). Clearing your browser data will erase everything — use Export to create backups.
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
