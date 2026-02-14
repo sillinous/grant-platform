@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 
 // ════════════════════════════════════════════════════════════════════════
-// GRANT LIFECYCLE PLATFORM v5.0 — UNLESS
+// GRANT LIFECYCLE PLATFORM v5.2 — UNLESS
 // ════════════════════════════════════════════════════════════════════════
 // 48 modules · 23+ APIs · 22 cross-module data flows · AI-powered
 // NEW: Timeline Calendar, Document Vault, Financial Impact Projector,
@@ -444,96 +444,579 @@ const Dashboard = ({ grants, docs, contacts, vaultDocs, events, navigate }) => {
 };
 
 // ════════════════════════════════════════════════════════════════════════
-// MODULE: GRANT DISCOVERY
+// MODULE: GRANT DISCOVERY (Enhanced v5.2)
 // ════════════════════════════════════════════════════════════════════════
-const Discovery = ({ onAdd }) => {
+const Discovery = ({ onAdd, grants }) => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
+  const [spendingResults, setSpendingResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [landscape, setLandscape] = useState(null);
   const [regs, setRegs] = useState([]);
   const [tab, setTab] = useState("search");
+  const [expanded, setExpanded] = useState(null);
+  const [detailData, setDetailData] = useState({});
+  const [sortBy, setSortBy] = useState("relevance");
+  const [filterAgency, setFilterAgency] = useState("");
+  const [filterMinAmt, setFilterMinAmt] = useState(0);
+  const [filterMaxAmt, setFilterMaxAmt] = useState(0);
+  const [filterOpen, setFilterOpen] = useState(true);
+  const [selected, setSelected] = useState(new Set());
+  const [searchHistory, setSearchHistory] = useState(() => LS.get("search_history", []));
+  const [savedResults, setSavedResults] = useState(() => LS.get("saved_discoveries", []));
+  const [aiRecs, setAiRecs] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [searchStats, setSearchStats] = useState(null);
 
-  const search = async () => {
-    if (!query.trim()) return;
+  useEffect(() => { LS.set("search_history", searchHistory); }, [searchHistory]);
+  useEffect(() => { LS.set("saved_discoveries", savedResults); }, [savedResults]);
+
+  const alreadyTracked = useMemo(() => new Set((grants||[]).map(g => g.title)), [grants]);
+
+  // Quick match score against profile
+  const scoreResult = (opp) => {
+    const text = `${opp.title || ""} ${opp.description || opp.synopsis || ""} ${opp.agency || opp.agencyName || ""}`.toLowerCase();
+    let score = 0; let reasons = [];
+    if (PROFILE.rural && (text.includes("rural") || text.includes("underserved"))) { score += 18; reasons.push("Rural focus"); }
+    if (PROFILE.disabled && text.includes("disab")) { score += 18; reasons.push("Disability"); }
+    if (PROFILE.selfEmployed && (text.includes("small business") || text.includes("entrepreneur") || text.includes("sbir"))) { score += 15; reasons.push("Small biz"); }
+    if (text.includes("technology") || text.includes(" ai ") || text.includes("artificial intelligence") || text.includes("innovation")) { score += 12; reasons.push("Technology"); }
+    if (PROFILE.poverty && (text.includes("poverty") || text.includes("low-income") || text.includes("economically disadvantaged"))) { score += 14; reasons.push("Low-income"); }
+    const state = (PROFILE.loc || "").split(",").pop()?.trim().toLowerCase();
+    if (state && text.includes(state)) { score += 10; reasons.push("State match"); }
+    if (text.includes("workforce") || text.includes("training")) { score += 8; reasons.push("Workforce"); }
+    if (text.includes("communit")) { score += 6; reasons.push("Community"); }
+    PROFILE.tags.forEach(tag => { if (text.includes(tag.replace(/-/g, " "))) { score += 5; } });
+    PROFILE.businesses.forEach(b => { if (text.includes(b.sec?.toLowerCase())) { score += 7; reasons.push(b.sec); } });
+    return { score: Math.min(score, 100), reasons: [...new Set(reasons)] };
+  };
+
+  // ─── SEARCH ───
+  const search = async (searchQuery) => {
+    const q = searchQuery || query;
+    if (!q.trim()) return;
     setLoading(true);
-    try {
-      const data = await API.searchGrants(query);
-      setResults(data.oppHits || []);
-    } catch { setResults([]); }
+    setResults([]);
+    setSpendingResults([]);
+    setExpanded(null);
+    setSelected(new Set());
+    setSearchStats(null);
+
+    // Parallel multi-source search
+    const [grantsData, spendingData] = await Promise.all([
+      API.searchGrants(q, { rows: 40 }),
+      API.searchFederalSpending(q, { limit: 10 }),
+    ]);
+
+    const hits = grantsData.oppHits || [];
+    setResults(hits);
+    setSpendingResults(spendingData.results || []);
+
+    // Stats
+    const agencies = [...new Set(hits.map(h => h.agency || h.agencyName).filter(Boolean))];
+    const amounts = hits.map(h => h.awardCeiling || h.estimatedFunding || 0).filter(v => v > 0);
+    const withDeadlines = hits.filter(h => h.closeDate).length;
+    setSearchStats({
+      total: hits.length, agencies: agencies.length,
+      avgAmount: amounts.length > 0 ? amounts.reduce((a,b)=>a+b,0)/amounts.length : 0,
+      maxAmount: amounts.length > 0 ? Math.max(...amounts) : 0,
+      withDeadlines, topAgencies: agencies.slice(0, 5),
+    });
+
+    // Save to history
+    setSearchHistory(prev => {
+      const filtered = prev.filter(h => h.query !== q);
+      return [{ query:q, resultCount:hits.length, date:new Date().toISOString() }, ...filtered].slice(0, 20);
+    });
+
     setLoading(false);
   };
 
-  const loadLandscape = async () => {
-    setLoading(true);
-    const [spending, recipients] = await Promise.all([API.getSpendingByState("IL"), API.getTopRecipients("IL")]);
-    setLandscape({ spending: spending.results || [], recipients: recipients.results || [] });
-    setLoading(false);
+  // ─── AI RECOMMENDATIONS ───
+  const getAIRecommendations = async () => {
+    setAiLoading(true);
+    const sys = `You are an expert grant strategist. Based on the user's profile, generate 8 highly specific grant search queries that would find the best matching federal grants. Consider their location, demographics, businesses, and sectors.
+
+RESPOND ONLY IN JSON: {"searches":[{"query":"...","reason":"...","priority":"high|medium","category":"..."}]}`;
+
+    const profileCtx = `Name: ${PROFILE.name}
+Location: ${PROFILE.loc}
+Rural: ${PROFILE.rural}, Disabled: ${PROFILE.disabled}, Poverty: ${PROFILE.poverty}, Self-Employed: ${PROFILE.selfEmployed}
+Tags: ${PROFILE.tags.join(", ")}
+Businesses: ${PROFILE.businesses.map(b => `${b.n} (${b.sec} — ${b.d})`).join("; ")}
+Narratives: ${PROFILE.narratives.founder}`;
+
+    const result = await API.callAI([{ role:"user", content:profileCtx }], sys);
+    if (!result.error) {
+      try {
+        const cleaned = result.text.replace(/```json\n?|```/g, "").trim();
+        setAiRecs(JSON.parse(cleaned));
+      } catch { setAiRecs(null); }
+    }
+    setAiLoading(false);
   };
 
-  const searchRegs = async () => {
-    if (!query.trim()) return;
-    setLoading(true);
-    const data = await API.searchRegulations(query);
-    setRegs(data.data || []);
-    setLoading(false);
+  // ─── FETCH DETAIL ───
+  const loadDetail = async (oppId) => {
+    if (detailData[oppId]) return;
+    const data = await API.getGrantDetail(oppId);
+    if (data) setDetailData(prev => ({ ...prev, [oppId]:data }));
   };
 
+  // ─── SAVE / TRACK ───
+  const saveResult = (opp) => {
+    const entry = {
+      id: uid(), title: opp.title || opp.opportunityTitle || "Untitled",
+      agency: opp.agency || opp.agencyName || "", amount: opp.awardCeiling || opp.estimatedFunding || 0,
+      deadline: opp.closeDate || "", description: (opp.description || opp.synopsis || "").slice(0, 500),
+      oppId: opp.id || opp.opportunityId, savedAt: new Date().toISOString(),
+      matchScore: scoreResult(opp).score,
+    };
+    setSavedResults(prev => prev.some(s => s.title === entry.title) ? prev : [...prev, entry]);
+  };
+
+  const trackGrant = (opp) => {
+    const match = scoreResult(opp);
+    onAdd({
+      id: uid(), title: opp.title || opp.opportunityTitle || "Untitled",
+      agency: opp.agency || opp.agencyName || "", amount: opp.awardCeiling || opp.estimatedFunding || 0,
+      deadline: opp.closeDate || opp.closeDateExplanation || "", stage: "discovered",
+      oppId: opp.id || opp.opportunityId, description: opp.description || opp.synopsis || "",
+      category: opp.category || opp.fundingInstrumentType || "", createdAt: new Date().toISOString(),
+      notes: `Match Score: ${match.score}/100 — ${match.reasons.join(", ")}`, tags: match.reasons.map(r => r.toLowerCase().replace(/\s+/g, "-")),
+    });
+  };
+
+  const bulkTrack = () => {
+    const toTrack = sortedResults.filter((_, i) => selected.has(i));
+    toTrack.forEach(opp => trackGrant(opp));
+    setSelected(new Set());
+  };
+
+  const toggleSelect = (i) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(i) ? next.delete(i) : next.add(i);
+      return next;
+    });
+  };
+
+  // ─── SORT & FILTER ───
+  const sortedResults = useMemo(() => {
+    let filtered = [...results];
+    // Agency filter
+    if (filterAgency) filtered = filtered.filter(r => (r.agency || r.agencyName || "").includes(filterAgency));
+    // Amount filter
+    if (filterMinAmt > 0) filtered = filtered.filter(r => (r.awardCeiling || r.estimatedFunding || 0) >= filterMinAmt);
+    if (filterMaxAmt > 0) filtered = filtered.filter(r => (r.awardCeiling || r.estimatedFunding || 0) <= filterMaxAmt);
+    // Open only
+    if (filterOpen) filtered = filtered.filter(r => !r.closeDate || daysUntil(r.closeDate) >= 0);
+    // Sort
+    switch (sortBy) {
+      case "match": return filtered.sort((a, b) => scoreResult(b).score - scoreResult(a).score);
+      case "amount_high": return filtered.sort((a, b) => (b.awardCeiling||b.estimatedFunding||0) - (a.awardCeiling||a.estimatedFunding||0));
+      case "amount_low": return filtered.sort((a, b) => (a.awardCeiling||a.estimatedFunding||0) - (b.awardCeiling||b.estimatedFunding||0));
+      case "deadline": return filtered.sort((a, b) => {
+        if (!a.closeDate) return 1; if (!b.closeDate) return -1;
+        return new Date(a.closeDate) - new Date(b.closeDate);
+      });
+      default: return filtered;
+    }
+  }, [results, sortBy, filterAgency, filterMinAmt, filterMaxAmt, filterOpen]);
+
+  const uniqueAgencies = useMemo(() => [...new Set(results.map(r => r.agency || r.agencyName).filter(Boolean))], [results]);
+
+  // ─── PROFILE-BASED QUICK SEARCHES ───
+  const profileSearches = useMemo(() => {
+    const searches = [];
+    if (PROFILE.rural) searches.push({ q:"rural development grants", icon:"🌾", cat:"Location" });
+    if (PROFILE.disabled) searches.push({ q:"disability entrepreneurship grants", icon:"♿", cat:"Demographic" });
+    if (PROFILE.selfEmployed) searches.push({ q:"small business innovation research", icon:"💼", cat:"Business" });
+    if (PROFILE.poverty) searches.push({ q:"economically disadvantaged business grants", icon:"📉", cat:"Demographic" });
+    PROFILE.businesses.filter(b=>b.st==="active").slice(0,3).forEach(b => {
+      searches.push({ q:`${b.sec.toLowerCase()} federal grants`, icon:"🏢", cat:b.n });
+    });
+    const state = (PROFILE.loc || "").split(",").pop()?.trim();
+    if (state) searches.push({ q:`${state} economic development grants`, icon:"📍", cat:"Location" });
+    return searches;
+  }, []);
+
+  // ─── RENDER ───
   return (
     <div>
       <Tab tabs={[
-        { id:"search", icon:"🔍", label:"Grant Search" },
+        { id:"search", icon:"🔍", label:"Smart Search" },
+        { id:"recommended", icon:"🧠", label:"AI Recommended" },
+        { id:"saved", icon:"⭐", label:`Saved (${savedResults.length})` },
         { id:"landscape", icon:"📈", label:"Funding Landscape" },
+        { id:"spending", icon:"💰", label:"Past Awards" },
         { id:"regs", icon:"⚖️", label:"Regulatory Intel" },
       ]} active={tab} onChange={setTab} />
 
+      {/* ━━━ SMART SEARCH TAB ━━━ */}
       {tab === "search" && (
         <div>
-          <div style={{ display:"flex", gap:8, marginBottom:16 }}>
-            <Input value={query} onChange={setQuery} placeholder="Search federal grants... (e.g., rural technology, disability services, small business)" style={{ flex:1 }} onKeyDown={e => e.key === "Enter" && search()} />
-            <Btn variant="primary" onClick={search} disabled={loading}>{loading ? "⏳" : "🔍"} Search</Btn>
-          </div>
-          <div style={{ display:"flex", gap:8, marginBottom:16, flexWrap:"wrap" }}>
-            {["rural technology", "disability entrepreneurship", "small business innovation", "AI research", "workforce development", "community development"].map(q => (
-              <Btn key={q} size="sm" variant="ghost" onClick={() => { setQuery(q); }}>{q}</Btn>
-            ))}
-          </div>
-          {results.length === 0 && !loading && <Empty icon="🔍" title="Search for Grant Opportunities" sub="Try keywords related to your business, location, or demographic" />}
-          {results.map((opp, i) => (
-            <Card key={i} style={{ marginBottom:8, cursor:"pointer" }} onClick={() => onAdd({
-              id: uid(), title: opp.title || opp.opportunityTitle || "Untitled",
-              agency: opp.agency || opp.agencyName || "", amount: opp.awardCeiling || opp.estimatedFunding || 0,
-              deadline: opp.closeDate || opp.closeDateExplanation || "", stage: "discovered",
-              oppId: opp.id || opp.opportunityId, description: opp.description || opp.synopsis || "",
-              category: opp.category || "", createdAt: new Date().toISOString(), notes: "", tags: [],
-            })}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:13, fontWeight:600, color:T.text, marginBottom:4 }}>{opp.title || opp.opportunityTitle}</div>
-                  <div style={{ fontSize:11, color:T.mute, marginBottom:4 }}>{opp.agency || opp.agencyName}</div>
-                  <div style={{ fontSize:11, color:T.sub, lineHeight:1.4 }}>{(opp.description || opp.synopsis || "").slice(0, 200)}...</div>
-                </div>
-                <div style={{ textAlign:"right", marginLeft:12, flexShrink:0 }}>
-                  {(opp.awardCeiling || opp.estimatedFunding) && <div style={{ fontSize:14, fontWeight:700, color:T.green }}>{fmt(opp.awardCeiling || opp.estimatedFunding)}</div>}
-                  {(opp.closeDate) && <div style={{ fontSize:11, color: daysUntil(opp.closeDate) <= 14 ? T.red : T.mute }}>{fmtDate(opp.closeDate)}</div>}
-                </div>
+          {/* Search Bar */}
+          <Card style={{ marginBottom:12 }}>
+            <div style={{ display:"flex", gap:8, marginBottom:8 }}>
+              <div style={{ position:"relative", flex:1 }}>
+                <Input value={query} onChange={setQuery} placeholder="Search federal grants — keywords, agency, CFDA number, topic..."
+                  style={{ paddingLeft:36, fontSize:14, padding:"12px 12px 12px 36px" }}
+                  onKeyDown={e => e.key === "Enter" && search()} />
+                <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", fontSize:16, pointerEvents:"none" }}>🔍</span>
+              </div>
+              <Btn variant="primary" size="lg" onClick={() => search()} disabled={loading} style={{ minWidth:120 }}>
+                {loading ? "⏳ Searching..." : "Search"}
+              </Btn>
+            </div>
+
+            {/* Quick Search Chips */}
+            <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+              <span style={{ fontSize:10, color:T.mute, lineHeight:"24px" }}>Quick:</span>
+              {["rural technology", "disability services", "SBIR", "workforce development", "community development", "clean energy", "digital equity", "agriculture innovation"].map(q => (
+                <button key={q} onClick={() => { setQuery(q); search(q); }}
+                  style={{ padding:"3px 10px", borderRadius:20, fontSize:11, border:`1px solid ${T.border}`, background:T.panel, color:T.sub, cursor:"pointer", fontFamily:"inherit" }}>
+                  {q}
+                </button>
+              ))}
+            </div>
+          </Card>
+
+          {/* Profile-Based Recommendations */}
+          {PROFILE.name && results.length === 0 && !loading && (
+            <Card style={{ marginBottom:12 }}>
+              <div style={{ fontSize:12, fontWeight:600, color:T.amber, marginBottom:8 }}>🎯 Recommended Searches Based on Your Profile</div>
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(220px, 1fr))", gap:6 }}>
+                {profileSearches.map((ps, i) => (
+                  <button key={i} onClick={() => { setQuery(ps.q); search(ps.q); }} style={{
+                    display:"flex", alignItems:"center", gap:8, padding:"8px 12px", borderRadius:6, background:T.panel,
+                    border:`1px solid ${T.border}`, cursor:"pointer", textAlign:"left", fontFamily:"inherit",
+                  }}>
+                    <span style={{ fontSize:16 }}>{ps.icon}</span>
+                    <div>
+                      <div style={{ fontSize:11, color:T.text }}>{ps.q}</div>
+                      <div style={{ fontSize:9, color:T.mute }}>{ps.cat}</div>
+                    </div>
+                  </button>
+                ))}
               </div>
             </Card>
-          ))}
+          )}
+
+          {/* Search History */}
+          {results.length === 0 && !loading && searchHistory.length > 0 && (
+            <Card style={{ marginBottom:12 }}>
+              <div style={{ fontSize:12, fontWeight:600, color:T.sub, marginBottom:6 }}>🕐 Recent Searches</div>
+              <div style={{ display:"flex", gap:4, flexWrap:"wrap" }}>
+                {searchHistory.slice(0, 8).map((h, i) => (
+                  <button key={i} onClick={() => { setQuery(h.query); search(h.query); }} style={{
+                    padding:"4px 10px", borderRadius:20, fontSize:11, border:`1px solid ${T.border}`,
+                    background:T.panel, color:T.text, cursor:"pointer", fontFamily:"inherit",
+                  }}>
+                    {h.query} <span style={{ color:T.mute }}>({h.resultCount})</span>
+                  </button>
+                ))}
+                <button onClick={() => { setSearchHistory([]); }} style={{ padding:"4px 8px", borderRadius:20, fontSize:10, border:"none", background:"transparent", color:T.red, cursor:"pointer", fontFamily:"inherit" }}>Clear</button>
+              </div>
+            </Card>
+          )}
+
+          {/* ─── RESULTS ─── */}
+          {results.length > 0 && (
+            <div>
+              {/* Stats Bar */}
+              {searchStats && (
+                <Card style={{ marginBottom:12 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:12 }}>
+                    <div style={{ display:"flex", gap:16, fontSize:12 }}>
+                      <span style={{ color:T.text, fontWeight:600 }}>{sortedResults.length} results</span>
+                      <span style={{ color:T.mute }}>{searchStats.agencies} agencies</span>
+                      <span style={{ color:T.green }}>Avg: {fmt(searchStats.avgAmount)}</span>
+                      <span style={{ color:T.amber }}>Max: {fmt(searchStats.maxAmount)}</span>
+                      <span style={{ color:T.blue }}>{searchStats.withDeadlines} with deadlines</span>
+                    </div>
+                    <div style={{ display:"flex", gap:4, alignItems:"center" }}>
+                      {selected.size > 0 && <Btn variant="success" size="sm" onClick={bulkTrack}>📋 Track {selected.size} Selected</Btn>}
+                      <Btn size="sm" variant={showFilters?"primary":"ghost"} onClick={() => setShowFilters(!showFilters)}>🔧 Filters</Btn>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {/* Filters Panel */}
+              {showFilters && (
+                <Card style={{ marginBottom:12, borderColor:T.amber+"33" }}>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 120px 120px auto auto", gap:8, alignItems:"end" }}>
+                    <div>
+                      <label style={{ fontSize:10, color:T.mute }}>Sort By</label>
+                      <Select value={sortBy} onChange={setSortBy} options={[
+                        {value:"relevance",label:"Relevance"},{value:"match",label:"🎯 Match Score"},
+                        {value:"amount_high",label:"💰 Amount (High→Low)"},{value:"amount_low",label:"Amount (Low→High)"},
+                        {value:"deadline",label:"📅 Deadline (Soonest)"},
+                      ]} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize:10, color:T.mute }}>Agency</label>
+                      <Select value={filterAgency} onChange={setFilterAgency}
+                        options={[{value:"",label:"All Agencies"},...uniqueAgencies.map(a => ({value:a,label:a.slice(0,40)}))]} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize:10, color:T.mute }}>Min Amount</label>
+                      <Input type="number" value={filterMinAmt || ""} onChange={v => setFilterMinAmt(Number(v))} placeholder="$0" />
+                    </div>
+                    <div>
+                      <label style={{ fontSize:10, color:T.mute }}>Max Amount</label>
+                      <Input type="number" value={filterMaxAmt || ""} onChange={v => setFilterMaxAmt(Number(v))} placeholder="No max" />
+                    </div>
+                    <div style={{ paddingBottom:2 }}>
+                      <label style={{ display:"flex", alignItems:"center", gap:4, cursor:"pointer", fontSize:11, color:T.sub }}>
+                        <input type="checkbox" checked={filterOpen} onChange={() => setFilterOpen(!filterOpen)} />
+                        Open only
+                      </label>
+                    </div>
+                    <Btn size="sm" variant="ghost" onClick={() => { setFilterAgency(""); setFilterMinAmt(0); setFilterMaxAmt(0); setFilterOpen(true); setSortBy("relevance"); }}>Reset</Btn>
+                  </div>
+                </Card>
+              )}
+
+              {/* Result Cards */}
+              {sortedResults.map((opp, i) => {
+                const match = scoreResult(opp);
+                const title = opp.title || opp.opportunityTitle || "Untitled";
+                const agency = opp.agency || opp.agencyName || "";
+                const amount = opp.awardCeiling || opp.estimatedFunding || 0;
+                const deadline = opp.closeDate;
+                const desc = opp.description || opp.synopsis || "";
+                const oppId = opp.id || opp.opportunityId;
+                const isTracked = alreadyTracked.has(title);
+                const isSaved = savedResults.some(s => s.title === title);
+                const isExpanded = expanded === i;
+                const daysLeft = deadline ? daysUntil(deadline) : null;
+                const detail = detailData[oppId];
+
+                return (
+                  <Card key={i} style={{
+                    marginBottom:8,
+                    borderColor: match.score >= 50 ? T.green+"33" : match.score >= 25 ? T.amber+"22" : T.border,
+                    borderLeftWidth: 3, borderLeftColor: match.score >= 50 ? T.green : match.score >= 25 ? T.amber : T.border,
+                    opacity: isTracked ? 0.55 : 1,
+                  }}>
+                    <div style={{ display:"flex", gap:10 }}>
+                      {/* Select checkbox */}
+                      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:4, flexShrink:0, paddingTop:2 }}>
+                        <button onClick={() => toggleSelect(i)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:16, color: selected.has(i) ? T.amber : T.mute }}>
+                          {selected.has(i) ? "☑" : "☐"}
+                        </button>
+                        {/* Match Score Ring */}
+                        <div style={{
+                          width:40, height:40, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center",
+                          background: match.score >= 50 ? T.green+"15" : match.score >= 25 ? T.amber+"15" : T.dim,
+                          border:`2px solid ${match.score >= 50 ? T.green : match.score >= 25 ? T.amber : T.mute}`,
+                        }}>
+                          <span style={{ fontSize:12, fontWeight:700, color: match.score >= 50 ? T.green : match.score >= 25 ? T.amber : T.mute }}>{match.score}</span>
+                        </div>
+                      </div>
+
+                      {/* Content */}
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:4 }}>
+                          <div style={{ flex:1, minWidth:0, cursor:"pointer" }} onClick={() => { setExpanded(isExpanded ? null : i); if (!isExpanded && oppId) loadDetail(oppId); }}>
+                            <div style={{ fontSize:14, fontWeight:600, color: isTracked ? T.mute : T.text, lineHeight:1.3, marginBottom:3 }}>
+                              {title.slice(0, 80)}{title.length > 80 ? "..." : ""}
+                              {isTracked && <span style={{ fontSize:10, color:T.mute, marginLeft:6 }}>✓ Tracked</span>}
+                            </div>
+                            <div style={{ fontSize:11, color:T.mute }}>{agency}</div>
+                          </div>
+                          <div style={{ textAlign:"right", marginLeft:12, flexShrink:0 }}>
+                            {amount > 0 && <div style={{ fontSize:16, fontWeight:700, color:T.green }}>{fmt(amount)}</div>}
+                            {daysLeft !== null && (
+                              <div style={{
+                                fontSize:11, fontWeight:600, marginTop:2,
+                                color: daysLeft < 0 ? T.red : daysLeft <= 7 ? T.red : daysLeft <= 30 ? T.yellow : T.mute,
+                              }}>
+                                {daysLeft < 0 ? `Closed ${Math.abs(daysLeft)}d ago` : daysLeft === 0 ? "Due TODAY" : `${daysLeft}d left`}
+                              </div>
+                            )}
+                            {deadline && <div style={{ fontSize:10, color:T.dim }}>{fmtDate(deadline)}</div>}
+                          </div>
+                        </div>
+
+                        {/* Match Reasons */}
+                        {match.reasons.length > 0 && (
+                          <div style={{ display:"flex", gap:3, flexWrap:"wrap", marginBottom:4 }}>
+                            {match.reasons.map(r => <Badge key={r} color={T.green} style={{ fontSize:9 }}>{r}</Badge>)}
+                            {opp.fundingInstrumentType && <Badge color={T.purple} style={{ fontSize:9 }}>{opp.fundingInstrumentType}</Badge>}
+                          </div>
+                        )}
+
+                        {/* Description preview */}
+                        <div style={{ fontSize:11, color:T.sub, lineHeight:1.4, marginBottom:6 }}>
+                          {desc.slice(0, isExpanded ? 1000 : 150)}{desc.length > (isExpanded ? 1000 : 150) ? "..." : ""}
+                        </div>
+
+                        {/* Expanded Detail */}
+                        {isExpanded && (
+                          <div style={{ padding:12, background:T.panel, borderRadius:6, marginBottom:8, marginTop:8 }}>
+                            {detail ? (
+                              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, fontSize:11 }}>
+                                {detail.opportunityCategory && <div><span style={{ color:T.mute }}>Category:</span> <span style={{ color:T.text }}>{detail.opportunityCategory}</span></div>}
+                                {detail.fundingInstrumentType && <div><span style={{ color:T.mute }}>Instrument:</span> <span style={{ color:T.text }}>{detail.fundingInstrumentType}</span></div>}
+                                {detail.categoryOfFundingActivity && <div><span style={{ color:T.mute }}>Funding Area:</span> <span style={{ color:T.text }}>{detail.categoryOfFundingActivity}</span></div>}
+                                {detail.cfdaNumber && <div><span style={{ color:T.mute }}>CFDA:</span> <span style={{ color:T.text }}>{detail.cfdaNumber}</span></div>}
+                                {detail.eligibleApplicants && <div style={{ gridColumn:"1/3" }}><span style={{ color:T.mute }}>Eligibility:</span> <span style={{ color:T.text }}>{detail.eligibleApplicants}</span></div>}
+                                {detail.additionalInformationUrl && <div style={{ gridColumn:"1/3" }}><a href={detail.additionalInformationUrl} target="_blank" rel="noopener noreferrer" style={{ color:T.blue }}>🔗 More Info</a></div>}
+                                {(detail.awardFloor || detail.awardCeiling) && (
+                                  <div><span style={{ color:T.mute }}>Range:</span> <span style={{ color:T.text }}>{fmt(detail.awardFloor||0)} — {fmt(detail.awardCeiling||0)}</span></div>
+                                )}
+                                {detail.estimatedTotalProgramFunding && <div><span style={{ color:T.mute }}>Total Program:</span> <span style={{ color:T.green, fontWeight:600 }}>{fmt(detail.estimatedTotalProgramFunding)}</span></div>}
+                                {detail.expectedNumberOfAwards && <div><span style={{ color:T.mute }}>Expected Awards:</span> <span style={{ color:T.text }}>{detail.expectedNumberOfAwards}</span></div>}
+                                {detail.agencyContactInfo && <div style={{ gridColumn:"1/3" }}><span style={{ color:T.mute }}>Contact:</span> <span style={{ color:T.text }}>{typeof detail.agencyContactInfo === "string" ? detail.agencyContactInfo.slice(0,200) : JSON.stringify(detail.agencyContactInfo).slice(0,200)}</span></div>}
+                              </div>
+                            ) : (
+                              <div style={{ color:T.mute, fontSize:11 }}>Loading details...</div>
+                            )}
+                            {oppId && (
+                              <div style={{ marginTop:8 }}>
+                                <a href={`https://www.grants.gov/search-results-detail/${oppId}`} target="_blank" rel="noopener noreferrer"
+                                  style={{ fontSize:11, color:T.blue }}>🔗 View on Grants.gov</a>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Actions */}
+                        <div style={{ display:"flex", gap:4, alignItems:"center" }}>
+                          <Btn size="sm" variant={isTracked ? "ghost" : "success"} onClick={() => !isTracked && trackGrant(opp)} disabled={isTracked}>
+                            {isTracked ? "✓ Tracked" : "📋 Track"}
+                          </Btn>
+                          <Btn size="sm" variant={isSaved ? "ghost" : "default"} onClick={() => !isSaved && saveResult(opp)} disabled={isSaved}>
+                            {isSaved ? "⭐ Saved" : "☆ Save"}
+                          </Btn>
+                          <Btn size="sm" variant="ghost" onClick={() => { setExpanded(isExpanded ? null : i); if (!isExpanded && oppId) loadDetail(oppId); }}>
+                            {isExpanded ? "▲ Less" : "▼ More"}
+                          </Btn>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+
+              {sortedResults.length === 0 && results.length > 0 && (
+                <Empty icon="🔍" title="No results match your filters" sub="Try adjusting the filters above" />
+              )}
+            </div>
+          )}
+
+          {/* Empty State */}
+          {results.length === 0 && !loading && searchHistory.length === 0 && !PROFILE.name && (
+            <Empty icon="🔍" title="Search Federal Grant Opportunities" sub="Enter keywords above or set up your profile in Settings for personalized recommendations" />
+          )}
         </div>
       )}
 
+      {/* ━━━ AI RECOMMENDED TAB ━━━ */}
+      {tab === "recommended" && (
+        <div>
+          <Card style={{ marginBottom:16 }}>
+            <div style={{ fontSize:14, fontWeight:600, color:T.text, marginBottom:4 }}>🧠 AI-Powered Grant Recommendations</div>
+            <div style={{ fontSize:11, color:T.sub, marginBottom:12 }}>Claude analyzes your profile, businesses, demographics, and location to suggest highly targeted grant searches you might not think of.</div>
+            {!PROFILE.name ? (
+              <div style={{ color:T.yellow, fontSize:12 }}>⚠️ Set up your profile in Settings first for personalized AI recommendations.</div>
+            ) : (
+              <Btn variant="primary" onClick={getAIRecommendations} disabled={aiLoading}>
+                {aiLoading ? "⏳ Analyzing your profile..." : "🧠 Generate Recommendations"}
+              </Btn>
+            )}
+          </Card>
+
+          {aiRecs?.searches && (
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))", gap:10 }}>
+              {aiRecs.searches.map((rec, i) => (
+                <Card key={i} style={{ cursor:"pointer", borderColor: rec.priority === "high" ? T.green+"33" : T.border }}
+                  onClick={() => { setQuery(rec.query); setTab("search"); setTimeout(() => search(rec.query), 100); }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:6 }}>
+                    <Badge color={rec.priority === "high" ? T.green : T.blue}>{rec.priority}</Badge>
+                    {rec.category && <Badge color={T.purple}>{rec.category}</Badge>}
+                  </div>
+                  <div style={{ fontSize:13, fontWeight:600, color:T.text, marginBottom:4 }}>🔍 {rec.query}</div>
+                  <div style={{ fontSize:11, color:T.sub, lineHeight:1.4 }}>{rec.reason}</div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ━━━ SAVED TAB ━━━ */}
+      {tab === "saved" && (
+        <div>
+          {savedResults.length === 0 ? <Empty icon="⭐" title="No saved grants yet" sub="Save interesting grants from search results to review later" /> :
+            <div>
+              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:12 }}>
+                <span style={{ fontSize:13, fontWeight:600, color:T.text }}>{savedResults.length} saved grants</span>
+                <Btn size="sm" variant="ghost" onClick={() => setSavedResults([])}>Clear All</Btn>
+              </div>
+              {savedResults.sort((a,b) => b.matchScore - a.matchScore).map(s => {
+                const isTracked = alreadyTracked.has(s.title);
+                return (
+                  <Card key={s.id} style={{ marginBottom:8, opacity: isTracked ? 0.55 : 1 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+                      <div style={{ flex:1 }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4 }}>
+                          <div style={{ width:28, height:28, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center",
+                            background:s.matchScore >= 50 ? T.green+"15" : T.amber+"15", border:`2px solid ${s.matchScore >= 50 ? T.green : T.amber}`,
+                            fontSize:10, fontWeight:700, color:s.matchScore >= 50 ? T.green : T.amber }}>{s.matchScore}</div>
+                          <div style={{ fontSize:13, fontWeight:600, color:T.text }}>{s.title?.slice(0,55)}</div>
+                        </div>
+                        <div style={{ fontSize:11, color:T.mute }}>{s.agency}</div>
+                        <div style={{ fontSize:10, color:T.dim, marginTop:2 }}>Saved {fmtDate(s.savedAt)}</div>
+                      </div>
+                      <div style={{ textAlign:"right", flexShrink:0, marginLeft:12 }}>
+                        {s.amount > 0 && <div style={{ fontSize:14, fontWeight:700, color:T.green }}>{fmt(s.amount)}</div>}
+                        {s.deadline && <div style={{ fontSize:10, color: daysUntil(s.deadline) <= 14 ? T.red : T.mute }}>{fmtDate(s.deadline)}</div>}
+                        <div style={{ display:"flex", gap:4, marginTop:6 }}>
+                          <Btn size="sm" variant={isTracked?"ghost":"success"} disabled={isTracked}
+                            onClick={() => !isTracked && onAdd({ id:uid(), title:s.title, agency:s.agency, amount:s.amount, deadline:s.deadline, stage:"discovered", oppId:s.oppId, description:s.description, createdAt:new Date().toISOString(), notes:`Match: ${s.matchScore}`, tags:[] })}>
+                            {isTracked ? "✓" : "📋"}
+                          </Btn>
+                          <Btn size="sm" variant="ghost" onClick={() => setSavedResults(prev => prev.filter(x => x.id !== s.id))}>✕</Btn>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          }
+        </div>
+      )}
+
+      {/* ━━━ FUNDING LANDSCAPE TAB ━━━ */}
       {tab === "landscape" && (
         <div>
-          <Btn variant="primary" onClick={loadLandscape} disabled={loading} style={{ marginBottom:16 }}>{loading ? "⏳ Loading..." : "📊 Load IL Funding Data"}</Btn>
+          <Btn variant="primary" onClick={async () => {
+            setLoading(true);
+            const [spending, recipients] = await Promise.all([API.getSpendingByState("IL"), API.getTopRecipients("IL")]);
+            setLandscape({ spending: spending.results || [], recipients: recipients.results || [] });
+            setLoading(false);
+          }} disabled={loading} style={{ marginBottom:16 }}>{loading ? "⏳ Loading..." : `📊 Load ${PROFILE.loc ? PROFILE.loc.split(",").pop()?.trim() : "IL"} Funding Data`}</Btn>
+
           {landscape && (
             <div>
               <Card style={{ marginBottom:12 }}>
-                <div style={{ fontSize:13, fontWeight:600, color:T.text, marginBottom:8 }}>Top Grant Recipients — Illinois</div>
-                {(landscape.recipients || []).slice(0, 8).map((r, i) => (
-                  <div key={i} style={{ display:"flex", justifyContent:"space-between", padding:"6px 0", borderBottom:`1px solid ${T.border}` }}>
-                    <span style={{ fontSize:12, color:T.text }}>{r["Recipient Name"] || "Unknown"}</span>
-                    <span style={{ fontSize:12, color:T.green, fontWeight:600 }}>{fmt(r["Award Amount"] || 0)}</span>
+                <div style={{ fontSize:13, fontWeight:600, color:T.text, marginBottom:8 }}>🏆 Top Grant Recipients — Illinois</div>
+                {(landscape.recipients || []).slice(0, 10).map((r, i) => (
+                  <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:`1px solid ${T.border}` }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      <span style={{ fontSize:11, color:T.mute, width:20 }}>#{i+1}</span>
+                      <span style={{ fontSize:12, color:T.text }}>{r["Recipient Name"] || "Unknown"}</span>
+                    </div>
+                    <div style={{ textAlign:"right" }}>
+                      <span style={{ fontSize:13, color:T.green, fontWeight:600 }}>{fmt(r["Award Amount"] || 0)}</span>
+                      {r["Awarding Agency"] && <div style={{ fontSize:10, color:T.mute }}>{r["Awarding Agency"]}</div>}
+                    </div>
                   </div>
                 ))}
               </Card>
@@ -542,19 +1025,70 @@ const Discovery = ({ onAdd }) => {
         </div>
       )}
 
+      {/* ━━━ PAST AWARDS TAB ━━━ */}
+      {tab === "spending" && (
+        <div>
+          <Card style={{ marginBottom:12 }}>
+            <div style={{ fontSize:12, fontWeight:600, color:T.text, marginBottom:8 }}>💰 Past Federal Award Search</div>
+            <div style={{ fontSize:11, color:T.sub, marginBottom:8 }}>Search USASpending.gov for past awards. See who got funded, for how much, and by which agency — invaluable competitive intelligence.</div>
+            <div style={{ display:"flex", gap:8 }}>
+              <Input value={query} onChange={setQuery} placeholder="Search past awards by keyword..." style={{ flex:1 }}
+                onKeyDown={e => { if (e.key === "Enter") { setLoading(true); API.searchFederalSpending(query).then(d => { setSpendingResults(d.results || []); setLoading(false); }); }}} />
+              <Btn variant="primary" onClick={async () => { setLoading(true); const d = await API.searchFederalSpending(query); setSpendingResults(d.results || []); setLoading(false); }} disabled={loading}>
+                {loading ? "⏳" : "🔍"} Search
+              </Btn>
+            </div>
+          </Card>
+
+          {spendingResults.length > 0 && (
+            <Card>
+              <div style={{ fontSize:12, fontWeight:600, color:T.text, marginBottom:8 }}>{spendingResults.length} Past Awards Found</div>
+              {spendingResults.map((r, i) => (
+                <div key={i} style={{ display:"flex", justifyContent:"space-between", padding:"8px 0", borderBottom:`1px solid ${T.border}` }}>
+                  <div>
+                    <div style={{ fontSize:12, color:T.text }}>{r["Recipient Name"] || "Unknown Recipient"}</div>
+                    <div style={{ fontSize:10, color:T.mute }}>{r["Awarding Agency"] || ""}{r["Award ID"] ? ` · ${r["Award ID"]}` : ""}</div>
+                    {r["Start Date"] && <div style={{ fontSize:10, color:T.dim }}>{fmtDate(r["Start Date"])}</div>}
+                  </div>
+                  <div style={{ fontSize:13, fontWeight:600, color:T.green }}>{fmt(r["Award Amount"] || 0)}</div>
+                </div>
+              ))}
+            </Card>
+          )}
+
+          {spendingResults.length === 0 && !loading && (
+            <Empty icon="💰" title="Search Past Federal Awards" sub="Discover who received funding in your focus areas" />
+          )}
+        </div>
+      )}
+
+      {/* ━━━ REGULATORY INTEL TAB ━━━ */}
       {tab === "regs" && (
         <div>
           <div style={{ display:"flex", gap:8, marginBottom:16 }}>
-            <Input value={query} onChange={setQuery} placeholder="Search regulations..." style={{ flex:1 }} />
-            <Btn variant="primary" onClick={searchRegs} disabled={loading}>⚖️ Search</Btn>
+            <Input value={query} onChange={setQuery} placeholder="Search federal regulations..." style={{ flex:1 }} onKeyDown={e => { if (e.key === "Enter") { setLoading(true); API.searchRegulations(query).then(d => { setRegs(d.data || []); setLoading(false); }); }}} />
+            <Btn variant="primary" onClick={async () => { setLoading(true); const d = await API.searchRegulations(query); setRegs(d.data || []); setLoading(false); }} disabled={loading}>⚖️ Search</Btn>
           </div>
-          {regs.map((reg, i) => (
-            <Card key={i} style={{ marginBottom:8 }}>
-              <div style={{ fontSize:13, fontWeight:600, color:T.text }}>{reg.attributes?.title || "Regulation"}</div>
-              <div style={{ fontSize:11, color:T.mute, marginTop:4 }}>{reg.attributes?.agencyName} · {reg.attributes?.postedDate}</div>
-              {reg.attributes?.commentEndDate && <Badge color={T.yellow} style={{ marginTop:4 }}>Open for Comment until {reg.attributes.commentEndDate}</Badge>}
-            </Card>
-          ))}
+          {regs.length > 0 && (
+            <div>
+              {regs.map((reg, i) => (
+                <Card key={i} style={{ marginBottom:8 }}>
+                  <div style={{ fontSize:13, fontWeight:600, color:T.text }}>{reg.attributes?.title || "Regulation"}</div>
+                  <div style={{ fontSize:11, color:T.mute, marginTop:4 }}>{reg.attributes?.agencyName} · {reg.attributes?.postedDate}</div>
+                  {reg.attributes?.commentEndDate && (
+                    <Badge color={daysUntil(reg.attributes.commentEndDate) <= 7 ? T.red : T.yellow} style={{ marginTop:6 }}>
+                      💬 Comment deadline: {fmtDate(reg.attributes.commentEndDate)} ({daysUntil(reg.attributes.commentEndDate)}d)
+                    </Badge>
+                  )}
+                  {reg.attributes?.documentId && (
+                    <a href={`https://www.regulations.gov/document/${reg.attributes.documentId}`} target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize:11, color:T.blue, display:"inline-block", marginTop:4 }}>🔗 View on Regulations.gov</a>
+                  )}
+                </Card>
+              ))}
+            </div>
+          )}
+          {regs.length === 0 && !loading && <Empty icon="⚖️" title="Search Federal Regulations" sub="Track rules and comment periods that affect your grant programs" />}
         </div>
       )}
     </div>
@@ -4814,7 +5348,7 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case "dashboard": return <Dashboard grants={grants} docs={vaultDocs} contacts={contacts} vaultDocs={vaultDocs} events={events} navigate={setPage} />;
-      case "discovery": return <Discovery onAdd={addGrant} />;
+      case "discovery": return <Discovery onAdd={addGrant} grants={grants} />;
       case "pipeline": return <Pipeline grants={grants} updateGrant={updateGrant} deleteGrant={deleteGrant} />;
       case "calendar": return <TimelineCalendar grants={grants} events={events} setEvents={setEvents} />;
       case "watchdog": return <DeadlineWatchdog grants={grants} events={events} />;
@@ -4897,7 +5431,7 @@ export default function App() {
         </div>
         {sidebarOpen && (
           <div style={{ padding:12, borderTop:`1px solid ${T.border}`, fontSize:10, color:T.dim }}>
-            v5.0 · {grants.length} grants · {(vaultDocs||[]).length} docs · 38 modules
+            v5.2 · {grants.length} grants · {(vaultDocs||[]).length} docs · 39 modules
           </div>
         )}
       </div>
