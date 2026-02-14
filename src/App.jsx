@@ -81,16 +81,17 @@ const STAGE_MAP = Object.fromEntries(STAGES.map(s => [s.id, s]));
 const API = {
   async searchGrants(query, params = {}) {
     const url = new URL("https://www.grants.gov/api/v2/opportunities/search");
-    const body = { keyword: query, oppStatuses: "forecasted|posted", rows: params.rows || 25, ...params };
+    const body = { keyword: query, oppStatuses: "forecasted|posted", rows: params.rows || 25, startRecord: params.startRecord || 0, ...params };
     try {
       const r = await fetch("https://apply07.grants.gov/grantsws/rest/opportunities/search", {
         method: "POST", headers: { "Content-Type":"application/json" }, body: JSON.stringify(body),
       });
       if (!r.ok) throw new Error(`Grants.gov: ${r.status}`);
-      return await r.json();
+      const data = await r.json();
+      return { oppHits: data.oppHits || [], totalCount: data.totalCount || data.hitCount || 0 };
     } catch (e) {
       console.warn("Grants.gov search failed, using fallback:", e);
-      return { oppHits: [] };
+      return { oppHits: [], totalCount: 0 };
     }
   },
 
@@ -468,6 +469,11 @@ const Discovery = ({ onAdd, grants }) => {
   const [aiLoading, setAiLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [searchStats, setSearchStats] = useState(null);
+  const [totalCount, setTotalCount] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [currentOffset, setCurrentOffset] = useState(0);
+  const [lastQuery, setLastQuery] = useState("");
+  const PAGE_SIZE = 40;
 
   useEffect(() => { LS.set("search_history", searchHistory); }, [searchHistory]);
   useEffect(() => { LS.set("saved_discoveries", savedResults); }, [savedResults]);
@@ -505,13 +511,16 @@ const Discovery = ({ onAdd, grants }) => {
 
     // Parallel multi-source search
     const [grantsData, spendingData] = await Promise.all([
-      API.searchGrants(q, { rows: 40 }),
+      API.searchGrants(q, { rows: PAGE_SIZE, startRecord: 0 }),
       API.searchFederalSpending(q, { limit: 10 }),
     ]);
 
     const hits = grantsData.oppHits || [];
     setResults(hits);
     setSpendingResults(spendingData.results || []);
+    setTotalCount(grantsData.totalCount || hits.length);
+    setCurrentOffset(hits.length);
+    setLastQuery(q);
 
     // Stats
     const agencies = [...new Set(hits.map(h => h.agency || h.agencyName).filter(Boolean))];
@@ -532,6 +541,22 @@ const Discovery = ({ onAdd, grants }) => {
 
     setLoading(false);
   };
+
+  // ─── LOAD MORE ───
+  const loadMore = async () => {
+    if (!lastQuery || loadingMore) return;
+    setLoadingMore(true);
+    const grantsData = await API.searchGrants(lastQuery, { rows: PAGE_SIZE, startRecord: currentOffset });
+    const newHits = grantsData.oppHits || [];
+    if (newHits.length > 0) {
+      setResults(prev => [...prev, ...newHits]);
+      setCurrentOffset(prev => prev + newHits.length);
+      if (grantsData.totalCount) setTotalCount(grantsData.totalCount);
+    }
+    setLoadingMore(false);
+  };
+
+  const hasMore = totalCount > 0 && currentOffset < totalCount;
 
   // ─── AI RECOMMENDATIONS ───
   const getAIRecommendations = async () => {
@@ -730,7 +755,7 @@ Narratives: ${PROFILE.narratives.founder}`;
                 <Card style={{ marginBottom:12 }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:12 }}>
                     <div style={{ display:"flex", gap:16, fontSize:12 }}>
-                      <span style={{ color:T.text, fontWeight:600 }}>{sortedResults.length} results</span>
+                      <span style={{ color:T.text, fontWeight:600 }}>{sortedResults.length} shown{totalCount > results.length ? ` of ${totalCount.toLocaleString()}` : ""}</span>
                       <span style={{ color:T.mute }}>{searchStats.agencies} agencies</span>
                       <span style={{ color:T.green }}>Avg: {fmt(searchStats.avgAmount)}</span>
                       <span style={{ color:T.amber }}>Max: {fmt(searchStats.maxAmount)}</span>
@@ -905,6 +930,25 @@ Narratives: ${PROFILE.narratives.founder}`;
 
               {sortedResults.length === 0 && results.length > 0 && (
                 <Empty icon="🔍" title="No results match your filters" sub="Try adjusting the filters above" />
+              )}
+
+              {/* Load More */}
+              {hasMore && sortedResults.length > 0 && (
+                <div style={{ textAlign:"center", padding:16 }}>
+                  <Btn variant="primary" onClick={loadMore} disabled={loadingMore} style={{ minWidth:200 }}>
+                    {loadingMore ? "⏳ Loading more..." : `Load More Results (${(totalCount - currentOffset).toLocaleString()} remaining)`}
+                  </Btn>
+                  <div style={{ fontSize:10, color:T.mute, marginTop:6 }}>
+                    Showing {results.length.toLocaleString()} of {totalCount.toLocaleString()} total opportunities
+                  </div>
+                  <Progress value={results.length} max={totalCount} color={T.amber} height={3} />
+                </div>
+              )}
+
+              {!hasMore && results.length > 0 && totalCount > 0 && (
+                <div style={{ textAlign:"center", padding:12, fontSize:11, color:T.mute }}>
+                  All {totalCount.toLocaleString()} results loaded
+                </div>
               )}
             </div>
           )}
