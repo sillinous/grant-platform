@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { T, LS, PROFILE, saveProfile, DEFAULT_PROFILE } from '../globals';
-import { Card, Btn, Input, TextArea, Select, Badge, Empty, Modal } from '../ui';
+import { Card, Btn, Input, TextArea, Select, Badge, Empty, Modal, MagicBtn } from '../ui';
 import { API } from '../api';
 import { AI_PROVIDERS as AI_PROVIDERS_LIST, getActiveProvider, getProviderKey as getProviderKeyFn } from '../ai-config';
 import { NarrativeWizard } from './NarrativeWizard';
@@ -39,30 +39,10 @@ export const Settings = ({ showToast }) => {
     setProfile(prev => ({ ...prev, narratives: { ...prev.narratives, [field]: value } }));
   };
 
-  const generateNarrative = async (type) => {
+  const handleMagicDraft = async (type) => {
     setLoading(true);
-    const context = `
-      Name: ${profile.name}
-      Location: ${profile.loc}
-      Demographics: ${[profile.rural ? "rural" : "", profile.disabled ? "disabled" : "", profile.poverty ? "low-income" : "", profile.selfEmployed ? "self-employed" : ""].filter(Boolean).join(", ")}
-      Tags: ${profile.tags.join(", ")}
-      Businesses: ${profile.businesses.map(b => `${b.n} (${b.sec}: ${b.d})`).join("; ")}
-    `;
-
-    const prompts = {
-      founder: "Write a professional 2-3 sentence 'Founder Story' for a grant application. Use third person.",
-      need: "Write a professional 2-3 sentence 'Statement of Need' explaining why funding is critical for this organization's context. Use third person.",
-      impact: "Write a professional 2-3 sentence 'Impact Vision' explaining the long-term positive change this organization seeks to create. Use third person."
-    };
-
-    const sys = "You are a Professional Grant Writer. Draft a concise, high-impact narrative based on the user's profile.";
-    const res = await API.callAI([{ role: "user", content: `Context: ${context}\n\nTask: ${prompts[type]}` }], sys);
-
-    if (!res.error) {
-      updateNarrative(type, res.text);
-    } else {
-      alert(`AI Assist failed: ${res.error}`);
-    }
+    const draft = await API.generateMagicDraft(`${type} story/narrative`, { profile }, "Write in third person, professional and compelling.");
+    updateNarrative(type, draft);
     setLoading(false);
   };
 
@@ -404,34 +384,37 @@ export const Settings = ({ showToast }) => {
               💡 <strong>Pro-Tip:</strong> Use the <strong>Narrative Wizard</strong> above to draft all three sections in one guided workflow based on your mission and goals.
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: T.amber }}>Founder Story</label>
-                <Btn variant="ghost" size="xs" onClick={() => generateNarrative("founder")} disabled={loading}>{loading ? "⏳" : "🪄 AI Assist"}</Btn>
-              </div>
-              <div style={{ fontSize: 10, color: T.mute, marginBottom: 4 }}>A brief narrative about who you are and what you do (2-3 sentences)</div>
+            <div style={{ position: "relative" }}>
               <TextArea value={profile.narratives?.founder || ""} onChange={v => updateNarrative("founder", v)} rows={3}
                 placeholder="e.g., [Name] is an entrepreneur and technologist based in [Location], building [what you do] that [impact]." />
+              <MagicBtn
+                loading={loading && tab === "narratives"}
+                onClick={() => handleMagicDraft("founder")}
+                label="Draft Story"
+                style={{ position: "absolute", bottom: 8, right: 8 }}
+              />
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: T.amber }}>Statement of Need</label>
-                <Btn variant="ghost" size="xs" onClick={() => generateNarrative("need")} disabled={loading}>{loading ? "⏳" : "🪄 AI Assist"}</Btn>
-              </div>
-              <div style={{ fontSize: 10, color: T.mute, marginBottom: 4 }}>Describes the challenges you face and why funding is needed</div>
+            <div style={{ position: "relative" }}>
               <TextArea value={profile.narratives?.need || ""} onChange={v => updateNarrative("need", v)} rows={3}
                 placeholder="e.g., Operating from a [rural/urban] community with [challenges], [Name] faces [specific barriers] that restrict access to [resources]." />
+              <MagicBtn
+                loading={loading && tab === "narratives"}
+                onClick={() => handleMagicDraft("need")}
+                label="Draft Need"
+                style={{ position: "absolute", bottom: 8, right: 8 }}
+              />
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: T.amber }}>Impact Vision</label>
-                <Btn variant="ghost" size="xs" onClick={() => generateNarrative("impact")} disabled={loading}>{loading ? "⏳" : "🪄 AI Assist"}</Btn>
-              </div>
-              <div style={{ fontSize: 10, color: T.mute, marginBottom: 4 }}>Your broader impact and what you're trying to achieve</div>
+            <div style={{ position: "relative" }}>
               <TextArea value={profile.narratives?.impact || ""} onChange={v => updateNarrative("impact", v)} rows={3}
                 placeholder="e.g., Each venture is designed to demonstrate that [approach] can [outcome], creating [broader impact]." />
+              <MagicBtn
+                loading={loading && tab === "narratives"}
+                onClick={() => handleMagicDraft("impact")}
+                label="Draft Vision"
+                style={{ position: "absolute", bottom: 8, right: 8 }}
+              />
             </div>
           </Card>
 

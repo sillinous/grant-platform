@@ -235,3 +235,28 @@ export const SkeletonStat = ({ style: sx = {} }) => (
   </div>
 );
 
+// ─── MAGIC UI (Phase 22) ────────────────────────────────────────────────
+const magicPulse = `@keyframes magicPulse { 0% { box-shadow: 0 0 0 0 ${T.amber}44; } 70% { box-shadow: 0 0 0 6px ${T.amber}00; } 100% { box-shadow: 0 0 0 0 ${T.amber}00; } }`;
+if (typeof document !== "undefined" && !document.getElementById("magic-pulse-style")) {
+  const style = document.createElement("style"); style.id = "magic-pulse-style"; style.textContent = magicPulse; document.head.appendChild(style);
+}
+
+export const MagicBtn = ({ onClick, loading, label = "Magic Draft", size = "xs", style }) => (
+  <Btn
+    size={size}
+    variant="ghost"
+    onClick={onClick}
+    disabled={loading}
+    style={{
+      color: T.amber,
+      fontWeight: 700,
+      animation: loading ? "magicPulse 1s infinite" : "none",
+      border: `1px solid ${T.amber}33`,
+      background: `${T.amber}08`,
+      ...style
+    }}
+  >
+    {loading ? "⏳" : "✨"} {label}
+  </Btn>
+);
+

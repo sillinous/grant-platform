@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Input, Btn, Select, TextArea, Stat, Empty, Modal, Progress, Badge } from '../ui';
+import { Card, Input, Btn, Select, TextArea, Stat, Empty, Modal, Progress, Badge, MagicBtn } from '../ui';
 import { LS, T, uid, fmt, PROFILE } from '../globals';
 import { API } from '../api';
 
@@ -11,6 +11,18 @@ export const BudgetBuilder = ({ grants, updateGrant }) => {
   const [loading, setLoading] = useState(false);
   const [aiResult, setAiResult] = useState("");
   const [showResult, setShowResult] = useState(false);
+  const [magicLoading, setMagicLoading] = useState(false);
+
+  const handleMagicDraft = async () => {
+    const grant = grants.find(g => g.id === selectedGrant);
+    setMagicLoading(true);
+    const draft = await API.generateMagicDraft(`budget justification for ${newItem.category}`, {
+      item: newItem,
+      grant: grant || "No specific grant context"
+    }, "Explain why this cost is reasonable, allocable, and necessary.");
+    setNewItem({ ...newItem, justification: draft });
+    setMagicLoading(false);
+  };
 
   useEffect(() => { LS.set("budgets", budgets); }, [budgets]);
 
@@ -246,7 +258,15 @@ Return a professional, structured narrative.`;
             </div>
           </div>
           <div><label style={{ fontSize: 10, color: T.mute }}>Cost Share (if any)</label><Input type="number" value={newItem.costShare} onChange={v => setNewItem({ ...newItem, costShare: Number(v) })} /></div>
-          <TextArea value={newItem.justification} onChange={v => setNewItem({ ...newItem, justification: v })} rows={2} placeholder="Budget justification for this item..." />
+          <div style={{ position: "relative" }}>
+            <TextArea value={newItem.justification} onChange={v => setNewItem({ ...newItem, justification: v })} rows={3} placeholder="Budget justification for this item..." />
+            <MagicBtn
+              loading={magicLoading}
+              onClick={handleMagicDraft}
+              label="Draft Justification"
+              style={{ position: "absolute", bottom: 8, right: 8 }}
+            />
+          </div>
           <div style={{ fontSize: 12, color: T.amber, fontWeight: 600 }}>Line Total: {fmt(newItem.amount * newItem.quantity)}</div>
           <Btn variant="primary" onClick={addItem}>Add Line Item</Btn>
         </div>

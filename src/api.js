@@ -44,6 +44,31 @@ export function buildPortfolioContext(grants, docs, contacts) {
 - Narratives: ${JSON.stringify(PROFILE.narratives)}`;
 }
 
+export function buildGrantContext(grantId) {
+    if (!grantId) return "";
+    const grants = LS.get("grants", []);
+    const g = grants.find(x => x.id === grantId);
+    if (!g) return "";
+
+    const tasks = LS.get("tasks", []).filter(t => t.grantId === grantId);
+    const budget = LS.get("budgets", {})[grantId] || { items: [] };
+    const library = LS.get("section_library", []);
+
+    // Also look for sections in the library that might be relevant to this grant or agency
+    const relevantSections = library.filter(s =>
+        (g.title && s.content.includes(g.title)) ||
+        (g.agency && s.content.includes(g.agency)) ||
+        s.useCount > 3 // High confidence sections
+    ).slice(0, 5);
+
+    return `SPECIFIC GRANT CONTEXT (${g.title}):
+- Agency: ${g.agency} | Amount: ${fmt(g.amount)} | Stage: ${g.stage}
+- Associated Tasks: ${tasks.map(t => `${t.title} (${t.status}): ${t.notes || "No notes"}`).join("; ")}
+- Budget Items: ${budget.items.map(i => `${i.description} (${fmt(i.amount * i.quantity)}): ${i.justification || "No justification"}`).join("; ")}
+- Previously Drafted/Finalized Sections: ${relevantSections.map(s => `[${s.title}]: ${s.content.slice(0, 300)}...`).join("\n")}
+- Grant Details: ${JSON.stringify(g)}`;
+}
+
 // ─── API SERVICES ──────────────────────────────────────────────────────
 export const API = {
     async searchGrants(query, params = {}) {
@@ -346,4 +371,28 @@ export const API = {
     async testAIConnection() {
         return await this.callAI([{ role: "user", content: "Hello! Reply with just 'Connected.'" }], "Reply with exactly one word: Connected.");
     },
+
+    async generateMagicDraft(fieldName, context = {}, instructions = "") {
+        const grantId = context.grantId || (context.grant && context.grant.id);
+        const portfolioContext = buildPortfolioContext(LS.get("grants", []), LS.get("vault_docs", []), LS.get("contacts", []));
+        const grantContext = buildGrantContext(grantId);
+        const voicePersona = LS.get("org_voice_persona", "");
+
+        const sys = `You are a professional grant writing assistant.
+        ${portfolioContext}
+        ${grantContext}
+        ${voicePersona ? `ORGANIZATION PERSONA: ${voicePersona}` : ""}
+        
+        Task: Draft a professional ${fieldName}.
+        Context: ${JSON.stringify(context)}
+        Additional Instructions: ${instructions}
+        
+        CRITICAL: Ensure consistency with previously drafted/finalized items shown in the context.
+        Use the same tone and build upon established data points.
+        
+        Provide only the drafted text. Be concise, compelling, and data-driven.`;
+
+        const result = await this.callAI([{ role: "user", content: `Draft the ${fieldName} for me.` }], sys);
+        return result.error ? `Error: ${result.error}` : result.text;
+    }
 };

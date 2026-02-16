@@ -1,11 +1,24 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { Card, Btn, Stat, Empty, Badge, Select, Input, TextArea, Modal } from '../ui';
+import { Card, Btn, Stat, Empty, Badge, Select, Input, TextArea, Modal, MagicBtn } from '../ui';
+import { API } from '../api';
 import { T, LS, uid, daysUntil } from '../globals';
 
 export const ActionPlan = ({ grants, tasks, setTasks }) => {
   const [showAdd, setShowAdd] = useState(false);
   const [newTask, setNewTask] = useState({ title: "", grantId: "", priority: "medium", dueDate: "", status: "todo", notes: "" });
   const [filter, setFilter] = useState("all");
+  const [magicLoading, setMagicLoading] = useState(false);
+
+  const handleMagicDraft = async () => {
+    const grant = grants.find(g => g.id === newTask.grantId);
+    setMagicLoading(true);
+    const draft = await API.generateMagicDraft("task notes and execution guide", {
+      taskTitle: newTask.title,
+      grant: grant || "No specific grant context"
+    });
+    setNewTask({ ...newTask, notes: draft });
+    setMagicLoading(false);
+  };
 
   const saveTasks = (newTasks) => {
     setTasks(newTasks);
@@ -105,7 +118,15 @@ export const ActionPlan = ({ grants, tasks, setTasks }) => {
               options={[{ value: "high", label: "🔴 High" }, { value: "medium", label: "🟡 Medium" }, { value: "low", label: "🟢 Low" }]} />
             <Input type="date" value={newTask.dueDate} onChange={v => setNewTask({ ...newTask, dueDate: v })} />
           </div>
-          <TextArea value={newTask.notes} onChange={v => setNewTask({ ...newTask, notes: v })} rows={2} placeholder="Notes..." />
+          <div style={{ position: "relative" }}>
+            <TextArea value={newTask.notes} onChange={v => setNewTask({ ...newTask, notes: v })} rows={3} placeholder="Notes & Guidance..." />
+            <MagicBtn
+              loading={magicLoading}
+              onClick={handleMagicDraft}
+              label="AI Guide"
+              style={{ position: "absolute", bottom: 8, right: 8 }}
+            />
+          </div>
           <Btn variant="primary" onClick={addTask}>Add Task</Btn>
         </div>
       </Modal>
