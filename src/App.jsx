@@ -3,23 +3,23 @@ import { T, PROFILE, saveProfile, LS, uid, fmt, fmtDate, daysUntil, clamp, pct, 
 import { Icon, Btn, Card, Badge, Input, TextArea, Select, Tab, Progress, Empty, Modal, Stat, MiniBar, ErrorBoundary } from "./ui";
 import { API, buildPortfolioContext } from "./api";
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// GRANT LIFECYCLE PLATFORM v5.2 â€” UNLESS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// 48 modules Â· 23+ APIs Â· 22 cross-module data flows Â· AI-powered
+// ═══════════════════════════════════════════════════════════════════
+// GRANT LIFECYCLE PLATFORM v5.2 — UNLESS
+// ═══════════════════════════════════════════════════════════════════
+// 48 modules · 23+ APIs · 22 cross-module data flows · AI-powered
 // NEW: Timeline Calendar, Document Vault, Financial Impact Projector,
 //      Grant Relationship Map, Enhanced Intelligence Engine
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 
-// â”€â”€â”€ THEME â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-
-// â”€â”€â”€ PROFILE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── THEME ─────────────────────────────────────────────────────────
 
 
-// Dynamic profile â€” loads from localStorage, falls back to defaults
+// ─── PROFILE ───────────────────────────────────────────────────────
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+// Dynamic profile — loads from localStorage, falls back to defaults
+
+// ───────────────────────────────────────────────────────────────────
 
 // ═══ Component Imports ═══
 import { Dashboard } from "./components/Dashboard"; // Extracted
@@ -65,9 +65,9 @@ import { OnboardingWizard } from './components/OnboardingWizard';
 import { Toast } from './components/Toast';
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 // MODULE: WIN/LOSS ANALYSIS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 // Moved to src/components/WinLossAnalysis.jsx
 
 
@@ -76,13 +76,12 @@ import { Toast } from './components/Toast';
 
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 // MODULE: COMPLIANCE TRACKER
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
+// ═══════════════════════════════════════════════════════════════════
 // All remaining modules extracted to src/components/:
 // SectionLibrary, ReportGenerator, FunderResearch, PortfolioOptimizer,
 // BudgetBuilder, MatchAlerts, NarrativeScorer, LetterGenerator,
@@ -90,9 +89,9 @@ import { Toast } from './components/Toast';
 // DocumentAssembler, OutcomeTracker, ExportCenter, StrategicAdvisor,
 // ReadinessAssessment, SAMWizard, ImpactPortfolio, OnboardingWizard, Toast
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â••â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 // MAIN APPLICATION
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 export default function App() {
   const [page, setPage] = useState("dashboard");
   const [grants, setGrants] = useState(() => LS.get("grants", []));
@@ -138,7 +137,7 @@ export default function App() {
     if (grant.id && grants.some(g => g.id === grant.id)) return;
     if (!grant.oppNumber && !grant.id && grants.some(g => g.title === grant.title)) return;
     setGrants(prev => [...prev, { ...grant, createdAt: grant.createdAt || new Date().toISOString() }]);
-    logActivity("grant_added", grant.title || "New Grant", { icon: "âž•", color: T.green });
+    logActivity("grant_added", grant.title || "New Grant", { icon: "➕", color: T.green });
   };
   const updateGrant = (id, updates) => {
     setGrants(prev => prev.map(g => {
@@ -157,8 +156,8 @@ export default function App() {
 
       // Submission Tracking
       if (updates.stage === "submitted" && g.stage !== "submitted") {
-        const date = prompt("ðŸ“… Submission Date (YYYY-MM-DD):", new Date().toISOString().split("T")[0]);
-        const method = prompt("ðŸ“¤ Submission Method (e.g. Grants.gov, Email):", "Grants.gov");
+        const date = prompt("📅 Submission Date (YYYY-MM-DD):", new Date().toISOString().split("T")[0]);
+        const method = prompt("📤 Submission Method (e.g. Grants.gov, Email):", "Grants.gov");
         if (date) updated.submittedAt = date;
         if (method) updated.submissionMethod = method;
       }
@@ -167,14 +166,14 @@ export default function App() {
 
     if (updates.stage) {
       const g = grants.find(x => x.id === id);
-      logActivity("stage_change", `${updates.stage} â†’ ${g?.title || id}`, { icon: STAGE_MAP[updates.stage]?.icon || "ðŸ“‹", color: STAGE_MAP[updates.stage]?.color || T.blue });
+      logActivity("stage_change", `${updates.stage} → ${g?.title || id}`, { icon: STAGE_MAP[updates.stage]?.icon || "📋", color: STAGE_MAP[updates.stage]?.color || T.blue });
     }
     showToast("Grant updated", "success");
   };
   const deleteGrant = (id) => {
     const g = grants.find(x => x.id === id);
     setGrants(prev => prev.filter(x => x.id !== id));
-    logActivity("grant_deleted", g?.title || id, { icon: "ðŸ—‘ï¸", color: T.red });
+    logActivity("grant_deleted", g?.title || id, { icon: "🗑️", color: T.red });
   };
 
   // C6: Auto lifecycle stage transitions based on deadlines
@@ -218,44 +217,44 @@ export default function App() {
   }, []);
 
   const NAV = [
-    { id: "dashboard", icon: "ðŸ“Š", label: "Dashboard", group: "core" },
-    { id: "discovery", icon: "ðŸ”", label: "Discovery", group: "core" },
-    { id: "pipeline", icon: "ðŸ“‹", label: "Pipeline", group: "core" },
-    { id: "calendar", icon: "ðŸ“…", label: "Calendar", group: "core" },
-    { id: "watchdog", icon: "â°", label: "Deadline Watchdog", group: "core" },
-    { id: "intel_feed", icon: "ðŸ§¿", label: "Intelligence Feed", group: "core" },
-    { id: "rfp_parser", icon: "ðŸ“‘", label: "RFP Parser", group: "analysis" },
-    { id: "match_scorer", icon: "ðŸŽ¯", label: "Match Scorer", group: "analysis" },
-    { id: "match_alerts", icon: "ðŸ””", label: "Match Alerts", group: "analysis" },
-    { id: "readiness", icon: "âœ…", label: "Readiness Check", group: "analysis" },
-    { id: "ai_drafter", icon: "âœï¸", label: "AI Drafter", group: "writing" },
-    { id: "narrative_scorer", icon: "ðŸ“", label: "Narrative Scorer", group: "writing" },
-    { id: "section_library", icon: "ðŸ“š", label: "Section Library", group: "writing" },
-    { id: "letter_gen", icon: "âœ‰ï¸", label: "Letter Generator", group: "writing" },
-    { id: "census", icon: "ðŸ“Š", label: "Census Narratives", group: "writing" },
-    { id: "assembler", icon: "ðŸ“¦", label: "Doc Assembler", group: "writing" },
-    { id: "budget", icon: "ðŸ’µ", label: "Budget Builder", group: "docs" },
-    { id: "vault", icon: "ðŸ—„ï¸", label: "Document Vault", group: "docs" },
-    { id: "templates", icon: "ðŸ“‹", label: "Grant Templates", group: "docs" },
-    { id: "compliance", icon: "âœ…", label: "Compliance", group: "management" },
-    { id: "tasks", icon: "ðŸ“", label: "Action Plan", group: "management" },
-    { id: "awards", icon: "ðŸ†", label: "Award Mgmt", group: "management" },
-    { id: "outcomes", icon: "ðŸ“Š", label: "Outcome Tracker", group: "management" },
-    { id: "collab", icon: "ðŸ’¬", label: "Collaboration", group: "management" },
-    { id: "sam_wizard", icon: "ðŸ›ï¸", label: "SAM Wizard", group: "management" },
-    { id: "projector", icon: "ðŸ’°", label: "Financial Projector", group: "intelligence" },
-    { id: "forecast", icon: "ðŸ“ˆ", label: "Funding Forecast", group: "intelligence" },
-    { id: "advisor", icon: "ðŸ§ ", label: "AI Advisor", group: "intelligence" },
-    { id: "network", icon: "ðŸ•¸ï¸", label: "Relationship Map", group: "intelligence" },
-    { id: "peers", icon: "ðŸ”Ž", label: "Peer Prospecting", group: "intelligence" },
-    { id: "funder_research", icon: "ðŸ›ï¸", label: "Funder Research", group: "intelligence" },
-    { id: "optimizer", icon: "âš¡", label: "Portfolio Optimizer", group: "intelligence" },
-    { id: "winloss", icon: "ðŸ“‰", label: "Win/Loss Analysis", group: "intelligence" },
-    { id: "impact", icon: "ðŸ“ˆ", label: "Impact Portfolio", group: "intelligence" },
-    { id: "reports", icon: "ðŸ“„", label: "Report Generator", group: "output" },
-    { id: "export", icon: "ðŸ“¤", label: "Export Center", group: "output" },
-    { id: "activity", icon: "ðŸ“œ", label: "Activity Log", group: "output" },
-    { id: "settings", icon: "âš™ï¸", label: "Settings", group: "system" },
+    { id: "dashboard", icon: "📈", label: "Dashboard", group: "core" },
+    { id: "discovery", icon: "🔍", label: "Discovery", group: "core" },
+    { id: "pipeline", icon: "📋", label: "Pipeline", group: "core" },
+    { id: "calendar", icon: "📅", label: "Calendar", group: "core" },
+    { id: "watchdog", icon: "⏰", label: "Deadline Watchdog", group: "core" },
+    { id: "intel_feed", icon: "🧠", label: "Intelligence Feed", group: "core" },
+    { id: "rfp_parser", icon: "📄", label: "RFP Parser", group: "analysis" },
+    { id: "match_scorer", icon: "🎯", label: "Match Scorer", group: "analysis" },
+    { id: "match_alerts", icon: "🔔", label: "Match Alerts", group: "analysis" },
+    { id: "readiness", icon: "✅", label: "Readiness Check", group: "analysis" },
+    { id: "ai_drafter", icon: "✍️", label: "AI Drafter", group: "writing" },
+    { id: "narrative_scorer", icon: "📊", label: "Narrative Scorer", group: "writing" },
+    { id: "section_library", icon: "📚", label: "Section Library", group: "writing" },
+    { id: "letter_gen", icon: "✉️", label: "Letter Generator", group: "writing" },
+    { id: "census", icon: "📊", label: "Census Narratives", group: "writing" },
+    { id: "assembler", icon: "📦", label: "Doc Assembler", group: "writing" },
+    { id: "budget", icon: "💵", label: "Budget Builder", group: "docs" },
+    { id: "vault", icon: "🗄️", label: "Document Vault", group: "docs" },
+    { id: "templates", icon: "📋", label: "Grant Templates", group: "docs" },
+    { id: "compliance", icon: "✅", label: "Compliance", group: "management" },
+    { id: "tasks", icon: "📑", label: "Action Plan", group: "management" },
+    { id: "awards", icon: "🏆", label: "Award Mgmt", group: "management" },
+    { id: "outcomes", icon: "📈", label: "Outcome Tracker", group: "management" },
+    { id: "collab", icon: "💬", label: "Collaboration", group: "management" },
+    { id: "sam_wizard", icon: "🧙", label: "SAM Wizard", group: "management" },
+    { id: "projector", icon: "💰", label: "Financial Projector", group: "intelligence" },
+    { id: "forecast", icon: "📈", label: "Funding Forecast", group: "intelligence" },
+    { id: "advisor", icon: "🧠", label: "AI Advisor", group: "intelligence" },
+    { id: "network", icon: "🕸️", label: "Relationship Map", group: "intelligence" },
+    { id: "peers", icon: "🔍", label: "Peer Prospecting", group: "intelligence" },
+    { id: "funder_research", icon: "🔍", label: "Funder Research", group: "intelligence" },
+    { id: "optimizer", icon: "⚡", label: "Portfolio Optimizer", group: "intelligence" },
+    { id: "winloss", icon: "📉", label: "Win/Loss Analysis", group: "intelligence" },
+    { id: "impact", icon: "📈", label: "Impact Portfolio", group: "intelligence" },
+    { id: "reports", icon: "📜", label: "Report Generator", group: "output" },
+    { id: "export", icon: "📤", label: "Export Center", group: "output" },
+    { id: "activity", icon: "📜", label: "Activity Log", group: "output" },
+    { id: "settings", icon: "⚙️", label: "Settings", group: "system" },
   ];
 
   const renderPage = () => {
@@ -313,7 +312,7 @@ export default function App() {
       }}>
         <div style={{ padding:"16px 12px", borderBottom:`1px solid ${T.border}`, display:"flex", alignItems:"center", gap:8 }}>
           <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background:"none", border:"none", color:T.amber, cursor:"pointer", fontSize:20 }}>
-            {sidebarOpen ? "â—€" : "â–¶"}
+            {sidebarOpen ? "◀" : "▶"}
           </button>
           {sidebarOpen && <div style={{ fontSize:14, fontWeight:700, color:T.amber, letterSpacing:1 }}>UNLESS</div>}
         </div>
@@ -334,7 +333,7 @@ export default function App() {
                 {sidebarOpen && label ? (
                   <div onClick={toggleGroup} style={{ padding: "8px 12px 2px", fontSize: 9, fontWeight: 700, color: T.dim, letterSpacing: 1.5, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", userSelect: "none" }}>
                     <span>{label}</span>
-                    <span style={{ fontSize: 8, transition: "transform 0.2s", transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)" }}>â–¼</span>
+                    <span style={{ fontSize: 8, transition: "transform 0.2s", transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)" }}>▼</span>
                   </div>
                 ) : null}
                 {!sidebarOpen && label && <div style={{ height: 1, background: T.border, margin: "6px 8px" }} />}
@@ -356,8 +355,8 @@ export default function App() {
         </div>
         {sidebarOpen && (
           <div style={{ padding:12, borderTop:`1px solid ${T.border}`, fontSize:10, color:T.dim }}>
-            <div>v5.2 Â· {grants.length} grants Â· {(vaultDocs || []).length} docs Â· 39 modules</div>
-            {(() => { const s = getStorageUsage(); return s.warning ? <div style={{ marginTop: 4, color: T.red }}>âš ï¸ Storage: {s.pct}% ({s.usedMB}MB / {s.quotaMB}MB)</div> : <div style={{ marginTop: 4, color: T.mute }}>ðŸ’¾ {s.pct}% storage used</div>; })()}
+            <div>v5.2 · {grants.length} grants · {(vaultDocs || []).length} docs · 39 modules</div>
+            {(() => { const s = getStorageUsage(); return s.warning ? <div style={{ marginTop: 4, color: T.red }}>⚠️ Storage: {s.pct}% ({s.usedMB}MB / {s.quotaMB}MB)</div> : <div style={{ marginTop: 4, color: T.mute }}>💾 {s.pct}% storage used</div>; })()}
           </div>
         )}
       </div>
@@ -369,7 +368,7 @@ export default function App() {
             <h2 style={{ margin:0, fontSize:18, fontWeight:600, color:T.text }}>{currentNav?.icon} {currentNav?.label}</h2>
           </div>
           <div style={{ display:"flex", gap:12, alignItems:"center" }}>
-            <div style={{ fontSize: 11, color: T.mute }}>{grants.length} grants Â· {fmt(grants.filter(g => ["awarded", "active"].includes(g.stage)).reduce((s, g) => s + (g.amount || 0), 0))} awarded</div>
+            <div style={{ fontSize: 11, color: T.mute }}>{grants.length} grants · {fmt(grants.filter(g => ["awarded", "active"].includes(g.stage)).reduce((s, g) => s + (g.amount || 0), 0))} awarded</div>
           </div>
         </div>
         <div style={{ flex:1, overflow:"auto", padding:20 }}>

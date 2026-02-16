@@ -10,14 +10,14 @@ export const DocumentVault = ({ vaultDocs, setVaultDocs }) => {
     const [newDoc, setNewDoc] = useState({ title: "", category: "narrative", content: "", tags: [], grantIds: [], version: 1, status: "draft" });
 
     const CATEGORIES = [
-        { id: "narrative", label: "ðŸ“ Narratives", color: T.amber },
-        { id: "budget", label: "ðŸ’° Budgets", color: T.green },
-        { id: "letter", label: "âœ‰ï¸ Letters of Support", color: T.blue },
-        { id: "bio", label: "ðŸ‘¤ Bios & Resumes", color: T.purple },
-        { id: "data", label: "ðŸ“Š Data & Evidence", color: T.cyan },
-        { id: "compliance", label: "âœ… Compliance", color: T.yellow },
-        { id: "template", label: "ðŸ“‹ Templates", color: T.orange },
-        { id: "other", label: "ðŸ“Ž Other", color: T.mute },
+        { id: "narrative", label: "📄 Narratives", color: T.amber },
+        { id: "budget", label: "💰 Budgets", color: T.green },
+        { id: "letter", label: "✉️ Letters of Support", color: T.blue },
+        { id: "bio", label: "👤 Bios & Resumes", color: T.purple },
+        { id: "data", label: "📊 Data & Evidence", color: T.cyan },
+        { id: "compliance", label: "✅ Compliance", color: T.yellow },
+        { id: "template", label: "📋 Templates", color: T.orange },
+        { id: "other", label: "📎 Other", color: T.mute },
     ];
 
     const docs = vaultDocs || [];
@@ -82,7 +82,7 @@ export const DocumentVault = ({ vaultDocs, setVaultDocs }) => {
                 <Card><Stat label="Linked to Grants" value={docs.filter(d => d.grantIds?.length > 0).length} color={T.blue} /></Card>
             </div>
 
-            {filtered.length === 0 ? <Empty icon="ðŸ—„ï¸" title="No documents yet" sub="Create reusable documents for your grant applications" action={<Btn variant="primary" size="sm" onClick={() => setShowAdd(true)}>+ Create First Document</Btn>} /> :
+            {filtered.length === 0 ? <Empty icon="🗄️" title="No documents yet" sub="Create reusable documents for your grant applications" action={<Btn variant="primary" size="sm" onClick={() => setShowAdd(true)}>+ Create First Document</Btn>} /> :
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 8 }}>
                     {filtered.map(d => (
                         <Card key={d.id} onClick={() => setSelected(d)} style={{ cursor: "pointer" }}>
@@ -96,7 +96,7 @@ export const DocumentVault = ({ vaultDocs, setVaultDocs }) => {
                                 <span>v{d.version || 1}</span>
                                 <span>{fmtDate(d.updatedAt)}</span>
                             </div>
-                            {d.grantIds?.length > 0 && <div style={{ fontSize: 10, color: T.blue, marginTop: 4 }}>ðŸ”— Linked to {d.grantIds.length} grant{d.grantIds.length > 1 ? "s" : ""}</div>}
+                            {d.grantIds?.length > 0 && <div style={{ fontSize: 10, color: T.blue, marginTop: 4 }}>🔗 Linked to {d.grantIds.length} grant{d.grantIds.length > 1 ? "s" : ""}</div>}
                         </Card>
                     ))}
                 </div>
@@ -111,16 +111,16 @@ export const DocumentVault = ({ vaultDocs, setVaultDocs }) => {
                             <Select value={selected.category} onChange={v => { updateDoc(selected.id, { category: v }); setSelected({ ...selected, category: v }); }}
                                 options={CATEGORIES.map(c => ({ value: c.id, label: c.label }))} />
                             <Select value={selected.status || "draft"} onChange={v => { updateDoc(selected.id, { status: v }); setSelected({ ...selected, status: v }); }}
-                                options={[{ value: "draft", label: "ðŸ“ Draft" }, { value: "review", label: "ðŸ‘ï¸ In Review" }, { value: "final", label: "âœ… Final" }]} />
-                            <div style={{ fontSize: 11, color: T.mute, display: "flex", alignItems: "center" }}>Version {selected.version || 1} Â· {(selected.versions || []).length} revisions</div>
+                                options={[{ value: "draft", label: "📄 Draft" }, { value: "review", label: "👁️ In Review" }, { value: "final", label: "✅ Final" }]} />
+                            <div style={{ fontSize: 11, color: T.mute, display: "flex", alignItems: "center" }}>Version {selected.version || 1} · {(selected.versions || []).length} revisions</div>
                         </div>
                         <TextArea value={selected.content || ""} onChange={v => { updateDoc(selected.id, { content: v }); setSelected({ ...selected, content: v }); }} rows={16} placeholder="Document content..." />
                         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 12 }}>
                             <div style={{ display: "flex", gap: 8 }}>
-                                <Btn size="sm" onClick={() => duplicateDoc(selected)}>ðŸ“‹ Duplicate</Btn>
-                                <Btn size="sm" onClick={() => navigator.clipboard?.writeText(selected.content || "")}>ðŸ“Ž Copy</Btn>
+                                <Btn size="sm" onClick={() => duplicateDoc(selected)}>📋 Duplicate</Btn>
+                                <Btn size="sm" onClick={() => navigator.clipboard?.writeText(selected.content || "")}>📎 Copy</Btn>
                             </div>
-                            <Btn variant="danger" size="sm" onClick={() => deleteDoc(selected.id)}>ðŸ—‘ï¸ Delete</Btn>
+                            <Btn variant="danger" size="sm" onClick={() => deleteDoc(selected.id)}>🗑️ Delete</Btn>
                         </div>
                         {/* Version History */}
                         {(selected.versions || []).length > 1 && (

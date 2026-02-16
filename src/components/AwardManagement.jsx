@@ -27,7 +27,7 @@ export const AwardManagement = ({ grants, updateGrant }) => {
         <Card><Stat label="Remaining" value={fmt(awarded.reduce((s, g) => s + ((g.amount || 0) - (getAwardData(g).spentToDate || 0)), 0))} color={T.purple} /></Card>
       </div>
 
-      {awarded.length === 0 ? <Empty icon="ðŸ†" title="No awards yet" sub="Awards will appear here when grants are marked as awarded" /> :
+      {awarded.length === 0 ? <Empty icon="🏆" title="No awards yet" sub="Awards will appear here when grants are marked as awarded" /> :
         <div>
           {awarded.map(g => {
             const ad = getAwardData(g);
@@ -37,7 +37,7 @@ export const AwardManagement = ({ grants, updateGrant }) => {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{g.title?.slice(0, 45)}</div>
-                    <div style={{ fontSize: 11, color: T.mute }}>{g.agency} Â· {STAGE_MAP[g.stage]?.label}</div>
+                    <div style={{ fontSize: 11, color: T.mute }}>{g.agency} · {STAGE_MAP[g.stage]?.label}</div>
                   </div>
                   <div style={{ textAlign: "right" }}>
                     <div style={{ fontSize: 14, fontWeight: 600, color: T.green }}>{fmt(g.amount || 0)}</div>
@@ -76,7 +76,7 @@ export const AwardManagement = ({ grants, updateGrant }) => {
                     </div>
                     <div style={{ marginTop: 8, fontSize: 11, color: T.sub }}>
                       Remaining: <strong style={{ color: T.green }}>{fmt(ad.totalAmount - ad.spentToDate)}</strong>
-                      {ad.period?.end && ` Â· ${daysUntil(ad.period.end)} days left in period`}
+                      {ad.period?.end && ` · ${daysUntil(ad.period.end)} days left in period`}
                     </div>
                   </div>
                 )}

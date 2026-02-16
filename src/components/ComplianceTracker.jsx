@@ -49,7 +49,7 @@ export const ComplianceTracker = ({ grants, updateGrant }) => {
   };
 
   const selected = selectedId ? grants.find(g => g.id === selectedId) : null;
-  const CATEGORIES = { registration: "ðŸ›ï¸ Registration", forms: "ðŸ“ Forms", content: "ðŸ“„ Content", support: "ðŸ¤ Support", compliance: "âœ… Compliance", qa: "ðŸ” Quality" };
+  const CATEGORIES = { registration: "🧙 Registration", forms: "📄 Forms", content: "📄 Content", support: "🤝 Support", compliance: "✅ Compliance", qa: "🔍 Quality" };
 
   return (
     <div>
@@ -59,7 +59,7 @@ export const ComplianceTracker = ({ grants, updateGrant }) => {
         <Card><Stat label="Need Attention" value={activeGrants.filter(g => getCriticalProgress(g) < 100).length} color={T.yellow} /></Card>
       </div>
 
-      {activeGrants.length === 0 ? <Empty icon="âœ…" title="No active grants to track" sub="Compliance tracking begins when grants enter preparation" /> :
+      {activeGrants.length === 0 ? <Empty icon="✅" title="No active grants to track" sub="Compliance tracking begins when grants enter preparation" /> :
         <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 16 }}>
           {/* Grant List */}
           <div>
@@ -99,7 +99,7 @@ export const ComplianceTracker = ({ grants, updateGrant }) => {
                           display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 4, cursor: "pointer",
                           background: item.done ? T.green + "08" : "transparent", marginBottom: 2,
                         }}>
-                          <span style={{ fontSize: 14, color: item.done ? T.green : T.mute }}>{item.done ? "â˜‘" : "â˜"}</span>
+                          <span style={{ fontSize: 14, color: item.done ? T.green : T.mute }}>{item.done ? "☑️" : "☐"}</span>
                           <span style={{ fontSize: 12, color: item.done ? T.sub : T.text, textDecoration: item.done ? "line-through" : "none", flex: 1 }}>{item.label}</span>
                           {item.critical && <Badge color={T.red} style={{ fontSize: 9 }}>CRITICAL</Badge>}
                         </div>

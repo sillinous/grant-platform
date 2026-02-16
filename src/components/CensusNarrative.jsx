@@ -43,15 +43,15 @@ export const CensusNarrative = () => {
     const unempStatus = unemployment > 6 ? "elevated" : unemployment > 4 ? "moderate" : "relatively stable";
     const broadbandStatus = broadband < 80 ? "limited" : broadband < 90 ? "moderate" : "adequate";
 
-    const text = `STATEMENT OF NEED â€” ${state}
+    const text = `STATEMENT OF NEED — ${state}
 
 ${state} faces persistent socioeconomic challenges that underscore the critical need for this project. The poverty rate stands at ${poverty.toFixed(1)}%, ${povertyStatus} the national average, indicating that a substantial portion of the population lacks adequate financial resources to meet basic needs. This economic hardship is compounded by an ${unempStatus} unemployment rate of ${unemployment.toFixed(1)}%, reflecting limited employment opportunities particularly in rural and underserved communities.
 
-Digital infrastructure remains a significant barrier, with ${broadbandStatus} broadband access at ${broadband.toFixed(1)}% household penetration. In rural areas like Newton, Illinois â€” the project's base of operations â€” this digital divide is even more pronounced, limiting residents' ability to participate in the modern economy, access remote work opportunities, and utilize digital services that urban populations take for granted.
+Digital infrastructure remains a significant barrier, with ${broadbandStatus} broadband access at ${broadband.toFixed(1)}% household penetration. In rural areas like Newton, Illinois — the project's base of operations — this digital divide is even more pronounced, limiting residents' ability to participate in the modern economy, access remote work opportunities, and utilize digital services that urban populations take for granted.
 
 Educational attainment data shows ${bachelors.toFixed(1)}% of the population holds a bachelor's degree or higher, indicating both a workforce development opportunity and the need for innovative approaches to skill-building that don't require traditional four-year pathways.
 
-These intersecting challenges â€” poverty, unemployment, digital exclusion, and limited educational pathways â€” create a compounding effect that disproportionately impacts rural communities, disabled individuals, and economically disadvantaged entrepreneurs. The proposed project directly addresses these barriers through technology-enabled solutions that bridge geographic and economic divides, creating sustainable pathways to economic self-sufficiency.
+These intersecting challenges — poverty, unemployment, digital exclusion, and limited educational pathways — create a compounding effect that disproportionately impacts rural communities, disabled individuals, and economically disadvantaged entrepreneurs. The proposed project directly addresses these barriers through technology-enabled solutions that bridge geographic and economic divides, creating sustainable pathways to economic self-sufficiency.
 
 [Data Source: U.S. Census Bureau, American Community Survey 5-Year Estimates, 2022]`;
 
@@ -61,17 +61,17 @@ These intersecting challenges â€” poverty, unemployment, digital exclusion,
   return (
     <div>
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 8 }}>ðŸ“Š Census-Powered Narrative Generator</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 8 }}>📊 Census-Powered Narrative Generator</div>
         <div style={{ fontSize: 12, color: T.sub, marginBottom: 12 }}>Generates a data-backed Statement of Need using live Census ACS data. Ready to paste into grant applications.</div>
         <div style={{ display: "flex", gap: 8 }}>
           <Select value={customArea} onChange={setCustomArea} options={STATES.map(s => ({ value: s.fips, label: s.name }))} style={{ flex: 1 }} />
-          <Btn variant="primary" onClick={loadCensusData} disabled={loading}>{loading ? "â³ Loading..." : "ðŸ“Š Generate Narrative"}</Btn>
+          <Btn variant="primary" onClick={loadCensusData} disabled={loading}>{loading ? "⏳ Loading..." : "📊 Generate Narrative"}</Btn>
         </div>
       </Card>
 
       {data && !data.error && (
         <Card style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 8 }}>ðŸ“ˆ Census Data â€” {data.NAME}</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 8 }}>📈 Census Data — {data.NAME}</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
             <div style={{ textAlign: "center", padding: 8, background: T.panel, borderRadius: 6 }}>
               <div style={{ fontSize: 20, fontWeight: 700, color: parseFloat(data.S1701_C03_001E) > 15 ? T.red : T.yellow }}>{data.S1701_C03_001E}%</div>
@@ -96,8 +96,8 @@ These intersecting challenges â€” poverty, unemployment, digital exclusion,
       {narrative && (
         <Card>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>ðŸ“ Generated Statement of Need</div>
-            <Btn size="sm" variant="ghost" onClick={() => navigator.clipboard?.writeText(narrative)}>ðŸ“‹ Copy</Btn>
+            <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>📄 Generated Statement of Need</div>
+            <Btn size="sm" variant="ghost" onClick={() => navigator.clipboard?.writeText(narrative)}>📋 Copy</Btn>
           </div>
           <div style={{ fontSize: 12, color: T.sub, lineHeight: 1.7, whiteSpace: "pre-wrap", padding: 12, background: T.panel, borderRadius: 6, maxHeight: 500, overflow: "auto" }}>{narrative}</div>
         </Card>

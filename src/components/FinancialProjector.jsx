@@ -59,7 +59,7 @@ export const FinancialProjector = ({ grants }) => {
 
       {/* Scenario Selector */}
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>ðŸŽ² Scenario Modeling</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>🎲 Scenario Modeling</div>
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
           {Object.entries(scenarios).map(([key, s]) => (
             <Btn key={key} size="sm" variant={scenario === key ? "primary" : "default"} onClick={() => setScenario(key)} style={{ borderColor: s.color + "44" }}>{s.label}</Btn>
@@ -84,18 +84,18 @@ export const FinancialProjector = ({ grants }) => {
       {/* Runway Analysis */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
         <Card>
-          <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>ðŸ›¤ï¸ Runway Analysis</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>🛤️ Runway Analysis</div>
           <div style={{ marginBottom: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
               <span style={{ color: T.sub }}>Current Runway</span>
-              <span style={{ color: currentRunway < 3 ? T.red : T.green, fontWeight: 600 }}>{currentRunway === Infinity ? "âˆž" : `${currentRunway.toFixed(1)} months`}</span>
+              <span style={{ color: currentRunway < 3 ? T.red : T.green, fontWeight: 600 }}>{currentRunway === Infinity ? "∞" : `${currentRunway.toFixed(1)} months`}</span>
             </div>
             <Progress value={Math.min(currentRunway, 24)} max={24} color={currentRunway < 3 ? T.red : currentRunway < 6 ? T.yellow : T.green} />
           </div>
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
               <span style={{ color: T.sub }}>Projected Runway</span>
-              <span style={{ color: T.green, fontWeight: 600 }}>{projectedRunway === Infinity ? "âˆž" : `${projectedRunway.toFixed(1)} months`}</span>
+              <span style={{ color: T.green, fontWeight: 600 }}>{projectedRunway === Infinity ? "∞" : `${projectedRunway.toFixed(1)} months`}</span>
             </div>
             <Progress value={Math.min(projectedRunway, 24)} max={24} color={T.green} />
           </div>
@@ -103,14 +103,14 @@ export const FinancialProjector = ({ grants }) => {
         </Card>
 
         <Card>
-          <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 8 }}>ðŸ“Š 12-Month Cash Flow</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 8 }}>📊 12-Month Cash Flow</div>
           <MiniBar data={monthlyProjection} height={100} color={T.amber} />
         </Card>
       </div>
 
       {/* Business Allocation */}
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>ðŸ¢ Suggested Business Allocation</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>🏢 Suggested Business Allocation</div>
         {bizAllocation.map((b, i) => (
           <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${T.border}` }}>
             <div>
@@ -124,7 +124,7 @@ export const FinancialProjector = ({ grants }) => {
 
       {/* Grant-Level Projections */}
       <Card>
-        <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>ðŸ“‹ Grant-Level Projections</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>📋 Grant-Level Projections</div>
         {[...awarded, ...pending, ...pipeline].map(g => {
           const probability = awarded.some(a => a.id === g.id) ? 1 : pending.some(p => p.id === g.id) ? sc.winRate : sc.winRate * 0.5;
           return (
@@ -135,7 +135,7 @@ export const FinancialProjector = ({ grants }) => {
               </div>
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: T.green }}>{fmt(g.amount || 0)}</div>
-                <div style={{ fontSize: 10, color: probability === 1 ? T.green : T.mute }}>{pct(probability * 100)} likely â†’ {fmt((g.amount || 0) * probability)}</div>
+                <div style={{ fontSize: 10, color: probability === 1 ? T.green : T.mute }}>{pct(probability * 100)} likely → {fmt((g.amount || 0) * probability)}</div>
               </div>
             </div>
           );

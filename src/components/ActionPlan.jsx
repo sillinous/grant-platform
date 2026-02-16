@@ -20,7 +20,7 @@ export const ActionPlan = ({ grants }) => {
   const updateTask = (id, updates) => setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
   const deleteTask = (id) => setTasks(prev => prev.filter(t => t.id !== id));
 
-  const PRIORITIES = { high: { color: T.red, label: "ðŸ”´ High" }, medium: { color: T.yellow, label: "ðŸŸ¡ Medium" }, low: { color: T.green, label: "ðŸŸ¢ Low" } };
+  const PRIORITIES = { high: { color: T.red, label: "🔴 High" }, medium: { color: T.yellow, label: "🟡 Medium" }, low: { color: T.green, label: "🟢 Low" } };
   const STATUSES = { todo: { color: T.mute, label: "To Do" }, inprogress: { color: T.blue, label: "In Progress" }, blocked: { color: T.red, label: "Blocked" }, done: { color: T.green, label: "Done" } };
 
   const filtered = tasks.filter(t => {
@@ -58,7 +58,7 @@ export const ActionPlan = ({ grants }) => {
         <Card><Stat label="Overdue" value={overdue} color={T.red} /></Card>
       </div>
 
-      {filtered.length === 0 ? <Empty icon="ðŸ“‹" title="No tasks" sub="Create tasks to track your grant workflow" action={<Btn variant="primary" size="sm" onClick={() => setShowAdd(true)}>+ Create Task</Btn>} /> :
+      {filtered.length === 0 ? <Empty icon="📋" title="No tasks" sub="Create tasks to track your grant workflow" action={<Btn variant="primary" size="sm" onClick={() => setShowAdd(true)}>+ Create Task</Btn>} /> :
         filtered.map(t => {
           const grant = grants.find(g => g.id === t.grantId);
           const isOverdue = t.dueDate && daysUntil(t.dueDate) < 0 && t.status !== "done";
@@ -67,7 +67,7 @@ export const ActionPlan = ({ grants }) => {
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <button onClick={() => updateTask(t.id, { status: t.status === "done" ? "todo" : "done" })}
                   style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, color: t.status === "done" ? T.green : T.mute }}>
-                  {t.status === "done" ? "â˜‘" : "â˜"}
+                  {t.status === "done" ? "☑️" : "☐"}
                 </button>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 12, color: t.status === "done" ? T.mute : T.text, textDecoration: t.status === "done" ? "line-through" : "none" }}>{t.title}</div>
@@ -85,7 +85,7 @@ export const ActionPlan = ({ grants }) => {
                   )}
                   <Select value={t.status} onChange={v => updateTask(t.id, { status: v })} style={{ fontSize: 10, padding: "2px 4px" }}
                     options={Object.entries(STATUSES).map(([k, v]) => ({ value: k, label: v.label }))} />
-                  <button onClick={() => deleteTask(t.id)} style={{ background: "none", border: "none", color: T.red, cursor: "pointer", fontSize: 12 }}>âœ•</button>
+                  <button onClick={() => deleteTask(t.id)} style={{ background: "none", border: "none", color: T.red, cursor: "pointer", fontSize: 12 }}>✕</button>
                 </div>
               </div>
             </Card>
@@ -100,7 +100,7 @@ export const ActionPlan = ({ grants }) => {
             options={[{ value: "", label: "No specific grant" }, ...grants.map(g => ({ value: g.id, label: g.title?.slice(0, 50) }))]} />
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             <Select value={newTask.priority} onChange={v => setNewTask({ ...newTask, priority: v })}
-              options={[{ value: "high", label: "ðŸ”´ High" }, { value: "medium", label: "ðŸŸ¡ Medium" }, { value: "low", label: "ðŸŸ¢ Low" }]} />
+              options={[{ value: "high", label: "🔴 High" }, { value: "medium", label: "🟡 Medium" }, { value: "low", label: "🟢 Low" }]} />
             <Input type="date" value={newTask.dueDate} onChange={v => setNewTask({ ...newTask, dueDate: v })} />
           </div>
           <TextArea value={newTask.notes} onChange={v => setNewTask({ ...newTask, notes: v })} rows={2} placeholder="Notes..." />

@@ -54,16 +54,16 @@ export const TimelineCalendar = ({ grants, events, setEvents }) => {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <Tab tabs={[{ id: "month", icon: "ðŸ“…", label: "Month" }, { id: "timeline", icon: "ðŸ“Š", label: "Timeline" }, { id: "agenda", icon: "ðŸ“‹", label: "Agenda" }]} active={view} onChange={setView} />
+        <Tab tabs={[{ id: "month", icon: "📅", label: "Month" }, { id: "timeline", icon: "📊", label: "Timeline" }, { id: "agenda", icon: "📋", label: "Agenda" }]} active={view} onChange={setView} />
         <Btn variant="primary" size="sm" onClick={() => setShowAdd(true)}>+ Add Event</Btn>
       </div>
 
       {view === "month" && (
         <Card>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <Btn variant="ghost" size="sm" onClick={() => navMonth(-1)}>â—€</Btn>
+            <Btn variant="ghost" size="sm" onClick={() => navMonth(-1)}>◀</Btn>
             <div style={{ fontSize: 16, fontWeight: 600, color: T.text }}>{monthNames[month]} {year}</div>
-            <Btn variant="ghost" size="sm" onClick={() => navMonth(1)}>â–¶</Btn>
+            <Btn variant="ghost" size="sm" onClick={() => navMonth(1)}>▶</Btn>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
             {dayNames.map(d => <div key={d} style={{ textAlign: "center", fontSize: 10, color: T.mute, padding: 4, fontWeight: 600 }}>{d}</div>)}
@@ -80,7 +80,7 @@ export const TimelineCalendar = ({ grants, events, setEvents }) => {
                   <div style={{ fontSize: 11, fontWeight: isToday(day) ? 700 : 400, color: isToday(day) ? T.amber : T.sub, marginBottom: 2 }}>{day}</div>
                   {dayEvents.slice(0, 3).map(e => (
                     <div key={e.id} style={{ fontSize: 8, padding: "1px 3px", borderRadius: 3, marginBottom: 1, background: e.color + "22", color: e.color, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {e.type === "deadline" ? "â°" : "ðŸ“Œ"} {e.title?.slice(0, 15)}
+                      {e.type === "deadline" ? "⏰" : "📌"} {e.title?.slice(0, 15)}
                     </div>
                   ))}
                   {dayEvents.length > 3 && <div style={{ fontSize: 8, color: T.mute }}>+{dayEvents.length - 3} more</div>}
@@ -93,7 +93,7 @@ export const TimelineCalendar = ({ grants, events, setEvents }) => {
 
       {view === "timeline" && (
         <Card>
-          <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>ðŸ“Š Next 90 Days</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>📊 Next 90 Days</div>
           {timelineEvents.length === 0 ? <div style={{ color: T.mute, fontSize: 12 }}>No events in the next 90 days</div> :
             timelineEvents.map(e => {
               const days = daysUntil(e.date);
@@ -102,7 +102,7 @@ export const TimelineCalendar = ({ grants, events, setEvents }) => {
                   <div style={{ width: 4, height: 32, borderRadius: 2, background: e.color, flexShrink: 0 }} />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 12, color: T.text }}>{e.title?.slice(0, 50)}</div>
-                    <div style={{ fontSize: 10, color: T.mute }}>{fmtDate(e.date)} Â· {e.type}</div>
+                    <div style={{ fontSize: 10, color: T.mute }}>{fmtDate(e.date)} · {e.type}</div>
                   </div>
                   <Badge color={days <= 7 ? T.red : days <= 30 ? T.yellow : T.green}>{days}d</Badge>
                 </div>
@@ -114,12 +114,12 @@ export const TimelineCalendar = ({ grants, events, setEvents }) => {
 
       {view === "agenda" && (
         <Card>
-          <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>ðŸ“‹ All Events by Date</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>📋 All Events by Date</div>
           {allEvents.sort((a, b) => new Date(a.date) - new Date(b.date)).map(e => (
             <div key={e.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${T.border}` }}>
               <div>
                 <div style={{ fontSize: 12, color: T.text }}>{e.title}</div>
-                <div style={{ fontSize: 10, color: T.mute }}>{fmtDate(e.date)} Â· {e.type}{e.stage ? ` Â· ${STAGE_MAP[e.stage]?.label}` : ""}</div>
+                <div style={{ fontSize: 10, color: T.mute }}>{fmtDate(e.date)} · {e.type}{e.stage ? ` · ${STAGE_MAP[e.stage]?.label}` : ""}</div>
               </div>
               <Badge color={e.color}>{e.type}</Badge>
             </div>
@@ -133,9 +133,9 @@ export const TimelineCalendar = ({ grants, events, setEvents }) => {
           <Input value={newEvent.title} onChange={v => setNewEvent({ ...newEvent, title: v })} placeholder="Event title" />
           <Input type="date" value={newEvent.date} onChange={v => setNewEvent({ ...newEvent, date: v })} />
           <Select value={newEvent.type} onChange={v => setNewEvent({ ...newEvent, type: v })} options={[
-            { value: "milestone", label: "ðŸ“Œ Milestone" }, { value: "meeting", label: "ðŸ¤ Meeting" },
-            { value: "report_due", label: "ðŸ“ Report Due" }, { value: "review", label: "ðŸ‘ï¸ Review" },
-            { value: "other", label: "ðŸ“Ž Other" },
+            { value: "milestone", label: "📌 Milestone" }, { value: "meeting", label: "🤝 Meeting" },
+            { value: "report_due", label: "📄 Report Due" }, { value: "review", label: "👁️ Review" },
+            { value: "other", label: "📎 Other" },
           ]} />
           <TextArea value={newEvent.notes} onChange={v => setNewEvent({ ...newEvent, notes: v })} placeholder="Notes..." rows={2} />
           <Btn variant="primary" onClick={addEvent}>Add Event</Btn>
