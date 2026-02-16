@@ -104,25 +104,64 @@ export const ExecutiveDashboard = ({ grants }) => {
             <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>🎯 Strategic ROI Heatmap</div>
             <Badge color={T.amber}>Premium Analysis</Badge>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 4, height: 120 }}>
-            {Array.from({ length: 15 }).map((_, i) => (
-              <div key={i} style={{ 
-                background: i % 3 === 0 ? T.amber + "44" : i % 5 === 0 ? T.green + "44" : T.panel,
-                borderRadius: 4,
-                border: `1px solid ${T.border}`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 8,
-                color: T.mute
-              }}>
-                {i === 3 ? "HIGH ROI" : ""}
-              </div>
-            ))}
+
+          <div style={{ position: "relative", height: 180, background: T.panel, borderRadius: 8, border: `1px solid ${T.border}`, overflow: "hidden" }}>
+            {/* Quadrant Labels */}
+            <div style={{ position: "absolute", top: 10, left: 10, fontSize: 10, color: T.green, fontWeight: 700, opacity: 0.6 }}>QUICK WINS</div>
+            <div style={{ position: "absolute", top: 10, right: 10, fontSize: 10, color: T.blue, fontWeight: 700, opacity: 0.6 }}>MOONSHOTS</div>
+            <div style={{ position: "absolute", bottom: 10, left: 10, fontSize: 10, color: T.sub, fontWeight: 700, opacity: 0.6 }}>CORE FUNDING</div>
+            <div style={{ position: "absolute", bottom: 10, right: 10, fontSize: 10, color: T.amber, fontWeight: 700, opacity: 0.6 }}>DIVERSIFICATION</div>
+
+            {/* Grid Lines */}
+            <div style={{ position: "absolute", inset: 0, display: "flex", pointerEvents: "none" }}>
+              <div style={{ flex: 1, borderRight: `1px dashed ${T.border}` }} />
+              <div style={{ flex: 1 }} />
+            </div>
+            <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", pointerEvents: "none" }}>
+              <div style={{ flex: 1, borderBottom: `1px dashed ${T.border}` }} />
+              <div style={{ flex: 1 }} />
+            </div>
+
+            {/* Data Points */}
+            {grants.filter(g => g.amount).map((g, i) => {
+              // Calculate coordinates: X (Complexity: 0-100), Y (Value: 0-100)
+              // Complexity based on stage and deadline proximity (simplified)
+              const complexity = 20 + ((STAGE_MAP[g.stage]?.level || 1) * 10);
+              // Value based on log scale of amount (min 0, max ~10M)
+              const valueScore = Math.min(100, (Math.log10(g.amount || 1000) - 3) * 25);
+
+              return (
+                <div
+                  key={g.id}
+                  title={`${g.title}\nValue: ${fmt(g.amount)}\nROI: ${valueScore.toFixed(0)}%`}
+                  style={{
+                    position: "absolute",
+                    left: `${complexity}%`,
+                    bottom: `${valueScore}%`,
+                    width: 12,
+                    height: 12,
+                    background: valueScore > 60 ? T.green : valueScore > 30 ? T.amber : T.blue,
+                    borderRadius: "50%",
+                    border: `2px solid ${T.text}`,
+                    boxShadow: `0 0 10px ${T.text}33`,
+                    cursor: "help",
+                    transform: "translate(-50%, 50%)",
+                    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
+                  }}
+                />
+              );
+            })}
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: T.dim, marginTop: 8 }}>
-            <span>Complexity →</span>
-            <span>Outcome Value →</span>
+
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9, color: T.dim, marginTop: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ width: 6, height: 6, background: T.border, border: `1px solid ${T.dim}`, borderRadius: "50%" }} />
+              Complexity (Low → High)
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              Value (Low → High)
+              <span style={{ width: 6, height: 6, background: T.border, border: `1px solid ${T.dim}`, borderRadius: "50%" }} />
+            </div>
           </div>
         </Card>
 
