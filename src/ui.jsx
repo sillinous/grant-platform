@@ -143,15 +143,25 @@ export const Stat = ({ label, value, color = T.amber, sub: subtitle }) => (
   </div>
 );
 
-export const MiniBar = ({ data, height = 120, color = T.amber }) => {
+export const MiniBar = ({ data, values, colors, height = 120, color = T.amber }) => {
+  if (values && colors) {
+    return (
+      <div style={{ width: "100%", height: 6, background: T.border, borderRadius: 3, overflow: "hidden", display: "flex" }}>
+        {values.map((v, i) => (
+          <div key={i} style={{ width: `${v}%`, height: "100%", background: colors[i] || color }} />
+        ))}
+      </div>
+    );
+  }
+  if (!data) return null;
   const max = Math.max(...data.map(d => d.value), 1);
   return (
-    <div style={{ display:"flex", alignItems:"flex-end", gap:4, height, padding:"8px 0" }}>
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height, padding: "8px 0" }}>
       {data.map((d, i) => (
-        <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
-          <div style={{ fontSize:9, color:T.mute }}>{d.value > 999999 ? `$${(d.value/1e6).toFixed(0)}M` : d.value > 999 ? `$${(d.value/1e3).toFixed(0)}K` : d.value}</div>
-          <div style={{ width:"100%", height:`${(d.value/max)*80}%`, minHeight:2, background:color, borderRadius:3, transition:"height 0.5s" }} />
-          <div style={{ fontSize:9, color:T.mute }}>{d.label}</div>
+        <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+          <div style={{ fontSize: 9, color: T.mute }}>{d.value > 999999 ? `$${(d.value / 1e6).toFixed(0)}M` : d.value > 999 ? `$${(d.value / 1e3).toFixed(0)}K` : d.value}</div>
+          <div style={{ width: "100%", height: `${(d.value / max) * 80}%`, minHeight: 2, background: color, borderRadius: 3, transition: "height 0.5s" }} />
+          <div style={{ fontSize: 9, color: T.mute }}>{d.label}</div>
         </div>
       ))}
     </div>
