@@ -1,7 +1,7 @@
 import { LS, T, getProfileState, STAGES, fmt, fmtDate, daysUntil, PROFILE } from "./globals";
 
 
-import { LS, T, getProfileState, STAGES, fmt, fmtDate, daysUntil, PROFILE } from "./globals";
+
 
 // ─── SIMPLE CACHE ───
 const SimpleCache = {
