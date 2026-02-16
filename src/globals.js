@@ -31,20 +31,20 @@ export let PROFILE = (() => {
     try {
         const saved = localStorage.getItem("gp_profile");
         if (saved) return { ...DEFAULT_PROFILE, ...JSON.parse(saved) };
-    } catch { }
+    } catch (e) { console.warn("gp_profile load error", e); }
     return { ...DEFAULT_PROFILE };
 })();
 
 export const saveProfile = (updates) => {
     PROFILE = { ...PROFILE, ...updates };
-    try { localStorage.setItem("gp_profile", JSON.stringify(PROFILE)); } catch { }
+    try { localStorage.setItem("gp_profile", JSON.stringify(PROFILE)); } catch (e) { console.warn("gp_profile save error", e); }
 };
 
 // ─── UTILITIES ─────────────────────────────────────────────────────────
 export const LS = {
     get: (k, d = null) => { try { const v = localStorage.getItem(`gp_${k}`); return v ? JSON.parse(v) : d; } catch { return d; } },
-    set: (k, v) => { try { localStorage.setItem(`gp_${k}`, JSON.stringify(v)); } catch { } },
-    del: (k) => { try { localStorage.removeItem(`gp_${k}`); } catch { } },
+    set: (k, v) => { try { localStorage.setItem(`gp_${k}`, JSON.stringify(v)); } catch (e) { console.warn("LS set error", e); } },
+    del: (k) => { try { localStorage.removeItem(`gp_${k}`); } catch (e) { console.warn("LS del error", e); } },
 };
 
 export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -123,5 +123,5 @@ export const logActivity = (type, title, meta = {}) => {
         logs.unshift({ id: uid(), type, title, date: new Date().toISOString(), icon: meta.icon || "📌", color: meta.color || T.blue, ...meta });
         // Keep last 200 entries
         LS.set("activity_log", logs.slice(0, 200));
-    } catch { }
+    } catch (e) { console.warn("Log activity error", e); }
 };

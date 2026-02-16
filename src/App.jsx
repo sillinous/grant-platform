@@ -1,9 +1,7 @@
 ﻿import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { T, PROFILE, saveProfile, LS, uid, fmt, fmtDate, daysUntil, clamp, pct, getProfileState, STAGES, STAGE_MAP, getStorageUsage, logActivity } from "./globals";
 import { Icon, Btn, Card, Badge, Input, TextArea, Select, Tab, Progress, Empty, Modal, Stat, MiniBar, ErrorBoundary } from "./ui";
-import { API, buildPortfolioContext } from "./api";
-import { auth } from "./auth";
-import { cloud } from "./cloud";
+import { API } from "./api";
 
 // ═══════════════════════════════════════════════════════════════════
 // GRANT LIFECYCLE PLATFORM v5.2 — UNLESS
@@ -41,6 +39,7 @@ import { FinancialProjector } from './components/FinancialProjector';
 import { RelationshipMap } from './components/RelationshipMap';
 import { AIDrafter } from './components/AIDrafter';
 import { ComplianceMatrix } from './components/ComplianceMatrix';
+import { ExecutiveDashboard } from './components/ExecutiveDashboard';
 import { Settings } from './components/Settings';
 import { AIChatBar } from './components/AIChatBar';
 import { WinLossAnalysis } from './components/WinLossAnalysis';
@@ -249,6 +248,7 @@ export default function App() {
 
   const NAV = [
     { id: "dashboard", icon: "📈", label: "Dashboard", group: "core" },
+    { id: "exec_dash", icon: "💎", label: "Executive View", group: "core" },
     { id: "discovery", icon: "🔍", label: "Discovery", group: "core" },
     { id: "pipeline", icon: "📋", label: "Pipeline", group: "core" },
     { id: "calendar", icon: "📅", label: "Calendar", group: "core" },
@@ -292,6 +292,7 @@ export default function App() {
   const renderPage = () => {
     switch (page) {
       case "dashboard": return <Dashboard grants={grants} docs={vaultDocs} contacts={contacts} vaultDocs={vaultDocs} events={events} navigate={setPage} />;
+      case "exec_dash": return <ExecutiveDashboard grants={grants} />;
       case "discovery": return <Discovery onAdd={addGrant} grants={grants} />;
       case "pipeline": return <Pipeline grants={grants} updateGrant={updateGrant} deleteGrant={deleteGrant} />;
       case "calendar": return <TimelineCalendar grants={grants} events={events} setEvents={setEvents} />;

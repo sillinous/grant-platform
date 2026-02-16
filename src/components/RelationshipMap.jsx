@@ -10,6 +10,7 @@ export const RelationshipMap = ({ grants, contacts, setContacts }) => {
   const [showTeaming, setShowTeaming] = useState(false);
   const [selectedGrantId, setSelectedGrantId] = useState("");
   const [teamingResult, setTeamingResult] = useState(null);
+  const [pathfindResult, setPathfindResult] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const contactList = contacts || [];
@@ -42,24 +43,22 @@ export const RelationshipMap = ({ grants, contacts, setContacts }) => {
     if (!selectedGrantId) return;
     setLoading(true);
     const grant = grants.find(g => g.id === selectedGrantId);
-
-    const sys = `You are a Senior Strategic Partnerships Consultant. Analyze this grant opportunity and provide a Teaming Strategy.
-Focus on:
-1. COMPLEMENTARY PARTNERS: What types of organizations (nonprofit, academic, private) should we partner with to strengthen this specific bid?
-2. ENGAGEMENT PATH: How should we approach the Program Officer at this agency?
-3. COMPETITIVE POSITIONING: What are our strengths/weaknesses compared to "usual winners" of this grant?
-
-ORGANIZATION: ${PROFILE.name} (${PROFILE.role})
-OUR PORTFOLIO: ${grants.length} grants, ${fmt(grants.reduce((s, x) => s + (x.amount || 0), 0))} total.
-AGENCY: ${grant?.agency || "Unknown"}
-GRANT: ${grant?.title || "Unknown"}
-DESCRIPTION: ${grant?.description || "No description provided."}
-
-Return a structured professional report.`;
-
-    const result = await API.callAI([{ role: "user", content: "Run Teaming Intelligence Analysis." }], sys);
+    const sys = `You are a Senior Strategic Partnerships Consultant. Analyze this grant opportunity and provide a Teaming Strategy. Return a structured report.`;
+    const result = await API.callAI([{ role: "user", content: `Grant: ${grant?.title}` }], sys);
     if (!result.error) setTeamingResult(result.text);
-    else alert(result.error);
+    setLoading(false);
+  };
+
+  const runPathfinder = async (agencyName) => {
+    setLoading(true);
+    const agency = agencies.find(a => a.name === agencyName);
+    const sys = `You are a Relationship Intelligence Specialist. Analyze the path to ${agencyName}.
+Contacts at this Agency: ${agency.contacts.map(c => c.name).join(", ")}
+Our Win Count here: ${agency.grants.filter(g => g.stage === "awarded").length}
+
+Provide the 'Most Strategic Path' to secure a meeting with a Program Officer. Mention specific contacts if available.`;
+    const result = await API.callAI([{ role: "user", content: "Find the path." }], sys);
+    if (!result.error) setPathfindResult({ agency: agencyName, text: result.text });
     setLoading(false);
   };
 
@@ -88,32 +87,53 @@ Return a structured professional report.`;
       </div>
 
       {view === "network" && (
-        <div>
-          {agencies.length === 0 ? <Empty icon="🕸️" title="No agency data yet" sub="Add grants to build your funder network" /> :
-            agencies.map(a => (
-              <Card key={a.name} style={{ marginBottom: 8 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: T.text }}>{a.name}</div>
-                    <div style={{ fontSize: 11, color: T.mute, marginTop: 2 }}>{a.grants.length} grant{a.grants.length > 1 ? "s" : ""} · {a.contacts.length} contact{a.contacts.length > 1 ? "s" : ""}</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 16 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 8, height: "fit-content" }}>
+            {agencies.length === 0 ? <Empty icon="🕸️" title="No agency data yet" sub="Add grants to build your funder network" /> :
+              agencies.map(a => (
+                <Card key={a.name} style={{ marginBottom: 0, position: "relative" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{a.name}</div>
+                      <div style={{ fontSize: 10, color: T.mute, marginTop: 2 }}>{a.grants.length} grants · {a.contacts.length} contacts</div>
+                    </div>
+                    <Btn size="xs" variant="ghost" onClick={() => runPathfinder(a.name)} disabled={loading}>🎯 Path</Btn>
                   </div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: T.green }}>{fmt(a.totalAmount)}</div>
-                </div>
-                <div style={{ display: "flex", gap: 4, marginTop: 8, flexWrap: "wrap" }}>
-                  {a.grants.map(g => (
-                    <Badge key={g.id} color={STAGE_MAP[g.stage]?.color || T.mute}>{STAGE_MAP[g.stage]?.icon} {g.title?.slice(0, 25)}</Badge>
-                  ))}
-                </div>
-                {a.contacts.length > 0 && (
-                  <div style={{ marginTop: 8 }}>
-                    {a.contacts.map(c => (
-                      <div key={c.id} style={{ fontSize: 11, color: T.sub, padding: 2 }}>👤 {c.name} — {c.role}</div>
+                  <div style={{ display: "flex", gap: 4, marginTop: 8, flexWrap: "wrap" }}>
+                    {a.grants.map(g => (
+                      <div key={g.id} style={{ width: 6, height: 6, borderRadius: "50%", background: STAGE_MAP[g.stage]?.color || T.mute }} title={g.title} />
                     ))}
                   </div>
-                )}
+                  {a.contacts.length > 0 && (
+                    <div style={{ marginTop: 8, borderTop: `1px solid ${T.border}`, paddingTop: 6 }}>
+                      {a.contacts.slice(0, 2).map(c => (
+                        <div key={c.id} style={{ fontSize: 10, color: T.sub, marginBottom: 2 }}>👤 {c.name}</div>
+                      ))}
+                      {a.contacts.length > 2 && <div style={{ fontSize: 9, color: T.dim }}>+ {a.contacts.length - 2} more</div>}
+                    </div>
+                  )}
+                </Card>
+              ))
+            }
+          </div>
+
+          <div style={{ position: "sticky", top: 0 }}>
+            {pathfindResult ? (
+              <Card style={{ background: T.panel + "22", borderColor: T.amber + "33" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: T.amber }}>🗺️ Intelligence Path: {pathfindResult.agency}</div>
+                  <button onClick={() => setPathfindResult(null)} style={{ background: "none", border: "none", color: T.mute, cursor: "pointer" }}>✕</button>
+                </div>
+                <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{pathfindResult.text}</div>
+                <Btn size="sm" variant="ghost" style={{ width: "100%", marginTop: 12 }} onClick={() => { navigator.clipboard?.writeText(pathfindResult.text); alert("📋 Path copied!"); }}>📋 Copy Intel</Btn>
               </Card>
-            ))
-          }
+            ) : (
+              <Card style={{ textAlign: "center", opacity: 0.6 }}>
+                <div style={{ fontSize: 40, marginBottom: 16 }}>🎯</div>
+                <div style={{ fontSize: 12, color: T.mute }}>Select <strong>Path</strong> on an agency card to determine the best relationship strategy.</div>
+              </Card>
+            )}
+          </div>
         </div>
       )}
 
@@ -141,21 +161,21 @@ Return a structured professional report.`;
       )}
 
       {view === "insights" && (
-        <div>
-          <Card style={{ marginBottom: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+          <Card>
             <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>🔑 Funder Diversity</div>
             <div style={{ fontSize: 12, color: T.sub, marginBottom: 8 }}>
-              You're connected to <strong style={{ color: T.amber }}>{agencies.length}</strong> unique agencies.
-              {agencies.length < 5 ? " Consider diversifying your funder base to reduce risk." : " Good funder diversification."}
+              Connected to <strong style={{ color: T.amber }}>{agencies.length}</strong> unique agencies.
+              {agencies.length < 5 ? " Consider diversifying." : " Good diversification."}
             </div>
             <Progress value={Math.min(agencies.length, 10)} max={10} color={agencies.length >= 5 ? T.green : T.yellow} />
           </Card>
-          <Card style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>📊 Relationship Strength</div>
+          <Card>
+            <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>📊 Agency Penetration</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               <div style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 20, fontWeight: 700, color: T.blue }}>{contactList.filter(c => c.type === "program_officer").length}</div>
-                <div style={{ fontSize: 11, color: T.mute }}>Program Officers</div>
+                <div style={{ fontSize: 11, color: T.mute }}>Officers</div>
               </div>
               <div style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 20, fontWeight: 700, color: T.purple }}>{contactList.filter(c => c.type === "partner").length}</div>
@@ -165,11 +185,10 @@ Return a structured professional report.`;
           </Card>
           <Card>
             <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>💡 Recommendations</div>
-            <div style={{ fontSize: 12, color: T.sub, lineHeight: 1.6 }}>
-              {contactList.length < 3 && <div>• Build your contact network — aim for at least 3 program officers</div>}
-              {agencies.filter(a => a.contacts.length === 0).length > 0 && <div>• Add contacts for: {agencies.filter(a => a.contacts.length === 0).map(a => a.name).join(", ")}</div>}
-              {grants.filter(g => g.stage === "declined").length > 0 && <div>• Review declined grants and reach out to program officers for feedback</div>}
-              {contactList.length >= 5 && <div>• Strong network! Consider nurturing existing relationships with regular check-ins</div>}
+            <div style={{ fontSize: 10, color: T.sub, lineHeight: 1.6 }}>
+              {contactList.length < 3 && <div>• Build your contact network.</div>}
+              {agencies.filter(a => a.contacts.length === 0).length > 0 && <div>• Add contacts for: {agencies.filter(a => a.contacts.length === 0).map(a => a.name.slice(0, 10)).join(", ")}...</div>}
+              {grants.filter(g => g.stage === "declined").length > 0 && <div>• Reach out for feedback on declines.</div>}
             </div>
           </Card>
         </div>
@@ -190,7 +209,7 @@ Return a structured professional report.`;
       <Modal open={showTeaming} onClose={() => setShowTeaming(false)} title="🤝 AI Teaming Intelligence" width={800}>
         {!teamingResult ? (
           <div style={{ display: "grid", gap: 12 }}>
-            <div style={{ fontSize: 12, color: T.sub }}>Select a grant opportunity to generate a tailored partnership and engagement strategy.</div>
+            <div style={{ fontSize: 12, color: T.sub }}>Select a grant opportunity to generate a tailored partnership strategy.</div>
             <Select value={selectedGrantId} onChange={setSelectedGrantId} options={[{ value: "", label: "Select a grant..." }, ...grants.map(g => ({ value: g.id, label: g.title?.slice(0, 60) }))]} />
             <Btn variant="primary" onClick={runTeamingStrategy} disabled={loading || !selectedGrantId}>{loading ? "⏳ Analyzing Strategy..." : "🚀 Generate Strategy"}</Btn>
           </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Input, Btn, Select, TextArea, Stat, Badge, Empty, Modal } from '../ui';
-import { LS, T, uid } from '../globals';
+import { Card, Btn, Badge, Input, Select, TextArea, Tab, Progress, Empty, Modal } from '../ui';
+import { T, LS, uid, fmtDate } from '../globals';
 import { API } from '../api';
 
 export const SectionLibrary = ({ vaultDocs, setVaultDocs }) => {
@@ -10,6 +10,7 @@ export const SectionLibrary = ({ vaultDocs, setVaultDocs }) => {
   const [newSection, setNewSection] = useState({ title: "", category: "need", content: "", tags: [], useCount: 0 });
   const [aiQuery, setAiQuery] = useState("");
   const [aiSuggestions, setAiSuggestions] = useState(null);
+  const [harvestResults, setHarvestResults] = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => { LS.set("section_library", sections); }, [sections]);
@@ -22,6 +23,8 @@ export const SectionLibrary = ({ vaultDocs, setVaultDocs }) => {
     { id: "impact", label: "Impact Statement", icon: "🎯" }, { id: "bio", label: "Key Personnel", icon: "👤" },
     { id: "partnership", label: "Partnerships", icon: "🤝" }, { id: "dissemination", label: "Dissemination Plan", icon: "📢" },
   ];
+
+  const typeMap = Object.fromEntries(SECTION_TYPES.map(t => [t.id, t]));
 
   const addSection = () => {
     if (!newSection.title || !newSection.content) return;
@@ -41,6 +44,33 @@ export const SectionLibrary = ({ vaultDocs, setVaultDocs }) => {
     if (!setVaultDocs) return;
     const doc = { id: uid(), title: section.title, content: section.content, category: section.category, source: "section_library", createdAt: new Date().toISOString() };
     setVaultDocs(prev => [...prev, doc]);
+  };
+
+  const harvestBoilerplate = async () => {
+    if (!vaultDocs || vaultDocs.length === 0) return alert("Vault is empty. Add documents first.");
+    setLoading(true);
+    const content = vaultDocs.map(d => `DOC: ${d.title}\nCONTENT: ${d.content?.slice(0, 500)}`).join("\n\n---\n\n");
+    const sys = `You are a Grant Content Architect. Analyze the following documents from the organization's vault.
+Identify 3-5 sections that would make excellent REUSABLE boilerplate (e.g., Mission Statements, Organizational Capacity, Team Bios, Methodology fragments).
+
+Format each as JSON:
+[{"title": "...", "category": "...", "content": "...", "reason": "..."}]
+
+Available Categories: ${SECTION_TYPES.map(t => t.id).join(", ")}`;
+
+    const result = await API.callAI([{ role: "user", content }], sys);
+    if (!result.error) {
+      try {
+        const cleaned = result.text.replace(/```json\n?|```/g, "").trim();
+        setHarvestResults(JSON.parse(cleaned));
+      } catch (e) { alert("Failed to parse boilerplate candidates."); }
+    }
+    setLoading(false);
+  };
+
+  const importHarvested = (item) => {
+    setSections(prev => [...prev, { ...item, id: uid(), createdAt: new Date().toISOString(), useCount: 1 }]);
+    setHarvestResults(prev => prev.filter(x => x !== item));
   };
 
   const findSimilar = async () => {
@@ -90,21 +120,57 @@ Return the adapted content only.`;
   };
 
   const filtered = sections.filter(s => !search || s.title.toLowerCase().includes(search.toLowerCase()) || s.content.toLowerCase().includes(search.toLowerCase()));
-  const typeMap = Object.fromEntries(SECTION_TYPES.map(t => [t.id, t]));
 
   return (
     <div>
-      <Card style={{ marginBottom: 16, background: T.panel + "22" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>🧠 AI Smart Suggest</span>
-          <Badge size="xs" color={T.amber}>Beta</Badge>
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <Input value={aiQuery} onChange={setAiQuery} placeholder="Paste RFP text or describe what you're writing (e.g., 'Project goals for a rural health grant')..." style={{ flex: 1 }} />
-          <Btn variant="primary" size="sm" onClick={findSimilar} disabled={loading || !aiQuery.trim()}>{loading ? "⏳..." : "Find Similar"}</Btn>
-          {aiSuggestions && <Btn variant="ghost" size="sm" onClick={() => setAiSuggestions(null)}>✕</Btn>}
-        </div>
-      </Card>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+        <Card style={{ background: T.panel + "22" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>🧠 AI Smart Suggest</span>
+            <Badge size="xs" color={T.amber}>Search</Badge>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Input value={aiQuery} onChange={setAiQuery} placeholder="Paste RFP or describe context..." style={{ flex: 1 }} />
+            <Btn variant="primary" size="sm" onClick={findSimilar} disabled={loading || !aiQuery.trim()}>{loading ? "⏳" : "🔍"}</Btn>
+          </div>
+        </Card>
+
+        <Card style={{ background: T.panel + "22" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>🌾 AI Boilerplate Harvest</span>
+            <Badge size="xs" color={T.green}>Auto</Badge>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ fontSize: 11, color: T.sub }}>Extract reusable sections from your Document Vault.</div>
+            <Btn size="sm" variant="success" onClick={harvestBoilerplate} disabled={loading}>{loading ? "⏳" : "🚀 Harvest"}</Btn>
+          </div>
+        </Card>
+      </div>
+
+      {harvestResults && (
+        <Card style={{ marginBottom: 16, borderColor: T.green + "88", background: T.green + "08" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: T.green }}>✨ Recommended Boilerplate Candidates</div>
+            <Btn size="xs" variant="ghost" onClick={() => setHarvestResults(null)}>✕</Btn>
+          </div>
+          <div style={{ display: "grid", gap: 8 }}>
+            {harvestResults.map((item, i) => (
+              <div key={i} style={{ background: T.card, padding: 10, borderRadius: 6, border: `1px solid ${T.border}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <span style={{ fontSize: 12, fontWeight: 600 }}>{item.title}</span>
+                      <Badge size="xs" color={T.blue}>{typeMap[item.category]?.label || item.category}</Badge>
+                    </div>
+                    <div style={{ fontSize: 10, color: T.mute, marginTop: 2, fontStyle: "italic" }}>{item.reason}</div>
+                  </div>
+                  <Btn size="sm" onClick={() => importHarvested(item)}>💾 Import</Btn>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {aiSuggestions && (
         <Card style={{ marginBottom: 16, borderColor: T.amber + "88" }}>

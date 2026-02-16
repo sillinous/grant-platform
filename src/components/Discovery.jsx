@@ -28,7 +28,6 @@ export const Discovery = ({ onAdd, grants }) => {
     const [searchHistory, setSearchHistory] = useState(() => LS.get("search_history", []));
     const [savedResults, setSavedResults] = useState(() => LS.get("saved_discoveries", []));
     const [aiRecs, setAiRecs] = useState(null);
-    const [aiLoading, setAiLoading] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
     const [searchStats, setSearchStats] = useState(null);
     const [totalCount, setTotalCount] = useState(0);

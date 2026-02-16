@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { Card, Btn, Input, Select, TextArea, Badge } from '../ui';
+import { Card, Btn, Select, TextArea, Badge } from '../ui';
 import { API, buildPortfolioContext } from '../api';
 import { T, LS, uid, fmtDate } from '../globals';
 
@@ -27,6 +27,37 @@ export const AIDrafter = ({ grants, vaultDocs }) => {
     else {
       setOutput(result.text);
       setMeta({ provider: result.provider, model: result.model });
+    }
+    setLoading(false);
+  };
+
+  const autoAssemble = async () => {
+    const grant = grants.find(g => g.id === selectedGrant);
+    if (!grant) return alert("Select a grant first to auto-assemble.");
+    setLoading(true);
+    const sections = LS.get("section_library", []);
+    const context = sections.map(s => `ID:${s.id} | Title:${s.title} | Category:${s.category}`).join("\n");
+    const sys = `You are a Grant Document Architect. Map the following grant requirements to the best available sections in the library.
+GRANT: ${grant.title}
+DESCRIPTION: ${grant.description}
+
+LIBRARY SECTIONS:
+${context}
+
+Return ONLY a JSON array of section IDs in the optimal sequence for a draft:
+["id1", "id2", "id3"]`;
+
+    const result = await API.callAI([{ role: "user", content: "Select the best sections for this grant." }], sys);
+    if (!result.error) {
+      try {
+        const cleaned = result.text.replace(/```json\n?|```/g, "").trim();
+        const ids = JSON.parse(cleaned);
+        const selected = ids.map(id => sections.find(s => s.id === id)).filter(Boolean);
+        const assembled = selected.map(s => `## ${s.title}\n\n${s.content}`).join("\n\n---\n\n");
+        setOutput(assembled);
+        setMeta({ provider: result.provider, model: result.model });
+        alert(`✨ Assembled ${selected.length} sections from your library!`);
+      } catch (e) { alert("Failed to assemble sections."); }
     }
     setLoading(false);
   };
@@ -65,11 +96,14 @@ export const AIDrafter = ({ grants, vaultDocs }) => {
       <Card style={{ marginBottom: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>✍️ AI Grant Drafter</div>
-          {meta && (
-            <Badge size="xs" variant="ghost" style={{ fontSize: 9 }}>
-              via {meta.provider} ({meta.model?.split("/").pop()})
-            </Badge>
-          )}
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <Btn size="xs" variant="primary" onClick={autoAssemble} disabled={loading || !selectedGrant} title="Auto-assemble from library">✨ Auto-Assemble</Btn>
+            {meta && (
+              <Badge size="xs" variant="ghost" style={{ fontSize: 9 }}>
+                via {meta.provider} ({meta.model?.split("/").pop()})
+              </Badge>
+            )}
+          </div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
           <Select value={docType} onChange={setDocType} options={[

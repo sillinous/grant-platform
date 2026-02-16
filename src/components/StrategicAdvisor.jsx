@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Card, Btn } from '../ui';
-import { T, fmt, fmtDate, STAGE_MAP } from '../globals';
+import { T, LS, fmt, fmtDate, STAGE_MAP } from '../globals';
 import { API, buildPortfolioContext } from '../api';
 
 export const StrategicAdvisor = ({ grants, vaultDocs, contacts }) => {
@@ -11,6 +11,7 @@ export const StrategicAdvisor = ({ grants, vaultDocs, contacts }) => {
   const MODES = [
     { id:"portfolio", label:"🎯 Portfolio Strategy", prompt:"Analyze my entire grant portfolio. Evaluate diversification, risk concentration, pipeline health, conversion potential, and strategic gaps. Provide a prioritized action plan for the next 30/60/90 days." },
     { id:"targeting", label:"🔍 Targeting Strategy", prompt:"Based on my profile, businesses, and demographics, what types of federal grants should I prioritize? What agencies and programs are the best fit? What areas am I underexploring?" },
+    { id: "win_prob", label: "🎲 Win Probability (Beta)", prompt: "Run a 'Go/No-Go' analysis for my active grants. Synthesize my organizational capacity against the specific requirements and competitive landscape. Rate success probability as a percentage and provide the 3 biggest 'Winning Factors' and 3 'Deal Breakers'." },
     { id:"narrative", label:"✍️ Narrative Strategy", prompt:"Review my profile and suggest the strongest narrative angles I should use across applications. What's my most compelling story? How should I frame my rural location, disability, and multiple ventures as strengths?" },
     { id:"capacity", label:"🏢 Capacity Building", prompt:"What organizational capacity gaps might reviewers identify? What should I address before submitting more applications? Suggest specific improvements to strengthen my competitive position." },
     { id:"timeline", label:"📅 Timeline Optimization", prompt:"Look at my pipeline deadlines, stages, and workload. Am I overcommitted? Should I drop any grants? What's the optimal sequence for completing applications to maximize quality?" },
@@ -21,16 +22,20 @@ export const StrategicAdvisor = ({ grants, vaultDocs, contacts }) => {
     setLoading(true);
     const context = buildPortfolioContext(grants, vaultDocs, contacts);
     const grantDetails = grants.map(g => `- ${g.title} | ${STAGE_MAP[g.stage]?.label} | ${fmt(g.amount||0)} | ${g.agency} | Deadline: ${g.deadline ? fmtDate(g.deadline) : 'none'}`).join("\n");
+    const peers = LS.get("peers", []).map(p => `- ${p.name} | ${p.agency} | ${fmt(p.amount)}`).join("\n");
     const selectedMode = MODES.find(m => m.id === mode);
 
-    const sys = `You are an elite grant strategy consultant with 20+ years of experience advising small organizations and rural entrepreneurs on federal funding. You specialize in building sustainable grant portfolios for underserved communities.
+    const sys = `You are an elite grant strategy consultant. ${selectedMode.id === "win_prob" ? "You specialize in probability analysis and risk assessment for federal bids." : "You specialize in building sustainable grant portfolios for underserved communities."}
 
 ${context}
 
 DETAILED GRANTS:
 ${grantDetails}
 
-Provide specific, actionable, data-driven advice. Reference the user's actual portfolio data. Include timelines and metrics. Structure your response with clear headers and priorities.`;
+PEER COMPETITIVE DATA:
+${peers}
+
+Provide specific, actionable, data-driven advice. Reference the user's actual portfolio and peer data. Include timelines and metrics where appropriate. Structure your response with clear headers and priorities.`;
 
     const result = await API.callAI([{ role:"user", content: selectedMode.prompt }], sys);
     setAnalysis({ mode: selectedMode, text: result.error ? `Error: ${result.error}` : result.text, date: new Date().toISOString() });

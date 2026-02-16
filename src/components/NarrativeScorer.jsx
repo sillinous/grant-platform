@@ -114,17 +114,47 @@ export const NarrativeScorer = ({ grants }) => {
     setLoading(false);
   };
 
+  const optimizeSection = async (category) => {
+    if (!text.trim()) return;
+    setLoading(true);
+    const rubric = RUBRICS[rubricId] || RUBRICS.generic;
+    const label = rubric.labels[category];
+    const scoreVal = scoreResult?.scores?.[category] || 0;
+
+    const sys = `You are an AI Grant Optimizer. Your goal is to rewrite the following grant narrative section to achieve a PERFECT SCORE for the specific rubric criterion: "${label}".
+The current score for this criterion is ${scoreVal}/100.
+
+CRITERION CONTEXT:
+${rubric.prompt}
+
+INSTRUCTIONS:
+- Maintain the original data and meaning.
+- Make it more persuasive, evidence-based, and aligned with ${rubric.name} standards.
+- Use academic but accessible tone.
+- Ensure the specific requirements for "${label}" are clearly and explicitly addressed.
+
+Return ONLY the optimized narrative text.`;
+
+    const res = await API.callAI([{ role: "user", content: text }], sys);
+    if (!res.error) {
+      setText(res.text);
+      alert(`✨ Narrative optimized for ${label}! Review changes in the editor.`);
+      setScoreResult(null); // Force re-score
+    } else { alert(res.error); }
+    setLoading(false);
+  };
+
   const getScoreColor = (val) => val >= 80 ? T.green : val >= 60 ? T.yellow : T.red;
 
   return (
     <div>
       <Card style={{ marginBottom: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>📝 AI Narrative Scorer</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>📝 AI Narrative Scorer & Optimizer</div>
           <Badge color={rubric.color}>{rubric.icon} {rubric.name}</Badge>
         </div>
         <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>
-          Paste a draft narrative section. The AI will score it as a "{rubric.name}" reviewer using agency-specific criteria.
+          Paste a draft narrative section. The AI will score and help you optimize it for "{rubric.name}" expectations.
         </div>
 
         {/* Rubric Selector */}
@@ -146,7 +176,7 @@ export const NarrativeScorer = ({ grants }) => {
           options={[{ value: "", label: "General (no specific grant)" }, ...grants.map(g => ({ value: g.id, label: g.title?.slice(0, 50) }))]} />
         <TextArea value={text} onChange={setText} rows={8} placeholder="Paste your narrative draft here..." />
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
-          <Btn variant="primary" onClick={score} disabled={loading}>{loading ? "⏳ Scoring..." : `📊 Score with ${rubric.name}`}</Btn>
+          <Btn variant="primary" onClick={score} disabled={loading}>{loading ? "⏳ Thinking..." : `📊 Score with ${rubric.name}`}</Btn>
           <div style={{ fontSize: 11, color: T.mute }}>{text.split(/\s+/).filter(Boolean).length} words</div>
         </div>
       </Card>
@@ -157,24 +187,27 @@ export const NarrativeScorer = ({ grants }) => {
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
               <div style={{ fontSize: 48, fontWeight: 700, color: getScoreColor(scoreResult.overall) }}>{scoreResult.overall}</div>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: T.text }}>Overall Score</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: T.text }}>Overall Reviewer Sentiment</div>
                 <div style={{ fontSize: 12, color: T.sub }}>
                   {scoreResult.overall >= 80 ? "Excellent — competitive quality" : scoreResult.overall >= 60 ? "Good — needs some refinement" : "Needs significant improvement"}
                 </div>
-                <Badge color={rubric.color} style={{ marginTop: 4 }}>{rubric.icon} Reviewed as: {rubric.name}</Badge>
+                <Badge color={rubric.color} style={{ marginTop: 4 }}>{rubric.icon} Criteria: {rubric.name}</Badge>
               </div>
             </div>
           </Card>
 
           <Card style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>📊 {rubric.name} Criteria Breakdown</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>📊 {rubric.name} Criteria & Optimization</div>
             {rubric.criteria.map(c => {
               const val = scoreResult.scores?.[c] || 0;
               return (
-                <div key={c} style={{ marginBottom: 8 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 3 }}>
-                    <span style={{ color: T.sub }}>{rubric.labels[c]}</span>
-                    <span style={{ color: getScoreColor(val), fontWeight: 600 }}>{val}/100</span>
+                <div key={c} style={{ marginBottom: 12, paddingBottom: 8, borderBottom: `1px solid ${T.border}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 3 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 12, color: T.text, fontWeight: 600 }}>{rubric.labels[c]}</div>
+                      <div style={{ fontSize: 10, color: T.sub }}>Score: <span style={{ color: getScoreColor(val) }}>{val}/100</span></div>
+                    </div>
+                    <Btn size="xs" variant="ghost" onClick={() => optimizeSection(c)} disabled={loading}>✨ Optimize</Btn>
                   </div>
                   <Progress value={val} max={100} color={getScoreColor(val)} height={6} />
                 </div>
