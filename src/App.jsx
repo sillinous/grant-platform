@@ -2,6 +2,8 @@
 import { T, PROFILE, saveProfile, LS, uid, fmt, fmtDate, daysUntil, clamp, pct, getProfileState, STAGES, STAGE_MAP, getStorageUsage, logActivity } from "./globals";
 import { Icon, Btn, Card, Badge, Input, TextArea, Select, Tab, Progress, Empty, Modal, Stat, MiniBar, ErrorBoundary } from "./ui";
 import { API, buildPortfolioContext } from "./api";
+import { auth } from "./auth";
+import { cloud } from "./cloud";
 
 // ═══════════════════════════════════════════════════════════════════
 // GRANT LIFECYCLE PLATFORM v5.2 — UNLESS
@@ -102,17 +104,45 @@ export default function App() {
   const [collapsedGroups, setCollapsedGroups] = useState(() => LS.get("sidebar_collapsed", {}));
   const [toast, setToast] = useState(null);
   const [onboardingComplete, setOnboardingComplete] = useState(() => LS.get("onboarding_complete", false));
+  const [user, setUser] = useState(null);
+  const [syncStatus, setSyncStatus] = useState("local"); // local, syncing, synced, error
+
+  // Initialize Auth & Cloud
+  useEffect(() => {
+    auth.init((u) => {
+      setUser(u);
+      if (u) {
+        cloud.pull().then((data) => {
+          if (data) {
+            // If cloud has data, update state
+            if (data.grants) setGrants(data.grants);
+            if (data.docs) setVaultDocs(data.docs);
+            if (data.contacts) setContacts(data.contacts);
+            if (data.events) setEvents(data.events);
+            showToast("Data synced from cloud", "success");
+          }
+        });
+      }
+    });
+  }, []);
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   };
 
-  // Debounced Persist (300ms delay to avoid thrashing localStorage)
+  // Debounced Persist (Local + Cloud)
   const debounceRef = useRef({});
   const debouncedPersist = useCallback((key, value) => {
     clearTimeout(debounceRef.current[key]);
-    debounceRef.current[key] = setTimeout(() => LS.set(key, value), 300);
+    debounceRef.current[key] = setTimeout(() => {
+      LS.set(key, value);
+      // Attempt cloud sync if logged in
+      if (auth.user) {
+        setSyncStatus("syncing");
+        cloud.push().then(() => setSyncStatus("synced")).catch(() => setSyncStatus("error"));
+      }
+    }, 1000); // 1s delay for cloud
   }, []);
   useEffect(() => { debouncedPersist("grants", grants); }, [grants, debouncedPersist]);
   useEffect(() => { debouncedPersist("vault_docs", vaultDocs); }, [vaultDocs, debouncedPersist]);
@@ -355,8 +385,27 @@ export default function App() {
         </div>
         {sidebarOpen && (
           <div style={{ padding:12, borderTop:`1px solid ${T.border}`, fontSize:10, color:T.dim }}>
-            <div>v5.2 · {grants.length} grants · {(vaultDocs || []).length} docs · 39 modules</div>
-            {(() => { const s = getStorageUsage(); return s.warning ? <div style={{ marginTop: 4, color: T.red }}>⚠️ Storage: {s.pct}% ({s.usedMB}MB / {s.quotaMB}MB)</div> : <div style={{ marginTop: 4, color: T.mute }}>💾 {s.pct}% storage used</div>; })()}
+            {/* Auth Status */}
+            <div style={{ marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              {user ? (
+                <>
+                  <span title={user.email}>👤 {user.user_metadata?.full_name || user.email.split("@")[0]}</span>
+                  <button onClick={() => auth.logout()} style={{ background: "none", border: "none", color: T.red, cursor: "pointer", fontSize: 10 }}>Logout</button>
+                </>
+              ) : (
+                <button onClick={() => auth.login()} style={{ width: "100%", background: T.blue, color: "white", border: "none", padding: "4px", borderRadius: 4, cursor: "pointer" }}>☁️ Login to Sync</button>
+              )}
+            </div>
+
+            <div>v5.3 · {grants.length} grants · {(vaultDocs || []).length} docs</div>
+
+            {user && (
+              <div style={{ marginTop: 4, color: syncStatus === "error" ? T.red : T.green }}>
+                {syncStatus === "syncing" ? "🔄 Syncing..." : syncStatus === "synced" ? "☁️ Cloud Saved" : "☁️ Connected"}
+              </div>
+            )}
+
+            {(() => { const s = getStorageUsage(); return s.warning ? <div style={{ marginTop: 4, color: T.red }}>⚠️ Local Storage: {s.pct}%</div> : <div style={{ marginTop: 4, color: T.mute }}>💾 Local: {s.pct}% used</div>; })()}
           </div>
         )}
       </div>
