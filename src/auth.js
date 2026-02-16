@@ -1,41 +1,50 @@
 
-// import netlifyIdentity from "netlify-identity-widget"; 
-// ^^^ CAUSES VITE BUILD ISSUES (global is not defined)
 // We use the CDN script in index.html, which exposes window.netlifyIdentity
-const netlifyIdentity = window.netlifyIdentity;
+// Access it lazily to avoid race conditions during module evaluation.
 
 export const auth = {
   user: null, // Current user object
   
+  _getParams: () => window.netlifyIdentity,
+
   init(callback) {
-    netlifyIdentity.init();
+    const NIST = this._getParams();
+    if (!NIST) {
+      console.warn("Netlify Identity script not loaded. Auth disabled.");
+      return;
+    }
+
+    NIST.init();
     
     // Set initial user
-    this.user = netlifyIdentity.currentUser();
+    this.user = NIST.currentUser();
 
     // Bind events
-    netlifyIdentity.on("login", (user) => {
+    NIST.on("login", (user) => {
       this.user = user;
-      netlifyIdentity.close();
+      NIST.close();
       if (callback) callback(user);
     });
 
-    netlifyIdentity.on("logout", () => {
+    NIST.on("logout", () => {
       this.user = null;
       if (callback) callback(null);
     });
   },
 
   login() {
-    netlifyIdentity.open("login");
+    const NIST = this._getParams();
+    if (NIST) NIST.open("login");
   },
 
   signup() {
-    netlifyIdentity.open("signup");
+    const NIST = this._getParams();
+    if (NIST) NIST.open("signup");
   },
 
   logout() {
-    netlifyIdentity.logout();
+    const NIST = this._getParams();
+    if (NIST) NIST.logout();
   },
 
   // Get the JWT token for API requests
