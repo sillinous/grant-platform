@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { T, LS, PROFILE, saveProfile, DEFAULT_PROFILE } from '../globals';
 import { Card, Btn, Input, TextArea, Select, Badge, Empty, Modal } from '../ui';
-import { API, AI_PROVIDERS as AI_PROVIDERS_LIST, getActiveProvider, getProviderKey as getProviderKeyFn } from '../api';
+import { API } from '../api';
+import { AI_PROVIDERS as AI_PROVIDERS_LIST, getActiveProvider, getProviderKey as getProviderKeyFn } from '../ai-config';
 
 export const Settings = ({ showToast }) => {
   const [saved, setSaved] = useState(false);
