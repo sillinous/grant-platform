@@ -1,6 +1,6 @@
 import React from 'react';
-import { Card, Stat, Badge, Progress, Btn } from './ui';
-import { T, fmt, fmtDate, STAGE_MAP } from './globals';
+import { Card, Stat, Badge, Progress, Btn } from '../ui';
+import { T, fmt, fmtDate, STAGE_MAP } from '../globals';
 
 export const ExecutiveSummary = ({ grants }) => {
   const awarded = grants.filter(g => ["awarded", "active", "closeout"].includes(g.stage));
