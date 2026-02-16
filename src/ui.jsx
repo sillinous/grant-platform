@@ -73,8 +73,8 @@ export const Card = ({ children, style, onClick, glow }) => (
   }}>{children}</div>
 );
 
-export const Badge = ({ children, color = T.amber, style }) => (
-  <span style={{ display:"inline-flex", alignItems:"center", padding:"2px 8px", borderRadius:20, fontSize:11, fontWeight:600, background:color+"22", color, ...style }}>{children}</span>
+export const Badge = ({ children, color = T.amber, style, ...props }) => (
+  <span {...props} style={{ display: "inline-flex", alignItems: "center", padding: "2px 8px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: color + "22", color, ...style }}>{children}</span>
 );
 
 export const Input = ({ value, onChange, placeholder, style, type = "text", ...props }) => (
