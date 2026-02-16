@@ -7,3 +7,82 @@ input, select, textarea, button { font-family: inherit; }
 ::-webkit-scrollbar-thumb { background: #283548; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #354058; }
 ::selection { background: rgba(196,147,85,0.3); }
+
+/* D3: Mobile Responsive Layout */
+@media (max-width: 768px) {
+
+    html,
+    body,
+    #root {
+        overflow: auto;
+    }
+
+    /* Stack sidebar below content on mobile */
+    #root>div {
+        flex-direction: column-reverse !important;
+        height: auto !important;
+        min-height: 100vh;
+    }
+
+    /* Sidebar becomes bottom nav */
+    #root>div>div:first-child {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex-shrink: 0 !important;
+        border-right: none !important;
+        border-top: 1px solid #1a2235 !important;
+        flex-direction: row !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        padding: 4px !important;
+        gap: 2px;
+    }
+
+    /* Hide sidebar labels and groups on mobile */
+    #root>div>div:first-child>div:last-child {
+        display: none !important;
+    }
+
+    /* Buttons in bottom nav */
+    #root>div>div:first-child button {
+        min-width: 44px !important;
+        min-height: 44px !important;
+    }
+
+    /* Main content fills viewport */
+    #root>div>div:nth-child(2) {
+        flex: 1 !important;
+        overflow: auto !important;
+    }
+
+    #root>div>div:nth-child(2)>div:last-child {
+        padding: 12px !important;
+    }
+
+    /* Stack grids on mobile */
+    div[style*="gridTemplateColumns"] {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* AI Chat smaller on mobile */
+    div[style*="position: fixed"][style*="width: 380px"],
+    div[style*="position:fixed"][style*="width:380"] {
+        width: calc(100vw - 16px) !important;
+        height: 60vh !important;
+        bottom: 8px !important;
+        right: 8px !important;
+    }
+}
+
+@media (max-width: 480px) {
+
+    /* Even tighter mobile */
+    #root>div>div:nth-child(2)>div:last-child {
+        padding: 8px !important;
+    }
+
+    div[style*="gap: 16px"],
+    div[style*="gap:16"] {
+        gap: 8px !important;
+    }
+}

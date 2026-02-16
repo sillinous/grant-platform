@@ -7,10 +7,21 @@ const SimpleCache = {
     get(key) {
         const item = this.data[key];
         if (item && item.exp > Date.now()) return item.val;
+        if (item) delete this.data[key]; // Auto-evict expired
         return null;
     },
     set(key, val, ttl = 300000) { // 5 mins default
         this.data[key] = { val, exp: Date.now() + ttl };
+    },
+    clear() { this.data = {}; },
+    clearExpired() {
+        const now = Date.now();
+        Object.keys(this.data).forEach(k => { if (this.data[k].exp <= now) delete this.data[k]; });
+    },
+    getStats() {
+        const keys = Object.keys(this.data);
+        const now = Date.now();
+        return { total: keys.length, active: keys.filter(k => this.data[k].exp > now).length, expired: keys.filter(k => this.data[k].exp <= now).length };
     }
 };
 
@@ -90,7 +101,8 @@ export const API = {
         const cached = SimpleCache.get(cacheKey);
         if (cached) return cached;
         try {
-            const r = await fetch(`https://api.regulations.gov/v4/documents?filter[searchTerm]=${encodeURIComponent(query)}&filter[documentType]=Rule&page[size]=10&sort=-postedDate&api_key=DEMO_KEY`);
+            const apiKey = import.meta.env.VITE_REGULATIONS_KEY || "DEMO_KEY";
+            const r = await fetch(`https://api.regulations.gov/v4/documents?filter[searchTerm]=${encodeURIComponent(query)}&filter[documentType]=Rule&page[size]=10&sort=-postedDate&api_key=${apiKey}`);
             if (r.status === 429) return { data: [], _error: "Regulations.gov rate limit reached (DEMO_KEY: 30 req/hr). Try again later." };
             if (!r.ok) return { data: [], _error: `Regulations.gov: HTTP ${r.status}` };
             const data = await r.json();
@@ -118,7 +130,8 @@ export const API = {
         const cached = SimpleCache.get(cacheKey);
         if (cached) return cached;
         try {
-            const r = await fetch(`https://api.sam.gov/entity-information/v3/entities?api_key=DEMO_KEY&registrationStatus=A&legalBusinessName=${encodeURIComponent(query)}&includeSections=entityRegistration`);
+            const apiKey = import.meta.env.VITE_SAM_KEY || "DEMO_KEY";
+            const r = await fetch(`https://api.sam.gov/entity-information/v3/entities?api_key=${apiKey}&registrationStatus=A&legalBusinessName=${encodeURIComponent(query)}&includeSections=entityRegistration`);
             if (r.status === 429) return { entityData: [], _error: "SAM.gov rate limit reached (DEMO_KEY: 30 req/hr). Try again later." };
             if (!r.ok) return { entityData: [], _error: `SAM.gov: HTTP ${r.status}` };
             const data = await r.json();

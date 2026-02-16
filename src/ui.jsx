@@ -1,4 +1,4 @@
-import { Component } from "react";
+import { Component, useState } from "react";
 import { T, clamp } from "./globals";
 
 // ─── ERROR BOUNDARY ────────────────────────────────────────────────────
@@ -157,3 +157,71 @@ export const MiniBar = ({ data, height = 120, color = T.amber }) => {
     </div>
   );
 };
+
+// ─── CONFIRM MODAL (B2) ─────────────────────────────────────────────────
+export const ConfirmModal = ({ open, title, message, confirmLabel = "Confirm", cancelLabel = "Cancel", onConfirm, onCancel, variant = "danger" }) => {
+  if (!open) return null;
+  const colors = { danger: T.red, warning: T.orange, primary: T.amber };
+  const accentColor = colors[variant] || T.amber;
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1001, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>
+      <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 12, padding: 24, maxWidth: 400, width: "90%", boxShadow: `0 8px 32px rgba(0,0,0,0.5)` }}>
+        <div style={{ fontSize: 15, fontWeight: 600, color: T.text, marginBottom: 8 }}>{title || "Confirm"}</div>
+        <div style={{ fontSize: 12, color: T.sub, lineHeight: 1.6, marginBottom: 20, whiteSpace: "pre-wrap" }}>{message}</div>
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <Btn size="sm" variant="ghost" onClick={onCancel}>{cancelLabel}</Btn>
+          <Btn size="sm" variant="primary" onClick={onConfirm} style={{ background: accentColor }}>{confirmLabel}</Btn>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── PROMPT MODAL (B2) ──────────────────────────────────────────────────
+export const PromptModal = ({ open, title, message, defaultValue = "", placeholder = "", onSubmit, onCancel }) => {
+  const [value, setValue] = useState(defaultValue);
+  if (!open) return null;
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1001, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(4px)" }}>
+      <div style={{ background: T.panel, border: `1px solid ${T.border}`, borderRadius: 12, padding: 24, maxWidth: 400, width: "90%", boxShadow: `0 8px 32px rgba(0,0,0,0.5)` }}>
+        <div style={{ fontSize: 15, fontWeight: 600, color: T.text, marginBottom: 8 }}>{title || "Input"}</div>
+        {message && <div style={{ fontSize: 12, color: T.sub, lineHeight: 1.6, marginBottom: 12 }}>{message}</div>}
+        <input value={value} onChange={e => setValue(e.target.value)} placeholder={placeholder}
+          onKeyDown={e => e.key === "Enter" && onSubmit(value)}
+          style={{ width: "100%", background: T.card, border: `1px solid ${T.border}`, borderRadius: 6, padding: "8px 12px", color: T.text, outline: "none", fontSize: 13, marginBottom: 16, boxSizing: "border-box" }}
+          autoFocus />
+        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <Btn size="sm" variant="ghost" onClick={onCancel}>Cancel</Btn>
+          <Btn size="sm" variant="primary" onClick={() => onSubmit(value)}>OK</Btn>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── SKELETON LOADERS (B4) ──────────────────────────────────────────────
+const pulse = `@keyframes skeletonPulse { 0%,100% { opacity:0.4 } 50% { opacity:0.8 } }`;
+if (typeof document !== "undefined" && !document.getElementById("skeleton-pulse-style")) {
+  const style = document.createElement("style"); style.id = "skeleton-pulse-style"; style.textContent = pulse; document.head.appendChild(style);
+}
+
+export const SkeletonLine = ({ width = "100%", height = 12, style: sx = {} }) => (
+  <div style={{ width, height, background: T.border, borderRadius: 4, animation: "skeletonPulse 1.5s ease-in-out infinite", ...sx }} />
+);
+
+export const SkeletonCard = ({ lines = 3, style: sx = {} }) => (
+  <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: 10, padding: 16, ...sx }}>
+    <SkeletonLine width="60%" height={14} style={{ marginBottom: 12 }} />
+    {Array.from({ length: lines }).map((_, i) => (
+      <SkeletonLine key={i} width={`${80 - i * 10}%`} style={{ marginBottom: 8 }} />
+    ))}
+  </div>
+);
+
+export const SkeletonStat = ({ style: sx = {} }) => (
+  <div style={{ textAlign: "center", ...sx }}>
+    <SkeletonLine width={48} height={22} style={{ margin: "0 auto 4px" }} />
+    <SkeletonLine width={64} height={10} style={{ margin: "0 auto" }} />
+  </div>
+);
+
