@@ -252,16 +252,49 @@ export const API = {
         const cached = SimpleCache.get(cacheKey);
         if (cached) return cached;
         try {
-            const r = await fetch(`https://data.ca.gov/api/3/action/datastore_search?resource_id=ca-grants-portal-grants&q=${encodeURIComponent(query)}`);
-            if (!r.ok) throw new Error(`State API (${state}): ${r.status}`);
-            const data = await r.json();
-            const results = data.result?.records || [];
-            SimpleCache.set(cacheKey, results);
-            return results;
+            // Mocking different state portals based on selection
+            if (state === "CA") {
+                const r = await fetch(`https://data.ca.gov/api/3/action/datastore_search?resource_id=ca-grants-portal-grants&q=${encodeURIComponent(query)}`);
+                if (!r.ok) throw new Error(`State API (${state}): ${r.status}`);
+                const data = await r.json();
+                const results = (data.result?.records || []).map(r => ({
+                    ...r,
+                    title: r.Grant_Title || r.title,
+                    agency: r.Agency_Department_Name || r.agency,
+                    amount: r.Estimated_Total_Funding || 0,
+                    source: "CA Grants Portal",
+                    type: "State"
+                }));
+                SimpleCache.set(cacheKey, results);
+                return results;
+            } else if (state === "IL") {
+                // IL GATA Mock
+                const results = [
+                    { id: uid(), title: `IL-${query}-GATA-2026`, agency: "IL Dept of Commerce", amount: 500000, source: "Illinois GATA", type: "State", description: "Economic development pass-through via GATA framework." },
+                    { id: uid(), title: `Chicago Regional Innovation Fund`, agency: "IL Innovation Bureau", amount: 250000, source: "Illinois GATA", type: "State", description: "Localized tech advancement funding." }
+                ].filter(r => r.title.toLowerCase().includes(query.toLowerCase()));
+                return results;
+            }
+            return [];
         } catch (e) {
             console.warn(`State API (${state}) failed:`, e);
             return { results: [], _error: `${state}: ${e.message}` };
         }
+    },
+
+    async searchLocalGrants(query, county = "Cook") {
+        const cacheKey = `local_grants_${county}_${query}`;
+        const cached = SimpleCache.get(cacheKey);
+        if (cached) return cached;
+
+        // Simulating county-level "Hyper-Local" results
+        const results = [
+            { id: uid(), title: `${county} County Community Reinvestment`, agency: `${county} Commissioners`, amount: 50000, source: "County Portal", type: "Local", description: `Specialized ${county} funding for local infrastructure.` },
+            { id: uid(), title: `Municipal Workforce Bridge`, agency: "Local City Council", amount: 15000, source: "City Clerk", type: "Local", description: "Small-scale workforce grants for city residents." }
+        ].filter(r => r.title.toLowerCase().includes(query.toLowerCase()) || r.description.toLowerCase().includes(query.toLowerCase()));
+
+        SimpleCache.set(cacheKey, results);
+        return results;
     },
 
     async getEconomicData(seriesId = "UNRATE") {

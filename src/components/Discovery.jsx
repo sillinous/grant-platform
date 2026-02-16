@@ -7,11 +7,9 @@ export const Discovery = ({ onAdd, grants }) => {
     const [query, setQuery] = useState("");
     const [results, setResults] = useState([]);
     const [spendingResults, setSpendingResults] = useState([]);
-    const [stateResults, setStateResults] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [landscape, setLandscape] = useState(null);
-    const [regs, setRegs] = useState([]);
     const [tab, setTab] = useState("search");
+    const [multiTierResults, setMultiTierResults] = useState([]);
+    const [geoFilter, setGeoFilter] = useState({ state: "CA", county: "Cook" });
     const [expanded, setExpanded] = useState(null);
     const [detailData, setDetailData] = useState({});
     const [sortBy, setSortBy] = useState("relevance");
@@ -72,16 +70,19 @@ export const Discovery = ({ onAdd, grants }) => {
         setSearchStats(null);
 
         // Parallel multi-source search
-        const [grantsData, spendingData, stateData] = await Promise.all([
+        const [grantsData, spendingData, stateData, localData] = await Promise.all([
             API.searchGrants(q, { rows: PAGE_SIZE, startRecord: 0 }),
             API.searchFederalSpending(q, { limit: 10 }),
-            tab === "state" ? API.searchStateGrants(q, "CA") : Promise.resolve([]),
+            tab === "state" ? API.searchStateGrants(q, geoFilter.state) : Promise.resolve([]),
+            tab === "state" ? API.searchLocalGrants(q, geoFilter.county) : Promise.resolve([]),
         ]);
 
         const hits = grantsData.oppHits || [];
         setResults(hits);
         setSpendingResults(spendingData.results || []);
-        if (tab === "state") setStateResults(stateData || []);
+        if (tab === "state") {
+            setMultiTierResults([...(stateData || []), ...(localData || [])]);
+        }
         setTotalCount(grantsData.totalCount || hits.length);
         setLastQuery(q);
 
@@ -953,45 +954,57 @@ Narratives: ${PROFILE.narratives.founder}`;
                 </div>
             )}
 
-            {/* ━━━ STATE PORTALS TAB ━━━ */}
+            {/* ━━━ MULTI-TIER (STATE/LOCAL) TAB ━━━ */}
             {tab === "state" && (
                 <div>
                     <Card style={{ marginBottom: 12 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 8 }}>🏛️ State-Specific Grant Search</div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>🏛️ Multi-Tier Discovery</div>
+                            <div style={{ display: "flex", gap: 8 }}>
+                                <Select value={geoFilter.state} onChange={s => setGeoFilter({ ...geoFilter, state: s })}
+                                    options={[{ id: "CA", label: "California" }, { id: "IL", label: "Illinois" }, { id: "NY", label: "New York" }, { id: "TX", label: "Texas" }]}
+                                    style={{ width: 120, height: 32, fontSize: 11 }} />
+                                <Input value={geoFilter.county} onChange={c => setGeoFilter({ ...geoFilter, county: c })} placeholder="County"
+                                    style={{ width: 100, height: 32, fontSize: 11 }} />
+                            </div>
+                        </div>
                         <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>
-                            Search localized state grant portals (currently supporting California). Track high-impact regional opportunities.
+                            Searching siloed portals at the state and county levels. UNLESS bridges the gap between massive federal grants and hyper-local opportunities.
                         </div>
                         <div style={{ display: "flex", gap: 8 }}>
-                            <Input value={query} onChange={setQuery} placeholder="Search state grants... (e.g. 'homelessness', 'water', 'energy')" style={{ flex: 1 }} onKeyDown={e => e.key === "Enter" && search()} />
-                            <Btn variant="primary" onClick={() => search()} disabled={loading}>{loading ? "⏳" : "🔍"} Search State</Btn>
+                            <Input value={query} onChange={setQuery} placeholder="Search state & local grants... (e.g. 'broadband', 'youth', 'infrastructure')" style={{ flex: 1 }} onKeyDown={e => e.key === "Enter" && search()} />
+                            <Btn variant="primary" onClick={() => search()} disabled={loading}>{loading ? "⏳" : "🔍"} Search All Tiers</Btn>
                         </div>
                     </Card>
 
-                    {stateResults.length > 0 && (
+                    {multiTierResults.length > 0 && (
                         <div>
-                            {stateResults.map((r, i) => (
-                                <Card key={i} style={{ marginBottom: 8 }}>
+                            {multiTierResults.map((r, i) => (
+                                <Card key={i} style={{ marginBottom: 8, borderLeft: `4px solid ${r.type === "Local" ? T.amber : T.blue}` }}>
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                                         <div style={{ flex: 1 }}>
-                                            <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{r.GrantTitle || r.title || "State Grant"}</div>
-                                            <div style={{ fontSize: 11, color: T.mute, marginTop: 4 }}>{r.AgencyName || r.agency} · {r.Status || "Active"}</div>
+                                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                                                <Badge color={r.type === "Local" ? T.amber : T.blue}>{r.type}</Badge>
+                                                <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{r.title || "Untitled Grant"}</div>
+                                            </div>
+                                            <div style={{ fontSize: 11, color: T.mute }}>{r.agency} · {r.source}</div>
                                         </div>
                                         <div style={{ textAlign: "right", marginLeft: 12 }}>
-                                            {r.EstimatedTotalFunding && <div style={{ fontSize: 14, fontWeight: 700, color: T.green }}>{fmt(r.EstimatedTotalFunding)}</div>}
+                                            {r.amount > 0 && <div style={{ fontSize: 14, fontWeight: 700, color: T.green }}>{fmt(r.amount)}</div>}
                                             {r.Deadline && <div style={{ fontSize: 10, color: T.mute }}>Ends: {r.Deadline}</div>}
                                         </div>
                                     </div>
-                                    <div style={{ fontSize: 11, color: T.sub, marginTop: 8, lineHeight: 1.5 }}>{r.Description?.slice(0, 300) || "No description provided."}</div>
+                                    <div style={{ fontSize: 11, color: T.sub, marginTop: 8, lineHeight: 1.5 }}>{r.description || r.Description?.slice(0, 300) || "No description provided."}</div>
                                     <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                                        <Btn size="sm" variant="success" onClick={() => trackGrant({ ...r, title: r.GrantTitle || r.title, agency: r.AgencyName || r.agency, amount: r.EstimatedTotalFunding || 0, id: r.ID || uid() })}>📋 Track Grant</Btn>
-                                        {r.RedirectURL && <a href={r.RedirectURL} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: T.blue, textDecoration: "none", alignSelf: "center" }}>🔗 Portal Link</a>}
+                                        <Btn size="sm" variant="success" onClick={() => trackGrant({ ...r, id: r.id || r.ID || uid() })}>📋 Track Grant</Btn>
+                                        <Btn size="sm" variant="ghost">📄 View Guidelines</Btn>
                                     </div>
                                 </Card>
                             ))}
                         </div>
                     )}
-                    {stateResults.length === 0 && !loading && (
-                        <Empty icon="🏛️" title="No State Results" sub="Search for local opportunities in state portals" />
+                    {multiTierResults.length === 0 && !loading && (
+                        <Empty icon="🏛️" title="Start Local Discovery" sub="Search for funding opportunities in your state and county" />
                     )}
                 </div>
             )}

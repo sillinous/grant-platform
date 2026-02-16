@@ -68,6 +68,8 @@ import { AdvisoryBoard } from './components/AdvisoryBoard';
 import { FundingStacker } from './components/FundingStacker';
 import { CloseoutWizard } from './components/CloseoutWizard';
 import { PolicyModeler } from './components/PolicyModeler';
+import { ImpactMapper } from './components/ImpactMapper';
+import { ComplianceWizard } from './components/ComplianceWizard';
 
 export default function App() {
   const [page, setPage] = useState("dashboard");
@@ -234,6 +236,8 @@ export default function App() {
     { id: "win_prob", icon: "🎲", label: "Win Probability", group: "intelligence" },
     { id: "advisory", icon: "🤝", label: "War Room", group: "intelligence" },
     { id: "funding_stacker", icon: "📊", label: "Funding Stacker", group: "intelligence" },
+    { id: "impact_mapper", icon: "🗺️", label: "Impact Mapper", group: "hyper_local" },
+    { id: "compliance_wizard", icon: "🧙", label: "Compliance Wizard", group: "hyper_local" },
     { id: "policy_modeler", icon: "🏛️", label: "Policy Modeler", group: "intelligence" },
     { id: "settings", icon: "⚙️", label: t("settings"), group: "system" },
   ];
@@ -275,6 +279,8 @@ export default function App() {
       case "advisory": return <AdvisoryBoard grants={grants} />;
       case "funding_stacker": return <FundingStacker grants={grants} />;
       case "policy_modeler": return <PolicyModeler grants={grants} />;
+      case "impact_mapper": return <ImpactMapper grants={grants} />;
+      case "compliance_wizard": return <ComplianceWizard grants={grants} />;
       case "settings": return <Settings showToast={showToast} />;
       default: return <Dashboard grants={grants} docs={vaultDocs} contacts={contacts} vaultDocs={vaultDocs} events={events} navigate={setPage} />;
     }
@@ -316,7 +322,7 @@ export default function App() {
           </div>
         )}
         <div style={{ flex:1, padding:"8px 4px", overflow:"auto" }}>
-          {["core", "analysis", "writing", "docs", "management", "intelligence", "system"].map(group => {
+          {["core", "hyper_local", "analysis", "writing", "docs", "management", "intelligence", "system"].map(group => {
             const items = NAV.filter(n => n.group === group);
             if (items.length === 0) return null;
             const label = group === "core" ? "" : group.toUpperCase();

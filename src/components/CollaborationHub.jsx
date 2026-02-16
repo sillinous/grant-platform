@@ -22,6 +22,13 @@ export const CollaborationHub = ({ grants }) => {
     setActivity(prev => [{ id: uid(), user: userRole === "lead" ? "Lead Admin" : "Partner Org", action, time: new Date().toISOString() }, ...prev.slice(0, 19)]);
   };
 
+  const [subReports, setSubReports] = useState(() => LS.get("collab_sub_reports", [
+    { id: uid(), partner: "Community Health Inc.", type: "Quarterly Fiscal", status: "reviewed", date: "2026-01-15", amount: 12500 },
+    { id: uid(), partner: "Global Logistics Group", type: "Performance Narrative", status: "pending", date: "2026-02-10", amount: 0 }
+  ]));
+
+  useEffect(() => { LS.set("collab_sub_reports", subReports); }, [subReports]);
+
   const [partners, setPartners] = useState(() => LS.get("collab_partners", [
     { id: 1, name: "Community Health Inc.", uei: "CH88234LF", risk: "low", lastAudit: "2026-01-10" },
     { id: 2, name: "Global Logistics Group", uei: "GL99112XY", risk: "medium", lastAudit: "2025-11-20" }
@@ -168,21 +175,46 @@ Priorities: high, normal`;
             * Runs simulations against known SAM exclusion patterns and historical performance data.
           </div>
         </Card>
-        <Card style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: T.text, marginBottom: 12, display: "flex", justifyContent: "space-between" }}>
-            <span>📜 Consortium Activity Feed</span>
-            <Badge size="xs">Live</Badge>
+        <Card style={{ padding: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 12, display: "flex", justifyContent: "space-between" }}>
+            <span>🤝 Sub-Recipient Reporting</span>
+            {userRole === "lead" && <Badge size="xs" color={T.amber}>{subReports.filter(r => r.status === "pending").length} Pending</Badge>}
           </div>
-          <div style={{ flex: 1, overflowY: "auto", maxHeight: 200 }}>
-            {activity.map(a => (
-              <div key={a.id} style={{ padding: "8px 0", borderBottom: `1px solid ${T.border}`, fontSize: 10 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
-                  <span style={{ fontWeight: 700, color: T.text }}>{a.user}</span>
-                  <span style={{ color: T.mute }}>{fmtDate(a.time)}</span>
+          <div style={{ display: "grid", gap: 10 }}>
+            {userRole === "lead" ? (
+              subReports.map(r => (
+                <div key={r.id} style={{ padding: 10, background: T.panel, borderRadius: 8, border: `1px solid ${r.status === "pending" ? T.amber : T.border}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontSize: 11, fontWeight: 700 }}>{r.partner}</div>
+                      <div style={{ fontSize: 10, color: T.sub }}>{r.type} · {fmtDate(r.date)}</div>
+                    </div>
+                    <Badge color={r.status === "reviewed" ? T.green : T.amber}>{r.status.toUpperCase()}</Badge>
+                  </div>
+                  {r.status === "pending" && (
+                    <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                      <Btn size="xs" variant="success" onClick={() => {
+                        setSubReports(prev => prev.map(x => x.id === r.id ? { ...x, status: "reviewed" } : x));
+                        logActivity(`Approved ${r.type} from ${r.partner}`);
+                      }}>Approve</Btn>
+                      <Btn size="xs" variant="ghost">Flag</Btn>
+                    </div>
+                  )}
                 </div>
-                <div style={{ color: T.sub }}>{a.action}</div>
+              ))
+            ) : (
+              <div style={{ textAlign: "center", padding: "20px 0" }}>
+                <div style={{ fontSize: 24, marginBottom: 12 }}>📤</div>
+                <div style={{ fontSize: 12, color: T.text, marginBottom: 4 }}>Submit Your Report</div>
+                <div style={{ fontSize: 10, color: T.sub, marginBottom: 16 }}>Required for quarterly compliance.</div>
+                <Btn variant="primary" size="sm" block onClick={() => {
+                  const r = { id: uid(), partner: "Local Partner Org", type: "Interim Progress", status: "pending", date: new Date().toISOString(), amount: 0 };
+                  setSubReports([r, ...subReports]);
+                  logActivity("Partner Org submitted Interim Progress Report");
+                  alert("Report Submitted to Prime!");
+                }}>Upload Report</Btn>
               </div>
-            ))}
+            )}
           </div>
         </Card>
       </div>
