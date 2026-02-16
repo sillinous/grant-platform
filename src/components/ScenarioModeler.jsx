@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Card, Badge, Button, T } from './ui';
+import { Card, Badge, Button, T } from '../ui';
 import { fmt } from '../globals';
 
 export const ScenarioModeler = ({ grants = [] }) => {
