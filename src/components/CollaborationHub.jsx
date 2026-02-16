@@ -10,12 +10,24 @@ export const CollaborationHub = ({ grants }) => {
   const [filter, setFilter] = useState("all");
   const [rfpText, setRfpText] = useState("");
   const [loading, setLoading] = useState(false);
+  const [userRole, setUserRole] = useState("lead"); // lead | partner
+  const [activity, setActivity] = useState(() => LS.get("collab_activity", [
+    { id: 1, user: "Lead Admin", action: "Grant Proposal Orchestrated", time: new Date(Date.now() - 1000 * 60 * 60).toISOString() },
+    { id: 2, user: "Partner X", action: "Uploaded Fiscal Report", time: new Date(Date.now() - 1000 * 60 * 30).toISOString() }
+  ]));
+
+  useEffect(() => { LS.set("collab_activity", activity); }, [activity]);
+
+  const logActivity = (action) => {
+    setActivity(prev => [{ id: uid(), user: userRole === "lead" ? "Lead Admin" : "Partner Org", action, time: new Date().toISOString() }, ...prev.slice(0, 19)]);
+  };
 
   useEffect(() => { LS.set("collab_notes", notes); }, [notes]);
 
   const addNote = () => {
     if (!newNote.content) return;
     setNotes(prev => [{ ...newNote, id:uid(), createdAt:new Date().toISOString(), resolved:false }, ...prev]);
+    logActivity(`Added new ${newNote.type}: ${newNote.content.slice(0, 20)}...`);
     setNewNote({ grantId:"", content:"", type:"note", priority:"normal" });
     setShowAdd(false);
   };
@@ -37,6 +49,7 @@ Priorities: high, normal`;
         const tasks = JSON.parse(cleaned);
         const formatted = tasks.map(t => ({ ...t, id: uid(), createdAt: new Date().toISOString(), resolved: false }));
         setNotes(prev => [...formatted, ...prev]);
+        logActivity(`Orchestrated ${tasks.length} tasks from RFP analysis.`);
         setRfpText("");
         alert(`🚀 Orchestrated ${tasks.length} tasks!`);
       } catch (e) { alert("Failed to parse AI orchestration."); }
@@ -58,23 +71,67 @@ Priorities: high, normal`;
 
   return (
     <div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-        <Card style={{ background: T.panel + "22" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>🤖 AI Workspace Orchestrator</span>
-            <Badge size="xs" color={T.blue}>Team</Badge>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <Input value={rfpText} onChange={setRfpText} placeholder="Paste RFP text to generate team tasks..." style={{ flex: 1 }} />
-            <Btn variant="primary" size="sm" onClick={orchestrateTasks} disabled={loading || !rfpText.trim()}>{loading ? "⏳" : "🧙 Orchestrate"}</Btn>
-          </div>
-          <div style={{ fontSize: 10, color: T.mute, marginTop: 6 }}>AI will extract roles, deadlines, and requirements into actionable items.</div>
-        </Card>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>🤝 Consortium Orchestrator</div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <span style={{ fontSize: 11, color: T.sub }}>Viewing as:</span>
+          <Select value={userRole} onChange={setUserRole} size="sm" options={[
+            { value: "lead", label: "🏢 Prime Recipient (Admin)" },
+            { value: "partner", label: "🤝 Sub-Recipient (Partner)" },
+          ]} />
+        </div>
+      </div>
 
-        <Card style={{ background: T.panel + "22" }}>
-          <Stat label="Workspace Velocity" value={`${notes.filter(n => n.resolved).length}/${notes.length}`} color={T.green} />
-          <div style={{ marginTop: 8 }}>
-            <Progress value={notes.length > 0 ? (notes.filter(n => n.resolved).length / notes.length) * 100 : 0} color={T.green} height={6} />
+      {userRole === "partner" && (
+        <div style={{ background: T.blue + "15", padding: "10px 16px", borderRadius: 8, border: `1px solid ${T.blue}33`, marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: T.blue }}>PARTNER VIEW ACTIVE</div>
+          <div style={{ fontSize: 11, color: T.sub }}>You have restricted access. You can view tasks assigned to you and upload reports/receipts. Other sensitive grant data is hidden.</div>
+        </div>
+      )}
+      <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: 16, marginBottom: 16 }}>
+        <div style={{ display: "grid", gap: 16 }}>
+          <Card style={{ background: T.panel + "22" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>🤖 AI Workspace Orchestrator</span>
+              <Badge size="xs" color={T.blue}>Team</Badge>
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Input value={rfpText} onChange={setRfpText} placeholder="Paste RFP text to generate team tasks..." style={{ flex: 1 }} />
+              <Btn variant="primary" size="sm" onClick={orchestrateTasks} disabled={loading || !rfpText.trim()}>{loading ? "⏳" : "🧙 Orchestrate"}</Btn>
+            </div>
+          </Card>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Card>
+              <Stat label="Workspace Velocity" value={`${notes.filter(n => n.resolved).length}`} color={T.green} />
+              <div style={{ fontSize: 10, color: T.sub, marginTop: 4 }}>Completed Tasks</div>
+            </Card>
+            <Card>
+              <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>Partner Engagement</div>
+              <div style={{ height: 30, display: "flex", alignItems: "flex-end", gap: 2 }}>
+                {[4, 7, 5, 9, 6].map((v, i) => (
+                  <div key={i} style={{ flex: 1, background: T.blue, height: `${v * 10}%`, borderRadius: "2px 2px 0 0" }} />
+                ))}
+              </div>
+            </Card>
+          </div>
+        </div>
+
+        <Card style={{ display: "flex", flexDirection: "column" }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: T.text, marginBottom: 12, display: "flex", justifyContent: "space-between" }}>
+            <span>📜 Consortium Activity Feed</span>
+            <Badge size="xs">Live</Badge>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto", maxHeight: 200 }}>
+            {activity.map(a => (
+              <div key={a.id} style={{ padding: "8px 0", borderBottom: `1px solid ${T.border}`, fontSize: 10 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                  <span style={{ fontWeight: 700, color: T.text }}>{a.user}</span>
+                  <span style={{ color: T.mute }}>{fmtDate(a.time)}</span>
+                </div>
+                <div style={{ color: T.sub }}>{a.action}</div>
+              </div>
+            ))}
           </div>
         </Card>
       </div>

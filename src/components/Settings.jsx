@@ -3,6 +3,7 @@ import { T, LS, PROFILE, saveProfile, DEFAULT_PROFILE } from '../globals';
 import { Card, Btn, Input, TextArea, Select, Badge, Empty, Modal } from '../ui';
 import { API } from '../api';
 import { AI_PROVIDERS as AI_PROVIDERS_LIST, getActiveProvider, getProviderKey as getProviderKeyFn } from '../ai-config';
+import { NarrativeWizard } from './NarrativeWizard';
 
 export const Settings = ({ showToast }) => {
   const [saved, setSaved] = useState(false);
@@ -10,10 +11,12 @@ export const Settings = ({ showToast }) => {
 
   // Profile state — editable copy
   const [profile, setProfile] = useState({ ...PROFILE });
+  const [loading, setLoading] = useState(false);
   const [showAddBiz, setShowAddBiz] = useState(false);
   const [newBiz, setNewBiz] = useState({ n: "", d: "", st: "active", sec: "", monthly: 0 });
   const [newTag, setNewTag] = useState("");
   const [profileSaved, setProfileSaved] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
 
   // AI State
   const [aiProvider, setAiProvider] = useState(() => LS.get("ai_provider", ""));
@@ -34,6 +37,33 @@ export const Settings = ({ showToast }) => {
 
   const updateNarrative = (field, value) => {
     setProfile(prev => ({ ...prev, narratives: { ...prev.narratives, [field]: value } }));
+  };
+
+  const generateNarrative = async (type) => {
+    setLoading(true);
+    const context = `
+      Name: ${profile.name}
+      Location: ${profile.loc}
+      Demographics: ${[profile.rural ? "rural" : "", profile.disabled ? "disabled" : "", profile.poverty ? "low-income" : "", profile.selfEmployed ? "self-employed" : ""].filter(Boolean).join(", ")}
+      Tags: ${profile.tags.join(", ")}
+      Businesses: ${profile.businesses.map(b => `${b.n} (${b.sec}: ${b.d})`).join("; ")}
+    `;
+
+    const prompts = {
+      founder: "Write a professional 2-3 sentence 'Founder Story' for a grant application. Use third person.",
+      need: "Write a professional 2-3 sentence 'Statement of Need' explaining why funding is critical for this organization's context. Use third person.",
+      impact: "Write a professional 2-3 sentence 'Impact Vision' explaining the long-term positive change this organization seeks to create. Use third person."
+    };
+
+    const sys = "You are a Professional Grant Writer. Draft a concise, high-impact narrative based on the user's profile.";
+    const res = await API.callAI([{ role: "user", content: `Context: ${context}\n\nTask: ${prompts[type]}` }], sys);
+
+    if (!res.error) {
+      updateNarrative(type, res.text);
+    } else {
+      alert(`AI Assist failed: ${res.error}`);
+    }
+    setLoading(false);
   };
 
   const addTag = () => {
@@ -57,6 +87,20 @@ export const Settings = ({ showToast }) => {
     setProfile(prev => ({
       ...prev, businesses: prev.businesses.map((b, i) => i === idx ? { ...b, ...updates } : b),
     }));
+  };
+
+  const generateBusinessDescription = async (idx) => {
+    setLoading(true);
+    const b = profile.businesses[idx];
+    const sys = "You are a Business Consultant and Grant Writer. Draft a concise, high-impact description for a grant-seeking organization.";
+    const content = `Business Name: ${b.n}\nSector: ${b.sec}\nMonthly Revenue: ${b.monthly}\nOther Context: ${profile.name} (Owner), ${profile.loc} (Location).\n\nTask: Write a professional 1-sentence description that explains what this business does and its value proposition.`;
+    const res = await API.callAI([{ role: "user", content }], sys);
+    if (!res.error) {
+      updateBusiness(idx, { d: res.text });
+    } else {
+      alert(`AI Assist failed: ${res.error}`);
+    }
+    setLoading(false);
   };
 
   const removeBusiness = (idx) => {
@@ -313,7 +357,10 @@ export const Settings = ({ showToast }) => {
                   <button onClick={() => removeBusiness(idx)} style={{ background: "none", border: "none", color: T.red, cursor: "pointer", fontSize: 14, marginTop: 12 }}>✕</button>
                 </div>
                 <div style={{ marginTop: 6 }}>
-                  <label style={{ fontSize: 9, color: T.mute }}>Description</label>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                    <label style={{ fontSize: 9, color: T.mute }}>Description</label>
+                    <Btn variant="ghost" size="xs" onClick={() => generateBusinessDescription(idx)} disabled={loading}>{loading ? "⏳" : "🪄 AI Assist"}</Btn>
+                  </div>
                   <Input value={b.d} onChange={v => updateBusiness(idx, { d: v })} placeholder="Brief description for grant narratives..." />
                 </div>
               </Card>
@@ -346,25 +393,42 @@ export const Settings = ({ showToast }) => {
       {tab === "narratives" && (
         <div>
           <Card style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 4 }}>📝 Narrative Templates</div>
-            <div style={{ fontSize: 11, color: T.mute, marginBottom: 12 }}>These narratives are injected into AI-generated content and used by the Impact Portfolio module. Write them in third person for maximum flexibility.</div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: T.text }}>📝 Narrative Templates</div>
+                <div style={{ fontSize: 11, color: T.mute }}>These narratives are used for grant applications and reporting.</div>
+              </div>
+              <Btn variant="primary" size="sm" onClick={() => setShowWizard(true)}>🪄 Narrative Wizard</Btn>
+            </div>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 12, padding: "8px 12px", background: T.panel, borderRadius: 6, borderLeft: `3px solid ${T.amber}` }}>
+              💡 <strong>Pro-Tip:</strong> Use the <strong>Narrative Wizard</strong> above to draft all three sections in one guided workflow based on your mission and goals.
+            </div>
 
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: T.amber, display: "block", marginBottom: 4 }}>Founder Story</label>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: T.amber }}>Founder Story</label>
+                <Btn variant="ghost" size="xs" onClick={() => generateNarrative("founder")} disabled={loading}>{loading ? "⏳" : "🪄 AI Assist"}</Btn>
+              </div>
               <div style={{ fontSize: 10, color: T.mute, marginBottom: 4 }}>A brief narrative about who you are and what you do (2-3 sentences)</div>
               <TextArea value={profile.narratives?.founder || ""} onChange={v => updateNarrative("founder", v)} rows={3}
                 placeholder="e.g., [Name] is an entrepreneur and technologist based in [Location], building [what you do] that [impact]." />
             </div>
 
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: T.amber, display: "block", marginBottom: 4 }}>Statement of Need</label>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: T.amber }}>Statement of Need</label>
+                <Btn variant="ghost" size="xs" onClick={() => generateNarrative("need")} disabled={loading}>{loading ? "⏳" : "🪄 AI Assist"}</Btn>
+              </div>
               <div style={{ fontSize: 10, color: T.mute, marginBottom: 4 }}>Describes the challenges you face and why funding is needed</div>
               <TextArea value={profile.narratives?.need || ""} onChange={v => updateNarrative("need", v)} rows={3}
                 placeholder="e.g., Operating from a [rural/urban] community with [challenges], [Name] faces [specific barriers] that restrict access to [resources]." />
             </div>
 
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: T.amber, display: "block", marginBottom: 4 }}>Impact Vision</label>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: T.amber }}>Impact Vision</label>
+                <Btn variant="ghost" size="xs" onClick={() => generateNarrative("impact")} disabled={loading}>{loading ? "⏳" : "🪄 AI Assist"}</Btn>
+              </div>
               <div style={{ fontSize: 10, color: T.mute, marginBottom: 4 }}>Your broader impact and what you're trying to achieve</div>
               <TextArea value={profile.narratives?.impact || ""} onChange={v => updateNarrative("impact", v)} rows={3}
                 placeholder="e.g., Each venture is designed to demonstrate that [approach] can [outcome], creating [broader impact]." />
@@ -560,6 +624,22 @@ export const Settings = ({ showToast }) => {
             </div>
           </Card>
         </div>
+      )}
+      {showWizard && (
+        <NarrativeWizard
+          onCancel={() => setShowWizard(false)}
+          onComplete={(results) => {
+            setProfile(prev => ({
+              ...prev,
+              narratives: {
+                ...prev.narratives,
+                ...results
+              }
+            }));
+            setShowWizard(false);
+            showToast("Narratives updated from wizard! Don't forget to save.", "success");
+          }}
+        />
       )}
     </div>
   );

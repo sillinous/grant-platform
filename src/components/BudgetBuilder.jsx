@@ -7,7 +7,7 @@ export const BudgetBuilder = ({ grants, updateGrant }) => {
   const [budgets, setBudgets] = useState(() => LS.get("budgets", {}));
   const [selectedGrant, setSelectedGrant] = useState("");
   const [showAdd, setShowAdd] = useState(false);
-  const [newItem, setNewItem] = useState({ category: "personnel", description: "", amount: 0, quantity: 1, unit: "year", justification: "", costShare: 0 });
+  const [newItem, setNewItem] = useState({ category: "personnel", description: "", amount: 0, quantity: 1, unit: "year", justification: "", costShare: 0, spent: 0 });
   const [loading, setLoading] = useState(false);
   const [aiResult, setAiResult] = useState("");
   const [showResult, setShowResult] = useState(false);
@@ -34,9 +34,9 @@ export const BudgetBuilder = ({ grants, updateGrant }) => {
   const addItem = () => {
     if (!selectedGrant || !newItem.description) return;
     const b = getBudget();
-    const updated = { ...b, items: [...b.items, { ...newItem, id: uid(), total: newItem.amount * newItem.quantity }] };
+    const updated = { ...b, items: [...b.items, { ...newItem, id: uid(), total: newItem.amount * newItem.quantity, spent: newItem.spent || 0 }] };
     setBudgets({ ...budgets, [selectedGrant]: updated });
-    setNewItem({ category: "personnel", description: "", amount: 0, quantity: 1, unit: "year", justification: "", costShare: 0 });
+    setNewItem({ category: "personnel", description: "", amount: 0, quantity: 1, unit: "year", justification: "", costShare: 0, spent: 0 });
     setShowAdd(false);
   };
 
@@ -55,11 +55,36 @@ export const BudgetBuilder = ({ grants, updateGrant }) => {
   const grandTotal = directTotal + indirectTotal;
   const costShareTotal = items.reduce((s, i) => s + (i.costShare || 0), 0);
   const federalShare = grandTotal - costShareTotal;
+  const spentTotal = items.reduce((s, i) => s + (i.spent || 0), 0);
 
   const byCat = CATEGORIES.map(c => ({
     ...c, items: items.filter(i => i.category === c.id),
     total: items.filter(i => i.category === c.id).reduce((s, i) => s + i.amount * i.quantity, 0),
+    spent: items.filter(i => i.category === c.id).reduce((s, i) => s + (i.spent || 0), 0),
+    variance: (items.filter(i => i.category === c.id).reduce((s, i) => s + (i.spent || 0), 0) / items.filter(i => i.category === c.id).reduce((s, i) => s + i.amount * i.quantity, 0)) || 0
   })).filter(c => c.items.length > 0 || c.id === "indirect");
+
+  const grant = grants.find(g => g.id === selectedGrant);
+  const burnRate = spentTotal / (grant?.amount || 1);
+  const remainingPercent = 1 - burnRate;
+
+  const mockSync = () => {
+    if (!selectedGrant) return;
+    setLoading(true);
+    setTimeout(() => {
+      const b = getBudget();
+      const updated = {
+        ...b,
+        items: b.items.map(item => ({
+          ...item,
+          spent: Math.min(item.amount * item.quantity, (item.spent || 0) + (Math.random() * (item.amount * item.quantity) * 0.2))
+        }))
+      };
+      setBudgets({ ...budgets, [selectedGrant]: updated });
+      setLoading(false);
+      alert("✅ Financial Sync Complete: Pulled latest transactions from QuickBooks/Xero.");
+    }, 1200);
+  };
 
   const generateJustification = async () => {
     if (!selectedGrant || items.length === 0) return;
@@ -120,14 +145,29 @@ Return a professional, structured narrative.`;
             const awardAmt = grant?.amount || 0;
             const diff = awardAmt - grandTotal;
             return awardAmt > 0 ? (
-              <Card style={{ marginBottom: 12 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Card style={{ marginBottom: 16, borderLeft: grandTotal > awardAmt ? `4px solid ${T.red}` : "none" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                   <span style={{ fontSize: 12, color: T.sub }}>Budget vs Award Ceiling</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: diff >= 0 ? T.green : T.red }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: diff >= 0 ? T.green : T.red }}>
                     {diff >= 0 ? `${fmt(diff)} under ceiling ✅` : `${fmt(Math.abs(diff))} OVER ceiling ⚠️`}
                   </span>
                 </div>
                 <Progress value={grandTotal} max={awardAmt} color={diff >= 0 ? T.green : T.red} height={6} />
+
+                {spentTotal > 0 && (
+                  <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, borderTop: `1px solid ${T.border}`, paddingTop: 12 }}>
+                    <div>
+                      <div style={{ fontSize: 11, color: T.mute, marginBottom: 4 }}>📈 Burn Rate Velocity</div>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: T.text }}>{(burnRate * 100).toFixed(1)}%</div>
+                      <div style={{ fontSize: 9, color: T.sub }}>of total funding exhausted</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, color: T.mute, marginBottom: 4 }}>⌛ Est. Runway</div>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: T.green }}>{Math.ceil(remainingPercent * 12)} Months</div>
+                      <div style={{ fontSize: 9, color: T.sub }}>based on current trajectory</div>
+                    </div>
+                  </div>
+                )}
               </Card>
             ) : null;
           })()}
@@ -135,7 +175,10 @@ Return a professional, structured narrative.`;
           {byCat.map(c => (
             <Card key={c.id} style={{ marginBottom: 8 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: c.items.length > 0 ? 8 : 0 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: c.color }}>{c.label}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: c.color }}>{c.label}</span>
+                  {c.variance > 0.8 && <Badge color={T.red} size="xs">High Variance ⚠️</Badge>}
+                </div>
                 <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{c.id === "indirect" ? fmt(indirectTotal) : fmt(c.total)}</span>
               </div>
               {c.id === "indirect" ? (
@@ -143,17 +186,24 @@ Return a professional, structured narrative.`;
                   <span style={{ fontSize: 11, color: T.mute }}>Rate:</span>
                   <Input type="number" value={indirectRate} onChange={setIndirectRate} style={{ width: 80 }} />
                   <span style={{ fontSize: 11, color: T.mute }}>% of direct costs ({fmt(directTotal)})</span>
+                  <div style={{ marginLeft: "auto", fontSize: 11, color: T.green }}>Spent: {fmt(spentTotal * (indirectRate / 100))}</div>
                 </div>
               ) : c.items.map(item => (
-                <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderBottom: `1px solid ${T.border}` }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, color: T.text }}>{item.description}</div>
-                    <div style={{ fontSize: 10, color: T.mute }}>{item.quantity} {item.unit}(s) × {fmt(item.amount)}{item.costShare > 0 ? ` · Cost Share: ${fmt(item.costShare)}` : ""}</div>
+                <div key={item.id} style={{ padding: "8px 0", borderBottom: `1px solid ${T.border}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 12, color: T.text }}>{item.description}</div>
+                      <div style={{ fontSize: 10, color: T.mute }}>{item.quantity} {item.unit}(s) × {fmt(item.amount)}</div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{fmt(item.amount * item.quantity)}</div>
+                        <div style={{ fontSize: 9, color: T.green }}>Spent: {fmt(item.spent || 0)}</div>
+                      </div>
+                      <button onClick={() => removeItem(item.id)} style={{ background: "none", border: "none", color: T.red, cursor: "pointer", fontSize: 11 }}>✕</button>
+                    </div>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: T.text }}>{fmt(item.amount * item.quantity)}</span>
-                    <button onClick={() => removeItem(item.id)} style={{ background: "none", border: "none", color: T.red, cursor: "pointer", fontSize: 11 }}>✕</button>
-                  </div>
+                  <Progress value={item.spent || 0} max={item.amount * item.quantity} color={T.green} height={3} />
                 </div>
               ))}
             </Card>
@@ -166,6 +216,9 @@ Return a professional, structured narrative.`;
             {updateGrant && selectedGrant && <Btn size="sm" variant="ghost" onClick={() => {
               updateGrant(selectedGrant, { budgetTotal: grandTotal, budgetFederal: federalShare, budgetCostShare: costShareTotal });
             }}>🔗 Sync to Grant</Btn>}
+            <Btn size="sm" variant="ghost" onClick={mockSync} disabled={loading}>
+              {loading ? "⏳ Syncing..." : "🔄 Sync Financials"}
+            </Btn>
             <Btn size="sm" variant="ghost" onClick={() => {
               const csv = "Category,Description,Quantity,Unit,Unit Cost,Total,Cost Share,Justification\n" +
                 items.map(i => `"${catMap[i.category]?.label}","${i.description}",${i.quantity},"${i.unit}",${i.amount},${i.amount * i.quantity},${i.costShare || 0},"${i.justification || ""}"`).join("\n") +

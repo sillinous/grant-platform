@@ -51,11 +51,45 @@ export const SAMWizard = () => {
   ];
 
   const completedReqs = REQS.filter(r => r.done).length;
+  const isHealthy = entity?.status === "Active" && new Date(entity.expiration) > new Date();
+  const daysNear = entity?.expiration ? Math.ceil((new Date(entity.expiration) - new Date()) / (1000 * 60 * 60 * 24)) : null;
+
+  const trustScore = Math.round((completedReqs / REQS.length) * 100);
+
+  const exportEvidence = () => {
+    const content = `COMPLIANCE AUDIT REPORT\nGenerated: ${new Date().toISOString()}\n\nEntity: ${entity?.name || "N/A"}\nUEI: ${entity?.uei || "N/A"}\nStatus: ${entity?.status || "N/A"}\nExpiration: ${entity?.expiration || "N/A"}\n\nCompliance Score: ${trustScore}%\nCompleted Requirements: ${completedReqs}/${REQS.length}\n\nVerified via GrantPlatform Strategic Sentinel.`;
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `compliance_audit_${entity?.uei || "org"}.txt`;
+    link.click();
+  };
 
   return (
     <div>
-      <Card style={{ marginBottom:16 }}>
-        <div style={{ fontSize:13, fontWeight:600, color:T.text, marginBottom:8 }}>🏛️ SAM.gov Registration Wizard</div>
+      <Card style={{ marginBottom: 16, borderLeft: daysNear !== null && daysNear < 60 ? `4px solid ${T.red}` : "none" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>🏛️ SAM.gov Registration Wizard</div>
+            {isHealthy && <Badge color={T.green}>✅ Verified</Badge>}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 9, color: T.mute, textTransform: "uppercase", fontWeight: 700 }}>Trust Score</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: trustScore > 80 ? T.green : trustScore > 50 ? T.amber : T.red }}>{trustScore}%</div>
+            </div>
+            <Btn variant="ghost" size="xs" onClick={exportEvidence} disabled={!entity}>📥 Export Evidence</Btn>
+          </div>
+        </div>
+
+        {daysNear !== null && daysNear < 60 && (
+          <div style={{ background: T.red + "15", padding: "8px 12px", borderRadius: 4, marginBottom: 12, border: `1px solid ${T.red}33` }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: T.red }}>🚨 REGISTRATION EXPIRES IN {daysNear} DAYS</div>
+            <div style={{ fontSize: 10, color: T.sub }}>Renewal processes can take 4-6 weeks. Initiate renewal immediately to avoid funding gaps.</div>
+          </div>
+        )}
+
         <div style={{ display:"flex", gap:4, marginBottom:12 }}>
           {STEPS.map(s => (
             <div key={s.n} onClick={() => setStep(s.n)} style={{
