@@ -41,17 +41,20 @@ export const AIChatBar = ({ grants, vaultDocs, contacts }) => {
     setLoading(true);
 
     const context = buildPortfolioContext(grants, vaultDocs, contacts);
-    const sys = `You are the UNLESS Grant Platform AI assistant. ${context}\n\nHelp the user with grant strategy, writing, analysis, and planning. Be specific, actionable, and reference their actual portfolio data.`;
+    const activeP = getActiveProvider();
+    const sys = `You are the UNLESS Grant Platform AI assistant. ${context}\n\nHelp the user with grant strategy, writing, analysis, and planning. Be specific, actionable, and reference their actual portfolio data. Current provider: ${activeP.name}.`;
     const history = [...messages.slice(-10), { role: "user", content: userMsg }];
     const result = await API.callAI(history, sys);
 
-    setMessages(prev => [...prev, { role: "assistant", content: result.error ? `Error: ${result.error}` : result.text }]);
+    setMessages(prev => [...prev, { role: "assistant", content: result.error ? `Error: ${result.error}` : result.text, provider: result.provider, model: result.model }]);
     setLoading(false);
   };
 
   useEffect(() => {
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
   }, [messages]);
+
+  const activeP = getActiveProvider();
 
   if (!open) return (
     <button onClick={() => setOpen(true)} style={{
@@ -68,7 +71,12 @@ export const AIChatBar = ({ grants, vaultDocs, contacts }) => {
       boxShadow: `0 8px 40px rgba(0,0,0,0.5)`, zIndex: 999,
     }}>
       <div style={{ padding: "12px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>🧠 AI Assistant</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>🧠 AI Assistant</span>
+          <Badge size="xs" style={{ background: (activeP.color || T.amber) + "22", color: activeP.color || T.amber, border: `1px solid ${activeP.color}44` }}>
+            {activeP.icon} {activeP.name}
+          </Badge>
+        </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           {messages.length > 0 && (
             <button onClick={clearHistory} title="Clear chat history" style={{

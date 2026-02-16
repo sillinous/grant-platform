@@ -25,23 +25,34 @@ export const AIDrafter = ({ grants, vaultDocs }) => {
   };
 
   const refine = async (instruction) => {
-    if (!output) return;
+    if (!draft) return; // Changed output to draft
     setLoading(true);
     const sys = `You are an expert grant writer. Refine the following draft based on the instruction given.`;
-    const result = await API.callAI([
-      { role: "user", content: `Current draft:\n\n${output}\n\nRefinement instruction: ${instruction}` },
+    const res = await API.callAI([ // Changed result to res
+      { role: "user", content: `Current draft:\n\n${draft}\n\nRefinement instruction: ${instruction}` }, // Changed output to draft
     ], sys);
-    if (!result.error) {
-      setRefinements([...refinements, { instruction, before: output, after: result.text }]);
-      setOutput(result.text);
+    if (res.error) { // Added error handling for refine
+      showToast?.(res.error, "error");
+      setLoading(false);
+      return;
     }
+    setRefinements([...refinements, { instruction, before: draft, after: res.text }]); // Changed output to draft
+    setDraft(res.text); // Changed setOutput to setDraft
+    setMeta({ provider: res.provider, model: res.model }); // Update AI metadata on refinement
     setLoading(false);
   };
 
   return (
     <div>
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>✍️ AI Grant Drafter</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>✍️ AI Grant Drafter</div>
+          {meta && (
+            <Badge size="xs" variant="ghost" style={{ fontSize: 9 }}>
+              via {meta.provider} ({meta.model?.split("/").pop()})
+            </Badge>
+          )}
+        </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
           <Select value={docType} onChange={setDocType} options={[
             { value: "narrative", label: "📄 Project Narrative" }, { value: "need", label: "📊 Statement of Need" },

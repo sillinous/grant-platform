@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { T, LS, PROFILE, saveProfile, DEFAULT_PROFILE } from '../globals';
 import { Card, Btn, Input, TextArea, Select, Badge, Empty, Modal } from '../ui';
+import { API, AI_PROVIDERS as AI_PROVIDERS_LIST, getActiveProvider, getProviderKey as getProviderKeyFn } from '../api';
 
 export const Settings = ({ showToast }) => {
-  const [apiKey, setApiKey] = useState(LS.get("anthropic_key", ""));
   const [saved, setSaved] = useState(false);
   const [tab, setTab] = useState("profile");
 
@@ -14,11 +14,18 @@ export const Settings = ({ showToast }) => {
   const [newTag, setNewTag] = useState("");
   const [profileSaved, setProfileSaved] = useState(false);
 
-  const saveApiKey = () => {
-    LS.set("anthropic_key", apiKey);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
+  // AI State
+  const [aiProvider, setAiProvider] = useState(() => LS.get("ai_provider", ""));
+  const [activeModel, setActiveModel] = useState(() => LS.get("ai_model", ""));
+  const [providerKeys, setProviderKeys] = useState(() => {
+    const keys = {};
+    Object.keys(AI_PROVIDERS_LIST).forEach(id => {
+      keys[id] = LS.get(AI_PROVIDERS_LIST[id].lsKey, "");
+    });
+    return keys;
+  });
+  const [testResult, setTestResult] = useState({ status: "", message: "" });
+  const activeProvider = aiProvider ? AI_PROVIDERS_LIST[aiProvider] : getActiveProvider();
 
   const updateProfile = (field, value) => {
     setProfile(prev => ({ ...prev, [field]: value }));
@@ -370,29 +377,132 @@ export const Settings = ({ showToast }) => {
       {/* ─── AI CONFIG TAB ─── */}
       {tab === "ai" && (
         <div>
-          <Card style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 12 }}>🔑 Anthropic API Key</div>
-            <div style={{ fontSize: 12, color: T.sub, marginBottom: 8 }}>Required for AI-powered features: AI Drafter, Narrative Scorer, Strategic Advisor, RFP Parser, Letter Generator, and AI Chat.</div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <Input type="password" value={apiKey} onChange={setApiKey} placeholder="sk-ant-..." style={{ flex: 1 }} />
-              <Btn variant="primary" onClick={saveApiKey}>{saved ? "✅ Saved!" : "💾 Save"}</Btn>
+          {/* Active Provider Selector */}
+          <Card style={{ marginBottom: 16, borderColor: T.amber + "44" }} glow>
+            <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 8 }}>🧠 Active AI Provider</div>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>Select which AI provider to use. OpenRouter is recommended — it gives you access to all major models with a single key.</div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+              <Btn size="sm" variant={!aiProvider ? "primary" : "ghost"} onClick={() => { LS.del("ai_provider"); setAiProvider(""); }}>
+                🔄 Auto-detect
+              </Btn>
+              {Object.values(AI_PROVIDERS_LIST).map(p => (
+                <Btn key={p.id} size="sm" variant={aiProvider === p.id ? "primary" : "ghost"} onClick={() => { LS.set("ai_provider", p.id); setAiProvider(p.id); }}
+                  style={aiProvider === p.id ? { borderColor: p.color, boxShadow: `0 0 8px ${p.color}44` } : {}}>
+                  {p.icon} {p.name} {getProviderKeyFn(p.id) ? "✅" : ""}
+                </Btn>
+              ))}
             </div>
-            <div style={{ fontSize: 11, color: T.mute, marginTop: 8 }}>Your key is stored locally in your browser only. Never sent to any server except Anthropic's API.</div>
-            <div style={{ fontSize: 11, color: T.blue, marginTop: 4 }}>
-              <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" style={{ color: T.blue }}>🔗 Get an API key from console.anthropic.com</a>
+            <div style={{ fontSize: 11, color: T.mute, padding: "6px 10px", borderRadius: 6, background: T.panel }}>
+              Currently active: <strong style={{ color: activeProvider?.color || T.text }}>{activeProvider?.icon} {activeProvider?.name}</strong>
+              {activeModel && <span> · Model: <strong>{AI_PROVIDERS_LIST[activeProvider?.id]?.models.find(m => m.id === activeModel)?.label || activeModel}</strong></span>}
             </div>
           </Card>
 
+          {/* Model Selector */}
+          {activeProvider && (
+            <Card style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 8 }}>🎯 Model Selection</div>
+              <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>Choose a model for {activeProvider.name}. Flagship models offer the best quality; fast models are cheaper and quicker.</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {activeProvider.models.map(m => {
+                  const tierColors = { flagship: T.amber, standard: T.blue, fast: T.green, reasoning: T.purple, open: T.cyan };
+                  const isActive = activeModel === m.id || (!activeModel && m === activeProvider.models[0]);
+                  return (
+                    <div key={m.id} onClick={() => { LS.set("ai_model", m.id); setActiveModel(m.id); }}
+                      style={{
+                        display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", borderRadius: 8, cursor: "pointer",
+                        background: isActive ? (activeProvider.color || T.amber) + "18" : T.panel,
+                        border: `1px solid ${isActive ? (activeProvider.color || T.amber) + "66" : T.border}`,
+                        transition: "all 0.2s"
+                      }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 14 }}>{isActive ? "◉" : "○"}</span>
+                        <span style={{ fontSize: 12, fontWeight: isActive ? 600 : 400, color: T.text }}>{m.label}</span>
+                      </div>
+                      <Badge style={{ background: (tierColors[m.tier] || T.mute) + "22", color: tierColors[m.tier] || T.mute, fontSize: 9 }}>{m.tier}</Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
+
+          {/* Per-Provider API Keys */}
+          <Card style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 12 }}>🔑 API Keys</div>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>Configure keys for each provider. Keys are stored locally in your browser only.</div>
+            {Object.values(AI_PROVIDERS_LIST).map(p => {
+              const currentKey = providerKeys[p.id] || "";
+              const hasKey = !!getProviderKeyFn(p.id);
+              return (
+                <div key={p.id} style={{ marginBottom: 16, padding: 12, borderRadius: 8, background: T.panel, border: `1px solid ${T.border}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontSize: 16 }}>{p.icon}</span>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{p.name}</span>
+                      {hasKey && <span style={{ fontSize: 10, color: T.green }}>✅ configured</span>}
+                    </div>
+                    <a href={p.keyUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: T.blue, textDecoration: "none" }}>Get key →</a>
+                  </div>
+                  <div style={{ fontSize: 10, color: T.mute, marginBottom: 6 }}>{p.description}</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <Input type="password" value={currentKey} onChange={v => setProviderKeys(prev => ({ ...prev, [p.id]: v }))} placeholder={`${p.keyPrefix}...`} style={{ flex: 1 }} />
+                    <Btn size="sm" variant="primary" onClick={() => {
+                      if (currentKey.trim()) {
+                        LS.set(p.lsKey, currentKey.trim());
+                      } else {
+                        LS.del(p.lsKey);
+                      }
+                      setSaved(true); setTimeout(() => setSaved(false), 2000);
+                      showToast?.(`${p.name} key ${currentKey.trim() ? "saved" : "cleared"}`, "success");
+                    }}>💾</Btn>
+                  </div>
+                </div>
+              );
+            })}
+          </Card>
+
+          {/* Connection Test */}
+          <Card style={{ marginBottom: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 4 }}>🧪 Connection Test</div>
+                <div style={{ fontSize: 11, color: T.sub }}>Send a test message to verify your active provider is working.</div>
+              </div>
+              <Btn size="sm" variant="primary" onClick={async () => {
+                setTestResult({ status: "testing" });
+                const result = await API.testAIConnection();
+                setTestResult(result.error ? { status: "error", message: result.error } : { status: "success", message: result.text });
+              }} disabled={testResult.status === "testing"}>
+                {testResult.status === "testing" ? "⏳ Testing..." : "🚀 Test"}
+              </Btn>
+            </div>
+            {testResult.status && testResult.status !== "testing" && (
+              <div style={{
+                marginTop: 8, padding: "8px 12px", borderRadius: 6, fontSize: 11,
+                background: testResult.status === "success" ? T.green + "15" : T.red + "15",
+                color: testResult.status === "success" ? T.green : T.red,
+                border: `1px solid ${testResult.status === "success" ? T.green + "33" : T.red + "33"}`
+              }}>
+                {testResult.status === "success" ? "✅" : "❌"} {testResult.message}
+              </div>
+            )}
+          </Card>
+
+          {/* AI-Powered Modules */}
           <Card>
             <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 8 }}>🤖 AI-Powered Modules</div>
             <div style={{ fontSize: 12, color: T.sub }}>These modules require an API key to function:</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 6, marginTop: 8 }}>
-              {["AI Drafter", "Narrative Scorer", "Strategic Advisor", "RFP Parser", "Letter Generator", "AI Chat", "Match Scorer (Deep)", "Report Generator (AI mode)"].map(m => (
-                <div key={m} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px", borderRadius: 4, background: T.panel }}>
-                  <span style={{ color: apiKey ? T.green : T.red, fontSize: 12 }}>{apiKey ? "✅" : "⚠️"}</span>
-                  <span style={{ fontSize: 11, color: T.text }}>{m}</span>
-                </div>
-              ))}
+              {["AI Drafter", "Narrative Scorer", "Strategic Advisor", "RFP Parser", "Letter Generator", "AI Chat", "Match Scorer (Deep)", "Report Generator (AI mode)"].map(m => {
+                const hasAnyKey = !!getProviderKeyFn(activeProvider?.id);
+                return (
+                  <div key={m} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px", borderRadius: 4, background: T.panel }}>
+                    <span style={{ color: hasAnyKey ? T.green : T.red, fontSize: 12 }}>{hasAnyKey ? "✅" : "⚠️"}</span>
+                    <span style={{ fontSize: 11, color: T.text }}>{m}</span>
+                  </div>
+                );
+              })}
             </div>
           </Card>
         </div>
@@ -445,7 +555,7 @@ export const Settings = ({ showToast }) => {
           <Card>
             <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 8 }}>🔒 Privacy</div>
             <div style={{ fontSize: 12, color: T.sub, lineHeight: 1.6 }}>
-              All data is stored locally in your browser's localStorage. Nothing is sent to any server except your API key (sent only to Anthropic when using AI features). Clearing your browser data will erase everything — use Export to create backups.
+              All data is stored locally in your browser's localStorage. Nothing is sent to any server except your API key (sent only to the specific AI provider you choose when using AI features). Clearing your browser data will erase everything — use Export to create backups.
             </div>
           </Card>
         </div>
