@@ -1,6 +1,6 @@
 ﻿import React, { useState } from 'react';
 import { Card, Btn, Stat, Empty, Badge, Input, Select, TextArea, Modal } from '../ui';
-import { T, uid, fmtDate, Badge } from '../globals';
+import { T, uid, fmtDate } from '../globals';
 import { API } from '../api';
 
 export const DocumentVault = ({ vaultDocs, setVaultDocs }) => {

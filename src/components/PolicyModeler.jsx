@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Card, Btn, Badge, Progress, Empty, Select } from '../ui';
-import { T, LS, uid, fmt, logs } from '../globals';
+import { T, LS, uid, fmt } from '../globals';
 import { API } from '../api';
 
 export const PolicyModeler = ({ grants }) => {
