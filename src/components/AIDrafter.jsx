@@ -12,6 +12,8 @@ export const AIDrafter = ({ grants, vaultDocs, snapshots, setSnapshots, voicePer
   const [refinements, setRefinements] = useState([]);
   const [meta, setMeta] = useState(null);
   const [voice, setVoice] = useState("brand_balanced");
+  const [audit, setAudit] = useState(null);
+  const [auditing, setAuditing] = useState(false);
 
   const VOICES = [
     { id: "academic", label: "Academic & Robust", tone: "Formal, data-heavy, peer-reviewed style." },
@@ -108,6 +110,18 @@ Return ONLY a JSON array of section IDs in the optimal sequence for a draft:
     setLoading(false);
   };
 
+  const runAudit = async () => {
+    if (!output) return;
+    setAuditing(true);
+    const result = await API.auditSection(output, docType, selectedGrant);
+    if (!result.error) {
+      setAudit(result);
+    } else {
+      alert("Audit failed: " + result.error);
+    }
+    setAuditing(false);
+  };
+
   const saveSnapshot = () => {
     if (!output) return;
     const snap = { id: uid(), date: new Date().toISOString(), text: output, type: docType, model: meta?.model || "AI" };
@@ -184,18 +198,61 @@ Return ONLY a JSON array of section IDs in the optimal sequence for a draft:
             <div style={{ display: "flex", gap: 4 }}>
               <Btn size="sm" variant="success" onClick={saveSnapshot} title="Capture this version">📸 Save</Btn>
               <Btn size="sm" variant="primary" onClick={saveToLibrary} title="Save to Section Library">📦 Harvest</Btn>
+              <Btn size="sm" variant="ghost" onClick={runAudit} disabled={auditing}>🛡️ {auditing ? "Auditing..." : "Red Team Audit"}</Btn>
               <Btn size="sm" variant="ghost" onClick={() => navigator.clipboard?.writeText(output)}>📋 Copy</Btn>
-              <Btn size="sm" variant="ghost" onClick={() => setOutput("")}>✕ Clear</Btn>
+              <Btn size="sm" variant="ghost" onClick={() => { setOutput(""); setAudit(null); }}>✕ Clear</Btn>
             </div>
           </div>
-          <div style={{ fontSize: 13, color: T.text, lineHeight: 1.7, whiteSpace: "pre-wrap", padding: 12, background: T.panel, borderRadius: 6, maxHeight: 400, overflow: "auto" }}>{output}</div>
-          <div style={{ marginTop: 12 }}>
-            <div style={{ fontSize: 11, color: T.mute, marginBottom: 6 }}>Quick Refinements</div>
-            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-              {["Make more concise", "Add data/metrics", "More professional tone", "Add budget justification", "Strengthen impact claims", "Add evaluation criteria"].map(r => (
-                <Btn key={r} size="sm" variant="ghost" onClick={() => refine(r)} disabled={loading}>{r}</Btn>
-              ))}
+
+          <div style={{ display: "grid", gridTemplateColumns: audit ? "1fr 300px" : "1fr", gap: 16 }}>
+            <div>
+              <div style={{ fontSize: 13, color: T.text, lineHeight: 1.7, whiteSpace: "pre-wrap", padding: 12, background: T.panel, borderRadius: 6, maxHeight: 400, overflow: "auto", border: `1px solid ${T.border}` }}>{output}</div>
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontSize: 11, color: T.mute, marginBottom: 6 }}>Quick Refinements</div>
+                <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                  {["Make more concise", "Add data/metrics", "More professional tone", "Add budget justification", "Strengthen impact claims", "Add evaluation criteria"].map(r => (
+                    <Btn key={r} size="sm" variant="ghost" onClick={() => refine(r)} disabled={loading}>{r}</Btn>
+                  ))}
+                </div>
+              </div>
             </div>
+
+            {audit && (
+              <div style={{ background: T.panel, borderRadius: 8, padding: 16, border: `1px solid ${audit.status === "pass" ? T.green : audit.status === "warn" ? T.amber : T.red}44` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: T.text, letterSpacing: 0.5 }}>🛡️ COMPLIANCE SCORE</div>
+                  <Badge color={audit.status === "pass" ? T.green : audit.status === "warn" ? T.amber : T.red}>{audit.score}/100</Badge>
+                </div>
+
+                <div style={{ display: "grid", gap: 8, marginBottom: 16 }}>
+                  {Object.entries(audit.breakdown || {}).map(([key, val]) => (
+                    <div key={key}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 4 }}>
+                        <span style={{ textTransform: "capitalize", color: T.sub }}>{key}</span>
+                        <span style={{ fontWeight: 600 }}>{val}</span>
+                      </div>
+                      <Progress value={val} max={key === 'compliance' ? 40 : key === 'persuasion' ? 30 : key === 'tone' ? 20 : 10} color={audit.status === "pass" ? T.green : T.amber} height={3} />
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.red, marginBottom: 8 }}>❌ DEFICIENCIES</div>
+                <div style={{ display: "grid", gap: 4, marginBottom: 16 }}>
+                  {audit.deficiencies?.map((d, i) => (
+                    <div key={i} style={{ fontSize: 10, color: T.sub, padding: "4px 8px", background: T.red + "08", borderRadius: 4, borderLeft: `2px solid ${T.red}` }}>{d}</div>
+                  ))}
+                </div>
+
+                <div style={{ fontSize: 11, fontWeight: 700, color: T.blue, marginBottom: 8 }}>💡 RECOMMENDATIONS</div>
+                <div style={{ display: "grid", gap: 4 }}>
+                  {audit.recommendations?.map((r, i) => (
+                    <div key={i} style={{ fontSize: 10, color: T.sub, padding: "4px 8px", background: T.blue + "08", borderRadius: 4, borderLeft: `2px solid ${T.blue}` }}>{r}</div>
+                  ))}
+                </div>
+
+                <Btn variant="ghost" size="xs" style={{ width: "100%", marginTop: 16 }} onClick={() => setAudit(null)}>Close Audit</Btn>
+              </div>
+            )}
           </div>
         </Card>
       )}

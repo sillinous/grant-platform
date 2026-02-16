@@ -48,6 +48,8 @@ import { LetterGenerator } from './components/LetterGenerator';
 import { FundingForecast } from './components/FundingForecast';
 import { ActivityLog } from './components/ActivityLog';
 import { DeadlineWatchdog } from './components/DeadlineWatchdog';
+import { SubmissionAssembler } from './components/SubmissionAssembler';
+import { ScenarioModeler } from './components/ScenarioModeler';
 import { CollaborationHub } from './components/CollaborationHub';
 import { GrantSentinel } from './components/GrantSentinel';
 import { PreFlightCheck } from './components/PreFlightCheck';
@@ -87,6 +89,7 @@ export default function App() {
   const [draftSnapshots, setDraftSnapshots] = useState(() => LS.get("draft_snapshots", []));
   const [voicePersona, setVoicePersona] = useState(() => LS.get("org_voice_persona", null));
   const [tasks, setTasks] = useState(() => LS.get("tasks", []));
+  const [budgets, setBudgets] = useState(() => LS.get("budgets", {}));
   const [user, setUser] = useState(null);
   const [syncStatus, setSyncStatus] = useState("local");
 
@@ -107,6 +110,7 @@ export default function App() {
             if (data.onboarding !== undefined) setOnboardingComplete(data.onboarding);
             if (data.voicePersona) setVoicePersona(data.voicePersona);
             if (data.tasks) setTasks(data.tasks);
+            if (data.budgets) setBudgets(data.budgets);
             showToast("Data synced from cloud", "success");
           }
         });
@@ -154,6 +158,7 @@ export default function App() {
   useEffect(() => { debouncedPersist("org_voice_persona", voicePersona); }, [voicePersona, debouncedPersist]);
   useEffect(() => { debouncedPersist("onboarding_complete", onboardingComplete); }, [onboardingComplete, debouncedPersist]);
   useEffect(() => { debouncedPersist("tasks", tasks); }, [tasks, debouncedPersist]);
+  useEffect(() => { debouncedPersist("budgets", budgets); }, [budgets, debouncedPersist]);
 
   useEffect(() => {
     const backupInterval = setInterval(() => {
@@ -168,8 +173,34 @@ export default function App() {
   const addGrant = (grant) => {
     if (grant.oppNumber && grants.some(g => g.oppNumber === grant.oppNumber)) return;
     if (grant.id && grants.some(g => g.id === grant.id)) return;
-    setGrants(prev => [...prev, { ...grant, createdAt: new Date().toISOString() }]);
-    logActivity("grant_added", grant.title || "New Grant", { icon: "➕", color: T.green });
+    const newGrant = { ...grant, createdAt: new Date().toISOString() };
+    setGrants(prev => [...prev, newGrant]);
+
+    // Auto-generate standard pursuit tasks
+    const defaultTasks = [
+      { id: uid(), grantId: newGrant.id, title: "🔍 RFP Deep Dive", status: "todo", notes: "Initial review of requirements and eligibility.", priority: "high" },
+      { id: uid(), grantId: newGrant.id, title: "📋 Compliance Matrix", status: "todo", notes: "Draft the internal compliance and requirements matrix.", priority: "medium" },
+      { id: uid(), grantId: newGrant.id, title: "✍️ Narrative Skeleton", status: "todo", notes: "Build the initial draft framework based on the RFP.", priority: "high" },
+      { id: uid(), grantId: newGrant.id, title: "💰 Budget Alignment", status: "todo", notes: "Cross-check budget placeholders against award limits.", priority: "medium" }
+    ];
+    setTasks(prev => [...prev, ...defaultTasks]);
+
+    // Initialize budget with award ceiling as guideline
+    if (newGrant.amount > 0) {
+      setBudgets(prev => ({
+        ...prev,
+        [newGrant.id]: {
+          items: [
+            { id: uid(), category: "personnel", description: "Program Director / Lead", amount: Math.round(newGrant.amount * 0.4), quantity: 1, justification: "Estimated leadership for program implementation." },
+            { id: uid(), category: "other", description: "Operational Reserve", amount: Math.round(newGrant.amount * 0.6), quantity: 1, justification: "Balance of award ceiling for program activities." }
+          ],
+          updatedAt: new Date().toISOString()
+        }
+      }));
+    }
+
+    logActivity("grant_added", grant.title || "New Grant", { icon: "📈", color: T.green });
+    showToast(`Lead injected: ${defaultTasks.length} tasks generated`, "success");
   };
 
   const updateGrant = (id, updates) => {
@@ -219,7 +250,8 @@ export default function App() {
     { id: "tasks", icon: "📑", label: "Action Plan", group: "management" },
     { id: "awards", icon: "🏆", label: "Award Mgmt", group: "management" },
     { id: "closeout", icon: "📑", label: "Closeout Engine", group: "management" },
-    { id: "action_plan", icon: "📋", label: "Action Plan", group: "execution" },
+    { id: "action_plan", icon: "📋", label: t("plan"), group: "execution" },
+    { id: "submission_assembler", icon: "📦", label: "Packager", group: "docs" },
     { id: "outcomes", icon: "📈", label: "Outcome Tracker", group: "management" },
     { id: "projector", icon: "💰", label: "Financial Projector", group: "intelligence" },
     { id: "forecast", icon: "📈", label: "Funding Forecast", group: "intelligence" },
@@ -234,6 +266,7 @@ export default function App() {
     { id: "impact", icon: "📈", label: "Impact Portfolio", group: "intelligence" },
     { id: "impact_predict", icon: "🔮", label: "Impact Predictor", group: "intelligence" },
     { id: "win_prob", icon: "🎲", label: "Win Probability", group: "intelligence" },
+    { id: "scenario_modeler", icon: "🎲", label: "Scenario Modeler", group: "intelligence" },
     { id: "advisory", icon: "🤝", label: "War Room", group: "intelligence" },
     { id: "funding_stacker", icon: "📊", label: "Funding Stacker", group: "intelligence" },
     { id: "impact_mapper", icon: "🗺️", label: "Impact Mapper", group: "hyper_local" },
@@ -254,8 +287,10 @@ export default function App() {
       case "preflight": return <PreFlightCheck grants={grants} vaultDocs={vaultDocs} />;
       case "ai_drafter": return <AIDrafter grants={grants} vaultDocs={vaultDocs} snapshots={draftSnapshots} setSnapshots={setDraftSnapshots} voicePersona={voicePersona} setVoicePersona={setVoicePersona} sections={sections} setSections={setSections} />;
       case "narrative_scorer": return <NarrativeScorer grants={grants} history={scoreHistory} setHistory={setScoreHistory} />;
+      case "submission_assembler": return <SubmissionAssembler grants={grants} vaultDocs={vaultDocs} sections={sections} />;
+      case "scenario_modeler": return <ScenarioModeler grants={grants} />;
       case "section_library": return <SectionLibrary vaultDocs={vaultDocs} setVaultDocs={setVaultDocs} grants={grants} sections={sections} setSections={setSections} />;
-      case "budget": return <BudgetBuilder grants={grants} updateGrant={updateGrant} />;
+      case "budget": return <BudgetBuilder grants={grants} updateGrant={updateGrant} budgets={budgets} setBudgets={setBudgets} />;
       case "vault": return <DocumentVault vaultDocs={vaultDocs} setVaultDocs={setVaultDocs} grants={grants} />;
       case "compliance_tracker": return <ComplianceTracker grants={grants} updateGrant={updateGrant} />;
       case "tasks": return <ActionPlan grants={grants} tasks={tasks} setTasks={setTasks} />;
@@ -271,7 +306,7 @@ export default function App() {
       case "funder_research": return <FunderResearch savedFunders={savedFunders} setSavedFunders={setSavedFunders} vaultDocs={vaultDocs} grants={grants} setGrants={setGrants} />;
       case "optimizer": return <PortfolioOptimizer grants={grants} />;
       case "portfolio_optimizer": return <PortfolioOptimizer grants={grants} />;
-      case "executive_summary": return <ExecutiveSummary grants={grants} />;
+      case "executive_summary": return <ExecutiveSummary grants={grants} tasks={tasks} budgets={budgets} />;
       case "win_prob": return <WinProbabilityDashboard grant={grants.find(g => ["drafting", "reviewing", "submitting"].includes(g.stage)) || grants[0]} vaultDocs={vaultDocs} />;
       case "winloss": return <WinLossAnalysis grants={grants} />;
       case "impact": return <ImpactPortfolio grants={grants} />;

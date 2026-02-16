@@ -238,7 +238,19 @@ Return the adapted content only.`;
                   {s.useCount > 0 && <Badge color={T.green}>Used {s.useCount}x</Badge>}
                 </div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 4 }}>{s.title}</div>
-                <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.5 }}>{s.content.slice(0, 150)}...</div>
+                <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.5, marginBottom: 8 }}>{s.content.slice(0, 150)}...</div>
+
+                {/* 🛡️ Compliance Audit Mini-Score */}
+                {s.lastAudit && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                    <div style={{ height: 4, width: 60, background: T.border, borderRadius: 2, overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${s.lastAudit.score}%`, background: s.lastAudit.status === "pass" ? T.green : s.lastAudit.status === "warn" ? T.amber : T.red }} />
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: s.lastAudit.status === "pass" ? T.green : s.lastAudit.status === "warn" ? T.amber : T.red }}>
+                      {s.lastAudit.score}% Compliance
+                    </span>
+                  </div>
+                )}
               </div>
               <div style={{ display: "flex", gap: 4 }}>
                 <Btn size="sm" variant="success" onClick={() => useSection(s)}>📋 Copy</Btn>

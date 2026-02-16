@@ -4,7 +4,7 @@ import { BoardSlider } from './BoardSlider';
 import { T, fmt, fmtDate, STAGE_MAP, PROFILE } from '../globals';
 import { API, buildPortfolioContext } from '../api';
 
-export const ExecutiveSummary = ({ grants }) => {
+export const ExecutiveSummary = ({ grants, tasks = [], budgets = {} }) => {
   const awarded = grants.filter(g => ["awarded", "active", "closeout"].includes(g.stage));
   const active = grants.filter(g => !["declined", "closeout", "archived"].includes(g.stage));
   
@@ -23,13 +23,28 @@ export const ExecutiveSummary = ({ grants }) => {
 
   const generateAIAnalysis = async () => {
     setLoading(true);
-    const context = buildPortfolioContext(grants, [], []); // Basic context for now
+
+    // Calculate operational metrics for AI context
+    const completedTasks = tasks.filter(t => t.status === "done").length;
+    const taskVelocity = tasks.length > 0 ? (completedTasks / tasks.length * 100).toFixed(1) : "0";
+
+    const totalSpentAcrossPortfolio = Object.values(budgets).reduce((acc, b) =>
+      acc + (b.items || []).reduce((s, i) => s + (i.spent || 0), 0), 0
+    );
+    const portfolioBurnRate = totalAwarded > 0 ? (totalSpentAcrossPortfolio / totalAwarded * 100).toFixed(1) : "0";
+
+    const context = buildPortfolioContext(grants, LS.get("vault_docs", []), []); 
     const prompt = `Analyze this grant portfolio for an Executive Board. 
-    Current Stats: Awarded: ${fmt(totalAwarded)}, Pipeline: ${fmt(totalPipeline)}, Win Rate: ${winRate}%.
+
+    STRATEGIC CONTEXT:
+    - Awarded: ${fmt(totalAwarded)} | Pipeline: ${fmt(totalPipeline)} | Win Rate: ${winRate}%
+    - Operational Velocity: ${taskVelocity}% of Action Plan tasks completed.
+    - Financial Burn: ${fmt(totalSpentAcrossPortfolio)} spent across portfolio (${portfolioBurnRate}% utilization).
+    
     Identify:
-    1. Three specific "Strategic Wins" or trends.
-    2. Two "Portfolio Risks" (e.g. agency concentration, funding cliffs).
-    3. One "Chief Strategy Officer Recommendation".
+    1. Three specific "Strategic Wins" or trends (mentioning operational efficiency if relevant).
+    2. Two "Portfolio Risks" (e.g. agency concentration, funding cliffs, or slow task velocity).
+    3. One "Chief Strategy Officer Recommendation" on how to optimize current organizational capacity.
     Format as a JSON object with keys: insights (array of strings), risks (array of strings), recommendation (string).`;
 
     const result = await API.callAI([{ role: "user", content: prompt }], "You are a Chief Strategy Officer AI.");

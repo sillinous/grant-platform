@@ -53,6 +53,20 @@ export function buildGrantContext(grantId) {
     const tasks = LS.get("tasks", []).filter(t => t.grantId === grantId);
     const budget = LS.get("budgets", {})[grantId] || { items: [] };
     const library = LS.get("section_library", []);
+    const vault = LS.get("vault_docs", []);
+
+    // 🧠 PORTFOLIO INTELLIGENCE: Find same-agency successes
+    const agencySuccesses = grants.filter(x =>
+        x.id !== grantId &&
+        x.agency === g.agency &&
+        ["awarded", "active"].includes(x.stage)
+    );
+
+    // 🗄️ VAULT INTELLIGENCE: Find relevant, final, and recent documents
+    const relevantVaultDocs = vault
+        .filter(d => (g.agency && d.name?.includes(g.agency)) || (g.title && d.name?.includes(g.title.slice(0, 10))))
+        .sort((a, b) => (b.status === "final" ? 1 : 0) - (a.status === "final" ? 1 : 0) || new Date(b.updatedAt) - new Date(a.updatedAt))
+        .slice(0, 3);
 
     // Also look for sections in the library that might be relevant to this grant or agency
     const relevantSections = library.filter(s =>
@@ -65,6 +79,8 @@ export function buildGrantContext(grantId) {
 - Agency: ${g.agency} | Amount: ${fmt(g.amount)} | Stage: ${g.stage}
 - Associated Tasks: ${tasks.map(t => `${t.title} (${t.status}): ${t.notes || "No notes"}`).join("; ")}
 - Budget Items: ${budget.items.map(i => `${i.description} (${fmt(i.amount * i.quantity)}): ${i.justification || "No justification"}`).join("; ")}
+- Agency Success Intelligence: ${agencySuccesses.length > 0 ? agencySuccesses.map(s => `${s.title} (${fmt(s.amount)})`).join("; ") : "No prior wins with this agency."}
+- Relevant Vault Documents: ${relevantVaultDocs.map(d => `${d.name} (${d.type})`).join("; ")}
 - Previously Drafted/Finalized Sections: ${relevantSections.map(s => `[${s.title}]: ${s.content.slice(0, 300)}...`).join("\n")}
 - Grant Details: ${JSON.stringify(g)}`;
 }
@@ -394,5 +410,46 @@ export const API = {
 
         const result = await this.callAI([{ role: "user", content: `Draft the ${fieldName} for me.` }], sys);
         return result.error ? `Error: ${result.error}` : result.text;
+    },
+
+    async auditSection(draft, sectionTitle, grantId) {
+        const grantContext = buildGrantContext(grantId);
+        const voicePersona = LS.get("org_voice_persona", "");
+
+        const sys = `You are a Senior Grant Reviewer and Compliance Officer. 
+        Your task is to perform a "Red Team" audit of a grant section draft.
+        
+        ${grantContext}
+        ${voicePersona ? `ORGANIZATION PERSONA: ${voicePersona}` : ""}
+
+        SCORING RUBRIC:
+        - Compliance (0-40): Does it meet all RFP requirements and section-specific rules?
+        - Persuasion (0-30): Is the case compelling and data-driven?
+        - Tone & Voice (0-20): Does it match the organizational persona and professional standards?
+        - Clarity (0-10): Is it concise and free of jargon?
+
+        Return a JSON object with:
+        - score: Total score (0-100)
+        - breakdown: { compliance: number, persuasion: number, tone: number, clarity: number }
+        - deficiencies: string[] (List specific missing requirements or weaknesses)
+        - recommendations: string[] (Actionable steps to improve the score)
+        - status: "pass" | "warn" | "fail" (status based on total score: pass > 85, warn 70-85, fail < 70)
+
+        Provide ONLY the JSON.`;
+
+        const prompt = `AUDIT REQUEST:
+        Section: ${sectionTitle}
+        Draft Content:
+        ---
+        ${draft}
+        ---`;
+
+        const result = await this.callAI([{ role: "user", content: prompt }], sys);
+        if (result.error) return { error: result.error };
+        try {
+            return JSON.parse(result.text.replace(/```json\n?|```/g, "").trim());
+        } catch (e) {
+            return { error: "Failed to parse audit results", raw: result.text };
+        }
     }
 };

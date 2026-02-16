@@ -3,8 +3,7 @@ import { Card, Input, Btn, Select, TextArea, Stat, Empty, Modal, Progress, Badge
 import { LS, T, uid, fmt, PROFILE } from '../globals';
 import { API } from '../api';
 
-export const BudgetBuilder = ({ grants, updateGrant }) => {
-  const [budgets, setBudgets] = useState(() => LS.get("budgets", {}));
+export const BudgetBuilder = ({ grants, updateGrant, budgets, setBudgets }) => {
   const [selectedGrant, setSelectedGrant] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [newItem, setNewItem] = useState({ category: "personnel", description: "", amount: 0, quantity: 1, unit: "year", justification: "", costShare: 0, spent: 0 });
@@ -24,7 +23,6 @@ export const BudgetBuilder = ({ grants, updateGrant }) => {
     setMagicLoading(false);
   };
 
-  useEffect(() => { LS.set("budgets", budgets); }, [budgets]);
 
   const CATEGORIES = [
     { id: "personnel", label: "👤 Personnel", color: T.blue },
