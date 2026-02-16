@@ -32,6 +32,11 @@ export const cloud = {
       if (remoteData.contacts) LS.set("contacts", remoteData.contacts);
       if (remoteData.profile) saveProfile(remoteData.profile);
       if (remoteData.events) LS.set("events", remoteData.events);
+      if (remoteData.library) LS.set("section_library", remoteData.library);
+      if (remoteData.scores) LS.set("score_history", remoteData.scores);
+      if (remoteData.funders) LS.set("saved_funders", remoteData.funders);
+      if (remoteData.snapshots) LS.set("draft_snapshots", remoteData.snapshots);
+      if (remoteData.onboarding) LS.set("onboarding_complete", remoteData.onboarding);
 
       return remoteData;
     } catch (e) {
@@ -51,6 +56,12 @@ export const cloud = {
       contacts: LS.get("contacts", []),
       profile: PROFILE,
       events: LS.get("events", []),
+      library: LS.get("section_library", []),
+      scores: LS.get("score_history", []),
+      funders: LS.get("saved_funders", []),
+      snapshots: LS.get("draft_snapshots", []),
+      onboarding: LS.get("onboarding_complete", false),
+      voicePersona: LS.get("org_voice_persona", null),
       lastSync: new Date().toISOString()
     };
 

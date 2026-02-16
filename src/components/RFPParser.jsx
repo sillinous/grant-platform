@@ -3,7 +3,7 @@ import { Card, Btn, TextArea, Badge, Progress, Select } from '../ui';
 import { API } from '../api';
 import { T, fmt, fmtDate, PROFILE } from '../globals';
 
-export const RFPParser = ({ grants, onUpdate }) => {
+export const RFPParser = ({ grants, onUpdate, tasks, setTasks }) => {
   const [rawText, setRawText] = useState("");
   const [parsed, setParsed] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -27,6 +27,12 @@ export const RFPParser = ({ grants, onUpdate }) => {
     - page_limits: {section: string, pages: number}[] (page limits if specified)
     - contacts: {name: string, email: string, role: string}[] (contact info)
     - cfda_number: string (if applicable)
+    - coaching: {
+        alignmentScore: number (0-100),
+        alignmentJustification: string,
+        complianceChecklist: { item: string, status: "required" | "recommended" }[],
+        strategicGaps: string[]
+      }
     - special_notes: string[] (anything else important)
     Respond with ONLY the JSON, no markdown formatting.`;
     const result = await API.callAI([{ role: "user", content: `Parse this RFP:\n\n${rawText}` }], sys);
@@ -53,6 +59,27 @@ export const RFPParser = ({ grants, onUpdate }) => {
     onUpdate(selectedGrant, updates);
   };
 
+  const generateTasks = () => {
+    if (!parsed) return;
+    const newTasks = [];
+    if (parsed.required_docs) {
+      parsed.required_docs.forEach(doc => {
+        newTasks.push({ id: uid(), title: `Draft: ${doc}`, grantId: selectedGrant, priority: "high", status: "todo", createdAt: new Date().toISOString(), notes: "Auto-generated from RFP Parser" });
+      });
+    }
+    if (parsed.key_dates) {
+      parsed.key_dates.forEach(ev => {
+        newTasks.push({ id: uid(), title: `Milestone: ${ev.event}`, grantId: selectedGrant, priority: "medium", status: "todo", dueDate: ev.date, createdAt: new Date().toISOString(), notes: "Auto-generated from RFP Parser" });
+      });
+    }
+    if (newTasks.length > 0) {
+      const updated = [...tasks, ...newTasks];
+      setTasks(updated);
+      LS.set("tasks", updated);
+      alert(`${newTasks.length} tasks injected into Action Plan.`);
+    }
+  };
+
   return (
     <div>
       <Card style={{ marginBottom: 16 }}>
@@ -67,6 +94,53 @@ export const RFPParser = ({ grants, onUpdate }) => {
 
       {parsed && !parsed.error && !parsed.raw && (
         <div>
+          {/* Apply to Grant */}
+          <Card style={{ marginBottom: 12, background: T.panel + "33" }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 8 }}>🔗 Lifecycle Integration</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: 8, alignItems: "center" }}>
+              <Select value={selectedGrant} onChange={setSelectedGrant}
+                options={[{ value: "", label: "Select a grant..." }, ...grants.map(g => ({ value: g.id, label: g.title?.slice(0, 50) }))]} style={{ flex: 1 }} />
+              <Btn variant="primary" size="sm" onClick={applyToGrant} disabled={!selectedGrant}>Apply Metadata</Btn>
+              <Btn variant="ghost" size="sm" onClick={generateTasks} disabled={!selectedGrant}>⚡ Gen Tasks</Btn>
+            </div>
+            {!selectedGrant && <div style={{ fontSize: 9, color: T.amber, marginTop: 4 }}>Select a grant to automate task generation from requirements.</div>}
+          </Card>
+          {/* Coaching & Alignment */}
+          {parsed.coaching && (
+            <Card style={{ marginBottom: 12, borderLeft: `4px solid ${parsed.coaching.alignmentScore >= 80 ? T.green : T.amber}` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>🎯 Mission Alignment & Coaching</div>
+                  <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>{parsed.coaching.alignmentJustification}</div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: parsed.coaching.alignmentScore >= 80 ? T.green : T.amber }}>{parsed.coaching.alignmentScore}%</div>
+                  <div style={{ fontSize: 9, color: T.mute }}>ALIGNMENT</div>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.text, marginBottom: 8, textTransform: "uppercase" }}>📝 Compliance Checklist</div>
+                  {parsed.coaching.complianceChecklist?.map((c, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, fontSize: 11, color: T.sub }}>
+                      <input type="checkbox" readOnly checked={false} style={{ cursor: "pointer" }} />
+                      <span style={{ color: c.status === "required" ? T.red : T.sub }}>{c.item}</span>
+                    </div>
+                  ))}
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: T.text, marginBottom: 8, textTransform: "uppercase" }}>⚠️ Strategic Gaps</div>
+                  {parsed.coaching.strategicGaps?.map((g, i) => (
+                    <div key={i} style={{ fontSize: 10, color: T.red, marginBottom: 4, padding: "2px 6px", background: T.red + "11", borderRadius: 4 }}>
+                      • {g}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          )}
+
           {/* Overview */}
           <Card style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 8 }}>{parsed.title || "Parsed RFP"}</div>
@@ -150,15 +224,6 @@ export const RFPParser = ({ grants, onUpdate }) => {
             </Card>
           )}
 
-          {/* Apply to Grant */}
-          <Card>
-            <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 8 }}>🔗 Apply to Existing Grant</div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <Select value={selectedGrant} onChange={setSelectedGrant}
-                options={[{ value: "", label: "Select a grant..." }, ...grants.map(g => ({ value: g.id, label: g.title?.slice(0, 50) }))]} style={{ flex: 1 }} />
-              <Btn variant="primary" size="sm" onClick={applyToGrant} disabled={!selectedGrant}>Apply Data</Btn>
-            </div>
-          </Card>
         </div>
       )}
 

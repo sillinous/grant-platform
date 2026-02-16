@@ -75,19 +75,16 @@ Respond ONLY in JSON format:
 
 const RUBRIC_LIST = Object.values(RUBRICS);
 
-export const NarrativeScorer = ({ grants }) => {
+export const NarrativeScorer = ({ grants, history, setHistory }) => {
   const [text, setText] = useState("");
   const [grantId, setGrantId] = useState("");
   const [rubricId, setRubricId] = useState("generic");
   const [scoreResult, setScoreResult] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [history, setHistory] = useState(() => LS.get("score_history", []));
   const [showCompare, setShowCompare] = useState(false);
   const [activeTab, setActiveTab] = useState("analysis");
   const [auditResult, setAuditResult] = useState(null);
   const [auditing, setAuditing] = useState(false);
-
-  useEffect(() => { LS.set("score_history", history); }, [history]);
 
   const rubric = RUBRICS[rubricId] || RUBRICS.generic;
 

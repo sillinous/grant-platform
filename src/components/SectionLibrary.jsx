@@ -3,8 +3,8 @@ import { Card, Btn, Badge, Input, Select, TextArea, Tab, Progress, Empty, Modal 
 import { T, LS, uid, fmtDate } from '../globals';
 import { API } from '../api';
 
-export const SectionLibrary = ({ vaultDocs, setVaultDocs }) => {
-  const [sections, setSections] = useState(() => LS.get("section_library", []));
+export const SectionLibrary = ({ vaultDocs, setVaultDocs, grants, sections, setSections }) => {
+  const [activeGrantId, setActiveGrantId] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [search, setSearch] = useState("");
   const [newSection, setNewSection] = useState({ title: "", category: "need", content: "", tags: [], useCount: 0 });
@@ -13,7 +13,21 @@ export const SectionLibrary = ({ vaultDocs, setVaultDocs }) => {
   const [harvestResults, setHarvestResults] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => { LS.set("section_library", sections); }, [sections]);
+  // Auto-suggest when active grant changes
+  useEffect(() => {
+    if (activeGrantId && grants) {
+      const g = grants.find(x => x.id === activeGrantId);
+      if (g) {
+        setAiQuery(`Grant: ${g.title}\nAgency: ${g.agency}\nDescription: ${g.category}`);
+        // Small delay to ensure state update if we want to auto-trigger findSimilar
+        const timeout = setTimeout(() => {
+          const btn = document.getElementById("ai-suggest-btn");
+          if (btn) btn.click();
+        }, 500);
+        return () => clearTimeout(timeout);
+      }
+    }
+  }, [activeGrantId, grants]);
 
   const SECTION_TYPES = [
     { id: "need", label: "Statement of Need", icon: "📊" }, { id: "methodology", label: "Methodology", icon: "🔬" },
@@ -131,8 +145,14 @@ Return the adapted content only.`;
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <Input value={aiQuery} onChange={setAiQuery} placeholder="Paste RFP or describe context..." style={{ flex: 1 }} />
-            <Btn variant="primary" size="sm" onClick={findSimilar} disabled={loading || !aiQuery.trim()}>{loading ? "⏳" : "🔍"}</Btn>
+            <Btn id="ai-suggest-btn" variant="primary" size="sm" onClick={findSimilar} disabled={loading || !aiQuery.trim()}>{loading ? "⏳" : "🔍"}</Btn>
           </div>
+          {grants && (
+            <div style={{ marginTop: 8 }}>
+              <Select size="xs" value={activeGrantId} onChange={setActiveGrantId}
+                options={[{ value: "", label: "Target an active pursuit..." }, ...grants.map(g => ({ value: g.id, label: g.title?.slice(0, 40) }))]} />
+            </div>
+          )}
         </Card>
 
         <Card style={{ background: T.panel + "22" }}>

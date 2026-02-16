@@ -85,6 +85,7 @@ export const STAGES = [
     { id: "active", label: "Active", icon: "⚡", color: T.green },
     { id: "closeout", label: "Closeout", icon: "📦", color: T.yellow },
     { id: "declined", label: "Declined", icon: "❌", color: T.red },
+    { id: "archived", label: "Archived", icon: "📁", color: T.mute },
 ];
 
 export const STAGE_MAP = Object.fromEntries(STAGES.map(s => [s.id, s]));

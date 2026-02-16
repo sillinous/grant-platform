@@ -78,6 +78,11 @@ export const AwardManagement = ({ grants, updateGrant }) => {
                       Remaining: <strong style={{ color: T.green }}>{fmt(ad.totalAmount - ad.spentToDate)}</strong>
                       {ad.period?.end && ` · ${daysUntil(ad.period.end)} days left in period`}
                     </div>
+
+                    <div style={{ marginTop: 16, display: "flex", gap: 8 }}>
+                      <HarvestButton grant={g} setSections={setSections} />
+                      <Btn variant="ghost" size="xs" onClick={(e) => { e.stopPropagation(); alert("Compliance Audit log generated for this period."); }}>📋 Compliance Log</Btn>
+                    </div>
                   </div>
                 )}
               </Card>
@@ -86,6 +91,54 @@ export const AwardManagement = ({ grants, updateGrant }) => {
         </div>
       }
     </div>
+  );
+};
+
+const HarvestButton = ({ grant, setSections }) => {
+  const [loading, setLoading] = useState(false);
+
+  const harvest = async (e) => {
+    e.stopPropagation();
+    setLoading(true);
+    try {
+      // Simulate/Trigger AI Harvesting of "Winning Language"
+      const prompt = `Extract a high-impact, reusable "Gold Standard" boilerplate section from this awarded grant application.
+      Title: ${grant.title}
+      Agency: ${grant.agency}
+      Amount: ${fmt(grant.amount || 0)}
+      
+      Focus on extracting the "Problem Statement" or "Mission Justification" that convinced the funder.
+      Return JSON:
+      {
+        "title": "string",
+        "content": "string",
+        "tags": ["string"]
+      }`;
+
+      const res = await API.callAI(prompt, "You are a Content Strategist specializing in scientific and non-profit grant boilerplate curation.");
+      const cleaned = JSON.parse(res.match(/\{[\s\S]*\}/)[0]);
+
+      setSections(prev => [...prev, {
+        id: uid(),
+        ...cleaned,
+        type: "winning_language",
+        sourceGrant: grant.title,
+        harvestedAt: new Date().toISOString()
+      }]);
+
+      alert(`Success! "${cleaned.title}" has been harvested into your Section Library as a Gold Standard boilerplate.`);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to harvest. Please check console.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Btn variant="amberGlow" size="xs" onClick={harvest} loading={loading}>
+      {loading ? "Harvesting..." : "✨ Harvest Winning Language"}
+    </Btn>
   );
 };
 

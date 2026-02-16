@@ -2,23 +2,25 @@
 import { Card, Btn, Stat, Empty, Badge, Select, Input, TextArea, Modal } from '../ui';
 import { T, LS, uid, daysUntil } from '../globals';
 
-export const ActionPlan = ({ grants }) => {
-  const [tasks, setTasks] = useState(() => LS.get("tasks", []));
+export const ActionPlan = ({ grants, tasks, setTasks }) => {
   const [showAdd, setShowAdd] = useState(false);
   const [newTask, setNewTask] = useState({ title: "", grantId: "", priority: "medium", dueDate: "", status: "todo", notes: "" });
   const [filter, setFilter] = useState("all");
 
-  useEffect(() => { LS.set("tasks", tasks); }, [tasks]);
+  const saveTasks = (newTasks) => {
+    setTasks(newTasks);
+    LS.set("tasks", newTasks);
+  };
 
   const addTask = () => {
     if (!newTask.title) return;
-    setTasks(prev => [...prev, { ...newTask, id: uid(), createdAt: new Date().toISOString() }]);
+    saveTasks([...tasks, { ...newTask, id: uid(), createdAt: new Date().toISOString() }]);
     setNewTask({ title: "", grantId: "", priority: "medium", dueDate: "", status: "todo", notes: "" });
     setShowAdd(false);
   };
 
-  const updateTask = (id, updates) => setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
-  const deleteTask = (id) => setTasks(prev => prev.filter(t => t.id !== id));
+  const updateTask = (id, updates) => saveTasks(tasks.map(t => t.id === id ? { ...t, ...updates } : t));
+  const deleteTask = (id) => saveTasks(tasks.filter(t => t.id !== id));
 
   const PRIORITIES = { high: { color: T.red, label: "🔴 High" }, medium: { color: T.yellow, label: "🟡 Medium" }, low: { color: T.green, label: "🟢 Low" } };
   const STATUSES = { todo: { color: T.mute, label: "To Do" }, inprogress: { color: T.blue, label: "In Progress" }, blocked: { color: T.red, label: "Blocked" }, done: { color: T.green, label: "Done" } };

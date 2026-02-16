@@ -193,6 +193,108 @@ export const API = {
         } catch (e) { return { results: [], _error: `USASpending: ${e.message}` }; }
     },
 
+    async searchNonprofits(query) {
+        const cacheKey = `nonprofits_${query}`;
+        const cached = SimpleCache.get(cacheKey);
+        if (cached) return cached;
+        try {
+            const r = await fetch(`https://projects.propublica.org/nonprofits/api/v2/search.json?q=${encodeURIComponent(query)}`);
+            if (!r.ok) throw new Error(`ProPublica: ${r.status}`);
+            const data = await r.json();
+            SimpleCache.set(cacheKey, data);
+            return data;
+        } catch (e) {
+            console.warn("ProPublica search failed:", e);
+            return { organizations: [], _error: `ProPublica: ${e.message}` };
+        }
+    },
+
+    async getNonprofitDetail(ein) {
+        const cacheKey = `nonprofit_detail_${ein}`;
+        const cached = SimpleCache.get(cacheKey);
+        if (cached) return cached;
+        try {
+            const r = await fetch(`https://projects.propublica.org/nonprofits/api/v2/organizations/${ein}.json`);
+            if (!r.ok) return null;
+            const data = await r.json();
+            SimpleCache.set(cacheKey, data);
+            return data;
+        } catch { return null; }
+    },
+
+    async searchBills(query, congress = 118) {
+        const cacheKey = `bills_${query}_${congress}`;
+        const cached = SimpleCache.get(cacheKey);
+        if (cached) return cached;
+        try {
+            const apiKey = import.meta.env.VITE_CONGRESS_KEY || "DEMO_KEY";
+            // Note: Congress.gov API doesn't have a direct "q" param in the list view, usually requires filters or specific bill searches.
+            // Using a generic search parameter if supported or common keywords.
+            const r = await fetch(`https://api.congress.gov/v3/bill/${congress}?api_key=${apiKey}&format=json&limit=20`);
+            if (!r.ok) throw new Error(`Congress.gov: ${r.status}`);
+            const data = await r.json();
+            // Local filtering for demonstration if API doesn't support direct text search in this endpoint
+            const filtered = (data.bills || []).filter(b =>
+                b.title?.toLowerCase().includes(query.toLowerCase()) ||
+                b.type?.toLowerCase().includes(query.toLowerCase())
+            );
+            const result = { bills: filtered, total: filtered.length };
+            SimpleCache.set(cacheKey, result);
+            return result;
+        } catch (e) {
+            console.warn("Congress.gov search failed:", e);
+            return { bills: [], _error: `Congress.gov: ${e.message}` };
+        }
+    },
+
+    async searchStateGrants(query, state = "CA") {
+        const cacheKey = `state_grants_${state}_${query}`;
+        const cached = SimpleCache.get(cacheKey);
+        if (cached) return cached;
+        try {
+            const r = await fetch(`https://data.ca.gov/api/3/action/datastore_search?resource_id=ca-grants-portal-grants&q=${encodeURIComponent(query)}`);
+            if (!r.ok) throw new Error(`State API (${state}): ${r.status}`);
+            const data = await r.json();
+            const results = data.result?.records || [];
+            SimpleCache.set(cacheKey, results);
+            return results;
+        } catch (e) {
+            console.warn(`State API (${state}) failed:`, e);
+            return { results: [], _error: `${state}: ${e.message}` };
+        }
+    },
+
+    async getEconomicData(seriesId = "UNRATE") {
+        const cacheKey = `fred_${seriesId}`;
+        const cached = SimpleCache.get(cacheKey);
+        if (cached) return cached;
+        try {
+            const apiKey = import.meta.env.VITE_FRED_KEY || "DEMO_KEY";
+            const r = await fetch(`https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${apiKey}&file_type=json&limit=12&sort_order=desc`);
+            if (!r.ok) return { observations: [], _error: `FRED: ${r.status}` };
+            const data = await r.json();
+            SimpleCache.set(cacheKey, data);
+            return data;
+        } catch (e) { return { observations: [], _error: `FRED: ${e.message}` }; }
+    },
+
+    async getClimateData(stationId = "GHCND:USW00094728") {
+        const cacheKey = `noaa_${stationId}`;
+        const cached = SimpleCache.get(cacheKey);
+        if (cached) return cached;
+        try {
+            const token = import.meta.env.VITE_NOAA_TOKEN || "DEMO_TOKEN";
+            // Getting recent daily summaries
+            const r = await fetch(`https://www.ncei.noaa.gov/cdo-web/api/v2/data?datasetid=GHCND&stationid=${stationId}&limit=10&sortfield=date&sortorder=desc`, {
+                headers: { token }
+            });
+            if (!r.ok) return { results: [], _error: `NOAA: ${r.status}` };
+            const data = await r.json();
+            SimpleCache.set(cacheKey, data);
+            return data;
+        } catch (e) { return { results: [], _error: `NOAA: ${e.message}` }; }
+    },
+
     async callAI(messages, systemPrompt) {
         const provider = getActiveProvider();
         const providerConfig = AI_PROVIDERS[provider.id];

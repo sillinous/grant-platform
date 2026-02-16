@@ -7,6 +7,7 @@ export const Discovery = ({ onAdd, grants }) => {
     const [query, setQuery] = useState("");
     const [results, setResults] = useState([]);
     const [spendingResults, setSpendingResults] = useState([]);
+    const [stateResults, setStateResults] = useState([]);
     const [loading, setLoading] = useState(false);
     const [landscape, setLandscape] = useState(null);
     const [regs, setRegs] = useState([]);
@@ -71,16 +72,17 @@ export const Discovery = ({ onAdd, grants }) => {
         setSearchStats(null);
 
         // Parallel multi-source search
-        const [grantsData, spendingData] = await Promise.all([
+        const [grantsData, spendingData, stateData] = await Promise.all([
             API.searchGrants(q, { rows: PAGE_SIZE, startRecord: 0 }),
             API.searchFederalSpending(q, { limit: 10 }),
+            tab === "state" ? API.searchStateGrants(q, "CA") : Promise.resolve([]),
         ]);
 
         const hits = grantsData.oppHits || [];
         setResults(hits);
         setSpendingResults(spendingData.results || []);
+        if (tab === "state") setStateResults(stateData || []);
         setTotalCount(grantsData.totalCount || hits.length);
-        setCurrentOffset(hits.length);
         setLastQuery(q);
 
         // Stats
@@ -277,6 +279,7 @@ Narratives: ${PROFILE.narratives.founder}`;
                 { id: "saved", icon: "⭐", label: `Saved (${savedResults.length})` },
                 { id: "landscape", icon: "📈", label: "Funding Landscape" },
                 { id: "spending", icon: "💰", label: "Past Awards" },
+                { id: "state", icon: "⚖️", label: "State Portals" },
                 { id: "regs", icon: "⚖️", label: "Regulatory Intel" },
             ]} active={tab} onChange={setTab} />
 
@@ -946,6 +949,49 @@ Narratives: ${PROFILE.narratives.founder}`;
 
                     {spendingResults.length === 0 && !loading && (
                         <Empty icon="💰" title="Search Past Federal Awards" sub="Discover who received funding in your focus areas" />
+                    )}
+                </div>
+            )}
+
+            {/* ━━━ STATE PORTALS TAB ━━━ */}
+            {tab === "state" && (
+                <div>
+                    <Card style={{ marginBottom: 12 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 8 }}>🏛️ State-Specific Grant Search</div>
+                        <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>
+                            Search localized state grant portals (currently supporting California). Track high-impact regional opportunities.
+                        </div>
+                        <div style={{ display: "flex", gap: 8 }}>
+                            <Input value={query} onChange={setQuery} placeholder="Search state grants... (e.g. 'homelessness', 'water', 'energy')" style={{ flex: 1 }} onKeyDown={e => e.key === "Enter" && search()} />
+                            <Btn variant="primary" onClick={() => search()} disabled={loading}>{loading ? "⏳" : "🔍"} Search State</Btn>
+                        </div>
+                    </Card>
+
+                    {stateResults.length > 0 && (
+                        <div>
+                            {stateResults.map((r, i) => (
+                                <Card key={i} style={{ marginBottom: 8 }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{r.GrantTitle || r.title || "State Grant"}</div>
+                                            <div style={{ fontSize: 11, color: T.mute, marginTop: 4 }}>{r.AgencyName || r.agency} · {r.Status || "Active"}</div>
+                                        </div>
+                                        <div style={{ textAlign: "right", marginLeft: 12 }}>
+                                            {r.EstimatedTotalFunding && <div style={{ fontSize: 14, fontWeight: 700, color: T.green }}>{fmt(r.EstimatedTotalFunding)}</div>}
+                                            {r.Deadline && <div style={{ fontSize: 10, color: T.mute }}>Ends: {r.Deadline}</div>}
+                                        </div>
+                                    </div>
+                                    <div style={{ fontSize: 11, color: T.sub, marginTop: 8, lineHeight: 1.5 }}>{r.Description?.slice(0, 300) || "No description provided."}</div>
+                                    <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                                        <Btn size="sm" variant="success" onClick={() => trackGrant({ ...r, title: r.GrantTitle || r.title, agency: r.AgencyName || r.agency, amount: r.EstimatedTotalFunding || 0, id: r.ID || uid() })}>📋 Track Grant</Btn>
+                                        {r.RedirectURL && <a href={r.RedirectURL} target="_blank" rel="noreferrer" style={{ fontSize: 11, color: T.blue, textDecoration: "none", alignSelf: "center" }}>🔗 Portal Link</a>}
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
+                    {stateResults.length === 0 && !loading && (
+                        <Empty icon="🏛️" title="No State Results" sub="Search for local opportunities in state portals" />
                     )}
                 </div>
             )}

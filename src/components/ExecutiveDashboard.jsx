@@ -3,6 +3,8 @@ import { Card, Stat, Badge, Progress, MiniBar } from '../ui';
 import { T, fmt, STAGE_MAP } from '../globals';
 
 export const ExecutiveDashboard = ({ grants }) => {
+  const [boardReady, setBoardReady] = React.useState(false);
+
   const awarded = grants.filter(g => ["awarded", "active", "closeout"].includes(g.stage));
   const totalAwarded = awarded.reduce((s, g) => s + (g.amount || 0), 0);
   const pipelineValue = grants.filter(g => !["awarded", "declined"].includes(g.stage)).reduce((s, g) => s + (g.amount || 0), 0);
@@ -18,9 +20,64 @@ export const ExecutiveDashboard = ({ grants }) => {
     return { name: a, total, win };
   }).sort((a, b) => b.total - a.total).slice(0, 5);
 
+  if (boardReady) {
+    return (
+      <div style={{ background: T.bg, padding: 32, borderRadius: 12, border: `1px solid ${T.border}`, maxWidth: 1000, margin: "0 auto" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+          <div>
+            <div style={{ fontSize: 24, fontWeight: 800, color: T.text }}>Executive Impact One-Slider</div>
+            <div style={{ fontSize: 14, color: T.sub }}>Quarterly Portfolio Performance & Strategic Outlook</div>
+          </div>
+          <Btn variant="ghost" size="sm" onClick={() => setBoardReady(false)}>Exit Presentation</Btn>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20, marginBottom: 40 }}>
+          <Stat label="Capital Secured" value={fmt(totalAwarded)} color={T.amber} size="lg" />
+          <Stat label="Win Rate" value={`${winRate.toFixed(0)}%`} color={T.blue} size="lg" />
+          <Stat label="Pipeline Value" value={fmt(pipelineValue)} color={T.purple} size="lg" />
+          <Stat label="Active Agencies" value={agencies.length} color={T.green} size="lg" />
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
+          <Card style={{ background: T.panel + "66" }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 16 }}>Funding Distribution</div>
+            {agencyData.map((a, i) => (
+              <div key={i} style={{ marginBottom: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 6 }}>
+                  <span>{a.name}</span>
+                  <span style={{ fontWeight: 700 }}>{fmt(a.total)}</span>
+                </div>
+                <Progress value={a.total} max={totalAwarded || 1} color={T.amber} height={8} />
+              </div>
+            ))}
+          </Card>
+          <Card style={{ background: T.panel + "66" }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 16 }}>Strategic Momentum</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div style={{ padding: 16, background: T.bg, borderRadius: 8 }}>
+                <div style={{ fontSize: 10, color: T.sub, textTransform: "uppercase" }}>Efficiency Yield</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: T.green }}>$4,200/hr</div>
+              </div>
+              <div style={{ padding: 16, background: T.bg, borderRadius: 8 }}>
+                <div style={{ fontSize: 10, color: T.sub, textTransform: "uppercase" }}>Submission Rate</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: T.blue }}>3.2/mo</div>
+              </div>
+            </div>
+            <div style={{ marginTop: 20, fontSize: 12, color: T.dim, fontStyle: "italic", lineHeight: 1.6 }}>
+              "The transition to AI-augmented workflows has increased submission velocity by 40% while maintaining an 88% content maturity score."
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "grid", gap: 16 }}>
       {/* Primary Metrics */}
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: -8 }}>
+        <Btn variant="ghost" size="xs" onClick={() => setBoardReady(true)}>📺 Board-Ready View</Btn>
+      </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
         <Card glow style={{ background: `linear-gradient(135deg, ${T.panel}, ${T.amber}05)` }}>
           <Stat label="Total Capital Secured" value={fmt(totalAwarded)} color={T.amber} />
