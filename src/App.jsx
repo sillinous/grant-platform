@@ -5,7 +5,6 @@ import { API } from "./api";
 import { auth } from "./auth";
 import { cloud } from "./cloud";
 
-import { NetlifySync } from "./netlifySync";
 
 // ═══════════════════════════════════════════════════════════════════
 // GRANT LIFECYCLE PLATFORM v5.2 — UNLESS
