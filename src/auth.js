@@ -1,5 +1,8 @@
 
-import netlifyIdentity from "netlify-identity-widget";
+// import netlifyIdentity from "netlify-identity-widget"; 
+// ^^^ CAUSES VITE BUILD ISSUES (global is not defined)
+// We use the CDN script in index.html, which exposes window.netlifyIdentity
+const netlifyIdentity = window.netlifyIdentity;
 
 export const auth = {
   user: null, // Current user object
