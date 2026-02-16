@@ -2,6 +2,8 @@
 import { T, PROFILE, saveProfile, LS, uid, fmt, fmtDate, daysUntil, clamp, pct, getProfileState, STAGES, STAGE_MAP, getStorageUsage, logActivity } from "./globals";
 import { Icon, Btn, Card, Badge, Input, TextArea, Select, Tab, Progress, Empty, Modal, Stat, MiniBar, ErrorBoundary } from "./ui";
 import { API } from "./api";
+import { auth } from "./auth";
+import { cloud } from "./cloud";
 
 // ═══════════════════════════════════════════════════════════════════
 // GRANT LIFECYCLE PLATFORM v5.2 — UNLESS
