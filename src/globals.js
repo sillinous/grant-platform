@@ -13,6 +13,43 @@ export const T = {
     glass: "rgba(11,16,24,0.85)", gradient: "linear-gradient(135deg,#c49355,#e0b84a)",
 };
 
+// ─── i18n & CURRENCY ──────────────────────────────────────────────────
+export const CURRENCIES = {
+    USD: { symbol: "$", label: "US Dollar", locale: "en-US" },
+    EUR: { symbol: "€", label: "Euro", locale: "de-DE" },
+    GBP: { symbol: "£", label: "British Pound", locale: "en-GB" },
+    CAD: { symbol: "C$", label: "Canadian Dollar", locale: "en-CA" }
+};
+
+export const LANGS = {
+    en: { label: "English", flag: "🇺🇸" },
+    es: { label: "Español", flag: "🇪🇸" },
+    fr: { label: "Français", flag: "🇫🇷" },
+    de: { label: "Deutsch", flag: "🇩🇪" }
+};
+
+export const TRANSLATIONS = {
+    en: {
+        dashboard: "Dashboard", discovery: "Discovery", pipeline: "Pipeline",
+        settings: "Settings", budget: "Budget Builder", vault: "Document Vault",
+        active_grants: "Active Grants", awarded: "Awarded",
+    },
+    es: {
+        dashboard: "Tablero", discovery: "Descubrimiento", pipeline: "Línea de Vida",
+        settings: "Ajustes", budget: "Constructor de Presupuesto", vault: "Bóveda de Documentos",
+        active_grants: "Subvenciones Activas", awarded: "Premiado",
+    }
+};
+
+export let LOCALE = LS.get("locale", { lang: "en", currency: "USD" });
+
+export const setLocale = (lang, currency) => {
+    LOCALE = { lang, currency };
+    LS.set("locale", LOCALE);
+};
+
+export const t = (key) => TRANSLATIONS[LOCALE.lang]?.[key] || TRANSLATIONS["en"][key] || key;
+
 // ─── PROFILE ───────────────────────────────────────────────────────────
 export const DEFAULT_PROFILE = {
     name: "", loc: "", rural: false, disabled: false,
@@ -48,8 +85,14 @@ export const LS = {
 };
 
 export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-export const fmt = (n) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
-export const fmtDate = (d) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+export const fmt = (n) => {
+    const c = CURRENCIES[LOCALE.currency] || CURRENCIES.USD;
+    return new Intl.NumberFormat(c.locale, { style: "currency", currency: LOCALE.currency, maximumFractionDigits: 0 }).format(n);
+};
+export const fmtDate = (d) => {
+    const c = CURRENCIES[LOCALE.currency] || CURRENCIES.USD;
+    return new Date(d).toLocaleDateString(c.locale, { month: "short", day: "numeric", year: "numeric" });
+};
 export const daysUntil = (d) => Math.ceil((new Date(d) - new Date()) / 86400000);
 export const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 export const pct = (v) => `${Math.round(v)}%`;

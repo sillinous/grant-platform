@@ -1,6 +1,7 @@
 ﻿import React, { useState } from 'react';
 import { Card, Btn, Stat, Empty, Badge, Input, Select, TextArea, Modal } from '../ui';
-import { T, uid, fmtDate } from '../globals';
+import { T, uid, fmtDate, Badge } from '../globals';
+import { API } from '../api';
 
 export const DocumentVault = ({ vaultDocs, setVaultDocs }) => {
     const [search, setSearch] = useState("");
@@ -8,6 +9,22 @@ export const DocumentVault = ({ vaultDocs, setVaultDocs }) => {
     const [selected, setSelected] = useState(null);
     const [filter, setFilter] = useState("all");
     const [newDoc, setNewDoc] = useState({ title: "", category: "narrative", content: "", tags: [], grantIds: [], version: 1, status: "draft" });
+    const [redacting, setRedacting] = useState(false);
+
+    const redactPII = async () => {
+        if (!selected) return;
+        setRedacting(true);
+        const sys = `You are a Privacy & Security Expert. Scan the document for PII (Personally Identifiable Information) such as Social Security Numbers, phone numbers, home addresses, and bank details. Replace them with [REDACTED]. Keep all other grant-specific technical language intact.
+        Return ONLY the redacted text.`;
+
+        const res = await API.callAI([{ role: "user", content: selected.content }], sys);
+        if (!res.error) {
+            updateDoc(selected.id, { content: res.text });
+            setSelected({ ...selected, content: res.text });
+            alert("🔒 Zero-Trust Redaction Complete: All identified PII has been masked.");
+        }
+        setRedacting(false);
+    };
 
     const CATEGORIES = [
         { id: "narrative", label: "📄 Narratives", color: T.amber },
@@ -119,6 +136,9 @@ export const DocumentVault = ({ vaultDocs, setVaultDocs }) => {
                             <div style={{ display: "flex", gap: 8 }}>
                                 <Btn size="sm" onClick={() => duplicateDoc(selected)}>📋 Duplicate</Btn>
                                 <Btn size="sm" onClick={() => navigator.clipboard?.writeText(selected.content || "")}>📎 Copy</Btn>
+                                <Btn size="sm" variant="primary" onClick={redactPII} disabled={redacting}>
+                                    {redacting ? "⏳ Redacting..." : "🔒 Redact PII"}
+                                </Btn>
                             </div>
                             <Btn variant="danger" size="sm" onClick={() => deleteDoc(selected.id)}>🗑️ Delete</Btn>
                         </div>

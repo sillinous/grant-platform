@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { T, PROFILE, saveProfile, LS, uid, fmt, fmtDate, daysUntil, clamp, pct, getProfileState, STAGES, STAGE_MAP, getStorageUsage, logActivity } from "./globals";
+import { T, PROFILE, saveProfile, LS, uid, fmt, fmtDate, daysUntil, clamp, pct, getProfileState, STAGES, STAGE_MAP, getStorageUsage, logActivity, t, setLocale, LOCALE, LANGS, CURRENCIES } from "./globals";
 import { Icon, Btn, Card, Badge, Input, TextArea, Select, Tab, Progress, Empty, Modal, Stat, MiniBar, ErrorBoundary } from "./ui";
 import { API } from "./api";
 import { auth } from "./auth";
@@ -67,6 +67,7 @@ import { LegislativeTracker } from './components/LegislativeTracker';
 import { AdvisoryBoard } from './components/AdvisoryBoard';
 import { FundingStacker } from './components/FundingStacker';
 import { CloseoutWizard } from './components/CloseoutWizard';
+import { PolicyModeler } from './components/PolicyModeler';
 
 export default function App() {
   const [page, setPage] = useState("dashboard");
@@ -199,10 +200,10 @@ export default function App() {
   }, []);
 
   const NAV = [
-    { id: "dashboard", icon: "📈", label: "Dashboard", group: "core" },
+    { id: "dashboard", icon: "📈", label: t("dashboard"), group: "core" },
     { id: "exec_dash", icon: "💎", label: "Executive View", group: "core" },
-    { id: "discovery", icon: "🔍", label: "Discovery", group: "core" },
-    { id: "pipeline", icon: "📋", label: "Pipeline", group: "core" },
+    { id: "discovery", icon: "🔍", label: t("discovery"), group: "core" },
+    { id: "pipeline", icon: "📋", label: t("pipeline"), group: "core" },
     { id: "calendar", icon: "📅", label: "Calendar", group: "core" },
     { id: "rfp_parser", icon: "📄", label: "RFP Parser", group: "analysis" },
     { id: "match_scorer", icon: "🎯", label: "Match Scorer", group: "analysis" },
@@ -210,8 +211,8 @@ export default function App() {
     { id: "ai_drafter", icon: "✍️", label: "AI Drafter", group: "writing" },
     { id: "narrative_scorer", icon: "📊", label: "Narrative Scorer", group: "writing" },
     { id: "section_library", icon: "📚", label: "Section Library", group: "writing" },
-    { id: "budget", icon: "💵", label: "Budget Builder", group: "docs" },
-    { id: "vault", icon: "🗄️", label: "Document Vault", group: "docs" },
+    { id: "budget", icon: "💵", label: t("budget"), group: "docs" },
+    { id: "vault", icon: "🗄️", label: t("vault"), group: "docs" },
     { id: "compliance_tracker", icon: "✅", label: "Compliance Tracker", group: "management" },
     { id: "tasks", icon: "📑", label: "Action Plan", group: "management" },
     { id: "awards", icon: "🏆", label: "Award Mgmt", group: "management" },
@@ -233,7 +234,8 @@ export default function App() {
     { id: "win_prob", icon: "🎲", label: "Win Probability", group: "intelligence" },
     { id: "advisory", icon: "🤝", label: "War Room", group: "intelligence" },
     { id: "funding_stacker", icon: "📊", label: "Funding Stacker", group: "intelligence" },
-    { id: "settings", icon: "⚙️", label: "Settings", group: "system" },
+    { id: "policy_modeler", icon: "🏛️", label: "Policy Modeler", group: "intelligence" },
+    { id: "settings", icon: "⚙️", label: t("settings"), group: "system" },
   ];
 
   const renderPage = () => {
@@ -272,6 +274,7 @@ export default function App() {
       case "impact_predict": return <ImpactPredictor grants={grants} vaultDocs={vaultDocs} />;
       case "advisory": return <AdvisoryBoard grants={grants} />;
       case "funding_stacker": return <FundingStacker grants={grants} />;
+      case "policy_modeler": return <PolicyModeler grants={grants} />;
       case "settings": return <Settings showToast={showToast} />;
       default: return <Dashboard grants={grants} docs={vaultDocs} contacts={contacts} vaultDocs={vaultDocs} events={events} navigate={setPage} />;
     }
@@ -286,6 +289,32 @@ export default function App() {
           <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: "none", border: "none", color: T.amber, cursor: "pointer", fontSize: 20 }}>{sidebarOpen ? "◀" : "▶"}</button>
           {sidebarOpen && <div style={{ fontSize:14, fontWeight:700, color:T.amber, letterSpacing:1 }}>UNLESS</div>}
         </div>
+
+        {sidebarOpen && (
+          <div style={{ padding: "12px", borderBottom: `1px solid ${T.border}`, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", gap: 4 }}>
+              {Object.entries(LANGS).map(([code, l]) => (
+                <button
+                  key={code}
+                  onClick={() => { setLocale(code, LOCALE.currency); window.location.reload(); }}
+                  style={{ flex: 1, padding: "4px", background: LOCALE.lang === code ? T.amber + "33" : T.bg, border: `1px solid ${LOCALE.lang === code ? T.amber : T.border}`, borderRadius: 4, cursor: "pointer", fontSize: 12 }}
+                  title={l.label}
+                >
+                  {l.flag}
+                </button>
+              ))}
+            </div>
+            <select
+              value={LOCALE.currency}
+              onChange={(e) => { setLocale(LOCALE.lang, e.target.value); window.location.reload(); }}
+              style={{ width: "100%", background: T.bg, border: `1px solid ${T.border}`, color: T.text, fontSize: 10, padding: 4, borderRadius: 4 }}
+            >
+              {Object.entries(CURRENCIES).map(([code, c]) => (
+                <option key={code} value={code}>{code} - {c.label}</option>
+              ))}
+            </select>
+          </div>
+        )}
         <div style={{ flex:1, padding:"8px 4px", overflow:"auto" }}>
           {["core", "analysis", "writing", "docs", "management", "intelligence", "system"].map(group => {
             const items = NAV.filter(n => n.group === group);
