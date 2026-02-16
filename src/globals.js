@@ -13,6 +13,15 @@ export const T = {
     glass: "rgba(11,16,24,0.85)", gradient: "linear-gradient(135deg,#c49355,#e0b84a)",
 };
 
+// ─── UTILITIES ─────────────────────────────────────────────────────────
+export const LS = {
+    get: (k, d = null) => { try { const v = localStorage.getItem(`gp_${k}`); return v ? JSON.parse(v) : d; } catch { return d; } },
+    set: (k, v) => { try { localStorage.setItem(`gp_${k}`, JSON.stringify(v)); } catch (e) { console.warn("LS set error", e); } },
+    del: (k) => { try { localStorage.removeItem(`gp_${k}`); } catch (e) { console.warn("LS del error", e); } },
+};
+
+export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
 // ─── i18n & CURRENCY ──────────────────────────────────────────────────
 export const CURRENCIES = {
     USD: { symbol: "$", label: "US Dollar", locale: "en-US" },
@@ -48,8 +57,6 @@ export const setLocale = (lang, currency) => {
     LS.set("locale", LOCALE);
 };
 
-export const t = (key) => TRANSLATIONS[LOCALE.lang]?.[key] || TRANSLATIONS["en"][key] || key;
-
 // ─── PROFILE ───────────────────────────────────────────────────────────
 export const DEFAULT_PROFILE = {
     name: "", loc: "", rural: false, disabled: false,
@@ -77,14 +84,7 @@ export const saveProfile = (updates) => {
     try { localStorage.setItem("gp_profile", JSON.stringify(PROFILE)); } catch (e) { console.warn("gp_profile save error", e); }
 };
 
-// ─── UTILITIES ─────────────────────────────────────────────────────────
-export const LS = {
-    get: (k, d = null) => { try { const v = localStorage.getItem(`gp_${k}`); return v ? JSON.parse(v) : d; } catch { return d; } },
-    set: (k, v) => { try { localStorage.setItem(`gp_${k}`, JSON.stringify(v)); } catch (e) { console.warn("LS set error", e); } },
-    del: (k) => { try { localStorage.removeItem(`gp_${k}`); } catch (e) { console.warn("LS del error", e); } },
-};
-
-export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+export const t = (key) => TRANSLATIONS[LOCALE.lang]?.[key] || TRANSLATIONS["en"][key] || key;
 export const fmt = (n) => {
     const c = CURRENCIES[LOCALE.currency] || CURRENCIES.USD;
     return new Intl.NumberFormat(c.locale, { style: "currency", currency: LOCALE.currency, maximumFractionDigits: 0 }).format(n);
