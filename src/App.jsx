@@ -58,6 +58,8 @@ import { FundingForecast } from './components/FundingForecast';
 import { ActivityLog } from './components/ActivityLog';
 import { DeadlineWatchdog } from './components/DeadlineWatchdog';
 import { CollaborationHub } from './components/CollaborationHub';
+import { GrantSentinel } from './components/GrantSentinel';
+import { PreFlightCheck } from './components/PreFlightCheck';
 import { DocumentAssembler } from './components/DocumentAssembler';
 import { OutcomeTracker } from './components/OutcomeTracker';
 import { ExportCenter } from './components/ExportCenter';
@@ -260,6 +262,7 @@ export default function App() {
     { id: "match_scorer", icon: "🎯", label: "Match Scorer", group: "analysis" },
     { id: "match_alerts", icon: "🔔", label: "Match Alerts", group: "analysis" },
     { id: "readiness", icon: "✅", label: "Readiness Check", group: "analysis" },
+    { id: "preflight", icon: "⚔️", label: "Pre-Flight Audit", group: "analysis" },
     { id: "ai_drafter", icon: "✍️", label: "AI Drafter", group: "writing" },
     { id: "narrative_scorer", icon: "📊", label: "Narrative Scorer", group: "writing" },
     { id: "section_library", icon: "📚", label: "Section Library", group: "writing" },
@@ -279,6 +282,7 @@ export default function App() {
     { id: "projector", icon: "💰", label: "Financial Projector", group: "intelligence" },
     { id: "forecast", icon: "📈", label: "Funding Forecast", group: "intelligence" },
     { id: "advisor", icon: "🧠", label: "AI Advisor", group: "intelligence" },
+    { id: "sentinel", icon: "📡", label: "Grant Sentinel", group: "intelligence" },
     { id: "network", icon: "🕸️", label: "Relationship Map", group: "intelligence" },
     { id: "peers", icon: "🔍", label: "Peer Prospecting", group: "intelligence" },
     { id: "funder_research", icon: "🔍", label: "Funder Research", group: "intelligence" },
@@ -304,6 +308,7 @@ export default function App() {
       case "match_scorer": return <MatchScorer grants={grants} />;
       case "match_alerts": return <MatchAlerts grants={grants} addGrant={addGrant} />;
       case "readiness": return <ReadinessAssessment grants={grants} vaultDocs={vaultDocs} contacts={contacts} />;
+      case "preflight": return <PreFlightCheck grants={grants} vaultDocs={vaultDocs} />;
       case "ai_drafter": return <AIDrafter grants={grants} vaultDocs={vaultDocs} />;
       case "narrative_scorer": return <NarrativeScorer grants={grants} />;
       case "section_library": return <SectionLibrary vaultDocs={vaultDocs} setVaultDocs={setVaultDocs} />;
@@ -322,6 +327,7 @@ export default function App() {
       case "sam_wizard": return <SAMWizard />;
       case "projector": return <FinancialProjector grants={grants} />;
       case "forecast": return <FundingForecast grants={grants} />;
+      case "sentinel": return <GrantSentinel onAdd={addGrant} grants={grants} />;
       case "advisor": return <StrategicAdvisor grants={grants} vaultDocs={vaultDocs} contacts={contacts} />;
       case "network": return <RelationshipMap grants={grants} contacts={contacts} setContacts={setContacts} />;
       case "peers": return <PeerProspecting />;

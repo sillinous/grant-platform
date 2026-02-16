@@ -83,6 +83,9 @@ export const NarrativeScorer = ({ grants }) => {
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState(() => LS.get("score_history", []));
   const [showCompare, setShowCompare] = useState(false);
+  const [activeTab, setActiveTab] = useState("analysis");
+  const [auditResult, setAuditResult] = useState(null);
+  const [auditing, setAuditing] = useState(false);
 
   useEffect(() => { LS.set("score_history", history); }, [history]);
 
@@ -144,6 +147,42 @@ Return ONLY the optimized narrative text.`;
     setLoading(false);
   };
 
+  const runFinancialAudit = async () => {
+    if (!text.trim()) return;
+    setAuditing(true);
+    const budgets = LS.get("budgets", {});
+    const grantBudget = budgets[grantId] || [];
+
+    const context = `NARRATIVE TEXT:
+${text}
+
+BUDGET DATA (${grantId ? "For selected grant" : "All budget data"}):
+${JSON.stringify(grantBudget, null, 2)}`;
+
+    const sys = `You are a Deep Financial Auditor. Cross-reference the grant narrative with the budget data.
+Look for:
+1. Numerical discrepancies (Narrative says $50k, Budget says $20k).
+2. Missing justifications (Personnel mentioned in narrative but missing from budget).
+3. Ghost expenses (Costs in budget not explained in narrative).
+4. Categorization errors.
+
+Return ONLY a JSON object:
+{
+  "issues": [{ "type": "critical|warning", "msg": "...", "found": "...", "expected": "..." }],
+  "integrityScore": 0-100,
+  "summary": "..."
+}`;
+
+    const res = await API.callAI([{ role: "user", content: context }], sys);
+    if (!res.error) {
+      try {
+        const cleaned = res.text.replace(/```json\n?|```/g, "").trim();
+        setAuditResult(JSON.parse(cleaned));
+      } catch { setAuditResult({ error: "Failed to parse audit results." }); }
+    } else { setAuditResult({ error: res.error }); }
+    setAuditing(false);
+  };
+
   const getScoreColor = (val) => val >= 80 ? T.green : val >= 60 ? T.yellow : T.red;
 
   return (
@@ -157,7 +196,14 @@ Return ONLY the optimized narrative text.`;
           Paste a draft narrative section. The AI will score and help you optimize it for "{rubric.name}" expectations.
         </div>
 
-        {/* Rubric Selector */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 16, borderBottom: `1px solid ${T.border}` }}>
+          <button onClick={() => setActiveTab("analysis")} style={{ padding: "8px 16px", background: "none", border: "none", color: activeTab === "analysis" ? T.amber : T.sub, borderBottom: activeTab === "analysis" ? `2px solid ${T.amber}` : "none", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>📊 Analysis</button>
+          <button onClick={() => setActiveTab("audit")} style={{ padding: "8px 16px", background: "none", border: "none", color: activeTab === "audit" ? T.amber : T.sub, borderBottom: activeTab === "audit" ? `2px solid ${T.amber}` : "none", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>🕵️ Financial Audit</button>
+        </div>
+
+        {activeTab === "analysis" ? (
+          <>
+            {/* Rubric Selector */}
         <div style={{ display: "grid", gridTemplateColumns: `repeat(${RUBRIC_LIST.length}, 1fr)`, gap: 6, marginBottom: 12 }}>
           {RUBRIC_LIST.map(r => (
             <button key={r.id} onClick={() => setRubricId(r.id)} style={{
@@ -172,7 +218,52 @@ Return ONLY the optimized narrative text.`;
           ))}
         </div>
 
-        <Select value={grantId} onChange={setGrantId} style={{ marginBottom: 8 }}
+          </>
+        ) : (
+          <div style={{ padding: "0 4px" }}>
+            <div style={{ fontSize: 12, color: T.sub, marginBottom: 12 }}>
+              The Deep Auditor cross-references your narrative text with budget items in real-time to prevent common submission errors.
+            </div>
+            <Btn variant="primary" onClick={runFinancialAudit} disabled={auditing} style={{ width: "100%", marginBottom: 12 }}>
+              {auditing ? "⏳ Auditing Integrity..." : "🕵️ Run Integrity Scan"}
+            </Btn>
+
+            {auditResult && (
+              <div style={{ background: T.panel, padding: 12, borderRadius: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>Audit Results</div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: getScoreColor(auditResult.integrityScore) }}>{auditResult.integrityScore}%</div>
+                    <div style={{ fontSize: 9, color: T.mute }}>INTEGRITY</div>
+                  </div>
+                </div>
+
+                {auditResult.issues?.map((iss, i) => (
+                  <div key={i} style={{ padding: 8, background: T.card, borderRadius: 6, marginBottom: 8, borderLeft: `3px solid ${iss.type === "critical" ? T.red : T.yellow}` }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: iss.type === "critical" ? T.red : T.amber, textTransform: "uppercase" }}>{iss.type}</div>
+                    <div style={{ fontSize: 12, color: T.text, marginTop: 2 }}>{iss.msg}</div>
+                    {(iss.found || iss.expected) && (
+                      <div style={{ fontSize: 10, color: T.mute, marginTop: 4, display: "flex", gap: 12 }}>
+                        <span>Found: <span style={{ color: T.red }}>{iss.found}</span></span>
+                        <span>Expected: <span style={{ color: T.green }}>{iss.expected}</span></span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {!auditResult.issues?.length && !auditResult.error && (
+                  <div style={{ color: T.green, fontSize: 12, textAlign: "center", padding: 12 }}>✅ No discrepancies found between narrative and budget.</div>
+                )}
+
+                {auditResult.summary && (
+                  <div style={{ fontSize: 11, color: T.sub, marginTop: 8, fontStyle: "italic" }}>{auditResult.summary}</div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        <Select value={grantId} onChange={setGrantId} style={{ marginBottom: 8, marginTop: 12 }}
           options={[{ value: "", label: "General (no specific grant)" }, ...grants.map(g => ({ value: g.id, label: g.title?.slice(0, 50) }))]} />
         <TextArea value={text} onChange={setText} rows={8} placeholder="Paste your narrative draft here..." />
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>

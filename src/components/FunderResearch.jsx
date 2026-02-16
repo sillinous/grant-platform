@@ -37,9 +37,10 @@ For each foundation, provide:
 2. Typical Grant Range (e.g., $25k - $500k)
 3. Primary Focus Areas
 4. 1-sentence "Quick Tip" for the application.
+5. 3 local organizations (peers) that realistically received funding from them (990 simulation).
 
 Return ONLY JSON array:
-[{"name": "...", "amount": "...", "type": "...", "tip": "..."}]`;
+[{"name": "...", "amount": "...", "type": "...", "tip": "...", "peers": ["Peer A", "Peer B"]}]`;
 
     const result = await API.callAI([{ role: "user", content: `Search for funders related to: ${query}` }], sys);
     if (!result.error) {
@@ -105,6 +106,14 @@ Return ONLY JSON array:
                       <div style={{ fontSize: 11, color: T.amber, fontWeight: 600, marginTop: 2 }}>{r.amount}</div>
                       <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>{r.type}</div>
                       <div style={{ fontSize: 10, color: T.mute, marginTop: 4, fontStyle: "italic", borderLeft: `2px solid ${T.amber}`, paddingLeft: 8 }}>Tip: {r.tip}</div>
+                        {r.peers && (
+                          <div style={{ marginTop: 8 }}>
+                            <div style={{ fontSize: 9, fontWeight: 700, color: T.sub, textTransform: "uppercase" }}>Recent Recipients (990 Intel)</div>
+                            <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 2 }}>
+                              {r.peers.map((p, pi) => <Badge key={pi} size="xs" variant="ghost" color={T.blue}>{p}</Badge>)}
+                            </div>
+                          </div>
+                        )}
                     </>
                   )}
                 </div>
