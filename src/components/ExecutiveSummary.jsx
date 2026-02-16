@@ -1,6 +1,8 @@
 import React from 'react';
 import { Card, Stat, Badge, Progress, Btn } from '../ui';
-import { T, fmt, fmtDate, STAGE_MAP } from '../globals';
+import { BoardSlider } from './BoardSlider';
+import { T, fmt, fmtDate, STAGE_MAP, PROFILE } from '../globals';
+import { API, buildPortfolioContext } from '../api';
 
 export const ExecutiveSummary = ({ grants }) => {
   const awarded = grants.filter(g => ["awarded", "active", "closeout"].includes(g.stage));
@@ -16,6 +18,30 @@ export const ExecutiveSummary = ({ grants }) => {
     .sort((a,b) => new Date(a.deadline) - new Date(b.deadline))
     .slice(0, 3);
 
+  const [insights, setInsights] = React.useState(null);
+  const [loading, setLoading] = React.useState(false);
+
+  const generateAIAnalysis = async () => {
+    setLoading(true);
+    const context = buildPortfolioContext(grants, [], []); // Basic context for now
+    const prompt = `Analyze this grant portfolio for an Executive Board. 
+    Current Stats: Awarded: ${fmt(totalAwarded)}, Pipeline: ${fmt(totalPipeline)}, Win Rate: ${winRate}%.
+    Identify:
+    1. Three specific "Strategic Wins" or trends.
+    2. Two "Portfolio Risks" (e.g. agency concentration, funding cliffs).
+    3. One "Chief Strategy Officer Recommendation".
+    Format as a JSON object with keys: insights (array of strings), risks (array of strings), recommendation (string).`;
+
+    const result = await API.callAI([{ role: "user", content: prompt }], "You are a Chief Strategy Officer AI.");
+    try {
+      const data = JSON.parse(result.text.match(/\{[\s\S]*\}/)?.[0] || '{"insights":[], "risks":[], "recommendation":""}');
+      setInsights(data);
+    } catch (e) {
+      console.warn("AI parsing failed", e);
+    }
+    setLoading(false);
+  };
+
   const printReport = () => window.print();
 
   return (
@@ -25,7 +51,10 @@ export const ExecutiveSummary = ({ grants }) => {
           <div style={{ fontSize: 24, fontWeight: 800, color: T.text, letterSpacing: "-0.5px" }}>Portfolio Executive Summary</div>
           <div style={{ fontSize: 13, color: T.sub, marginTop: 4 }}>Institutional Funding Performance · {fmtDate(new Date())}</div>
         </div>
-        <Btn variant="ghost" onClick={printReport}>📄 Export PDF</Btn>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Btn variant="primary" onClick={generateAIAnalysis} disabled={loading}>{loading ? "🧠 Analyzing..." : "✨ AI Strategic Analysis"}</Btn>
+          <Btn variant="ghost" onClick={printReport}>📄 Export PDF</Btn>
+        </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
@@ -38,6 +67,10 @@ export const ExecutiveSummary = ({ grants }) => {
         <Card style={{ textAlign: "center", borderTop: `4px solid ${T.amber}` }}>
           <Stat label="Historical Win Rate" value={`${winRate}%`} color={T.amber} />
         </Card>
+      </div>
+
+      <div style={{ marginBottom: 32 }}>
+        <BoardSlider grants={grants} />
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: 24 }}>
@@ -62,16 +95,22 @@ export const ExecutiveSummary = ({ grants }) => {
             💡 Key Strategic Insights
           </div>
           <div style={{ display: "grid", gap: 12 }}>
-            {[
-              "Portfolio yield has increased by 14% QOQ through agency diversification.",
-              "Internal ROI is optimized for USDA/DOE specific narratives.",
-              "Current pipeline contains $2.4M in high-probability ($matchScore > 80) leads."
-            ].map((insight, i) => (
+            {(insights?.insights || [
+              "Portfolio yield has increased through agency diversification.",
+              "Internal ROI is optimized for domain-specific narratives.",
+              "Current pipeline contains high-probability leads ready for drafting."
+            ]).map((insight, i) => (
               <div key={i} style={{ padding: "12px 16px", background: T.panel, borderRadius: 8, fontSize: 13, color: T.sub, borderLeft: `2px solid ${T.blue}` }}>
                 {insight}
               </div>
             ))}
           </div>
+          {insights?.recommendation && (
+            <div style={{ marginTop: 24, padding: 16, background: T.blue + "10", borderRadius: 8, border: `1px solid ${T.blue}44` }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: T.blue, marginBottom: 4, letterSpacing: 0.5 }}>STRATEGIC RECOMMENDATION</div>
+              <div style={{ fontSize: 13, color: T.text, lineHeight: 1.5 }}>{insights.recommendation}</div>
+            </div>
+          )}
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
@@ -91,8 +130,12 @@ export const ExecutiveSummary = ({ grants }) => {
           <Card style={{ background: T.amber + "05" }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: T.amber, marginBottom: 12 }}>🛡️ Risk & Mitigation</div>
             <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.6 }}>
-              <p>• <b>Concentration Risk</b>: 45% of pipeline relies on NSF funding. Mitigation: New lead generation in private foundations initiated.</p>
-              <p style={{ marginTop: 8 }}>• <b>Labor Bottleneck</b>: Q3 contains 5 major complex submissions. Recommendation: Shift junior analysts to boilerplate retrieval to free senior team.</p>
+              {(insights?.risks || [
+                "Concentration Risk: Significant pipeline reliance on single-agency funding. Mitigation: Diversification initiated.",
+                "Labor Bottleneck: Q3 contains major complex submissions. Recommendation: Leverage AI boilerplate for draft acceleration."
+              ]).map((risk, i) => (
+                <p key={i} style={{ marginTop: i > 0 ? 8 : 0 }}>• {risk}</p>
+              ))}
             </div>
           </Card>
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, Btn } from '../ui';
+import { Card, Btn, Modal } from '../ui';
 import { T, PROFILE, fmt, fmtDate, daysUntil, STAGES, STAGE_MAP } from '../globals';
 import { API, buildPortfolioContext } from '../api';
 
@@ -7,6 +7,7 @@ export const ReportGenerator = ({ grants, vaultDocs, contacts }) => {
   const [reportType, setReportType] = useState("portfolio");
   const [generated, setGenerated] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const REPORT_TYPES = [
     { id:"portfolio", label:"📊 Portfolio Summary", desc:"Overview of all grants, pipeline status, and financial projections" },
@@ -15,6 +16,8 @@ export const ReportGenerator = ({ grants, vaultDocs, contacts }) => {
     { id:"financial", label:"💰 Financial Summary", desc:"Award amounts, burn rates, and projections across all grants" },
     { id:"impact", label:"🎯 Impact Report", desc:"Outcomes, metrics, and community impact from awarded grants" },
     { id:"funder", label:"🏛️ Funder Analysis", desc:"Breakdown of funding sources, success rates, and relationship strength" },
+    { id: "microsite", label: "🌐 Shareable Microsite", desc: "Generate a standalone HTML impact summary for external stakeholders" },
+    { id: "advocacy", label: "📢 Advocacy & PR Kit", desc: "AI-generated press releases and impact cards for award wins" },
   ];
 
   const generateReport = async () => {
@@ -29,6 +32,8 @@ export const ReportGenerator = ({ grants, vaultDocs, contacts }) => {
       financial: `Generate a Financial Summary Report including: total funding awarded, total pending, total in pipeline, burn rate on active awards, projected cash flow, and budget utilization analysis.`,
       impact: `Generate an Impact Report covering: communities served, outcomes achieved, jobs created or supported, innovations developed, and how the portfolio aligns with broader economic development goals.`,
       funder: `Generate a Funder Analysis Report including: funding sources breakdown, success rate by agency, relationship strength assessment, diversification analysis, and recommendations for new funder targets.`,
+      microsite: `Generate a public-facing Impact Advocacy Story. Focus on mission-match, community ROI, and success testimonials. Format as a self-contained data story for a general audience. Include HTML/CSS structure for a microsite.`,
+      advocacy: `Generate a PR Advocacy Kit for the most recent wins. Include a draft Press Release, three social media "Impact Cards" (text-based), and a letter to a local representative highlighting community benefit.`,
     };
 
     const sys = `You are an expert grant management consultant generating a professional report. ${context}\n\nGRANT DETAILS:\n${grantDetails}\n\nFormat the report with clear sections, headers, and actionable insights. Use specific numbers from the data provided.`;
@@ -109,12 +114,28 @@ BUSINESSES: ${PROFILE.businesses.filter(b=>b.st==="active").map(b=>b.n).join(", 
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
             <div style={{ fontSize:13, fontWeight:600, color:T.text }}>📄 Generated Report</div>
             <div style={{ display:"flex", gap:4 }}>
+              {reportType === "microsite" && <Btn size="sm" variant="success" onClick={() => setShowPreview(true)}>🌐 Preview Microsite</Btn>}
               <Btn size="sm" variant="ghost" onClick={() => navigator.clipboard?.writeText(generated)}>📋 Copy</Btn>
               <Btn size="sm" variant="ghost" onClick={() => setGenerated("")}>✕ Clear</Btn>
             </div>
           </div>
           <div style={{ fontSize:12, color:T.sub, lineHeight:1.7, whiteSpace:"pre-wrap", padding:12, background:T.panel, borderRadius:6, maxHeight:600, overflow:"auto" }}>{generated}</div>
         </Card>
+      )}
+
+      {showPreview && (
+        <Modal title="🌐 Impact Microsite Preview" onClose={() => setShowPreview(false)}>
+          <div style={{ background: "white", padding: 0, borderRadius: 8, height: "70vh", overflow: "hidden" }}>
+            <iframe
+              srcDoc={generated.includes("<html") ? generated : `<html><body style="font-family:sans-serif;padding:40px;color:#333;line-height:1.6"><h1>Impact Story</h1><div style="white-space:pre-wrap">${generated}</div></body></html>`}
+              style={{ width: "100%", height: "100%", border: "none" }}
+              title="Microsite Preview"
+            />
+          </div>
+          <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end" }}>
+            <Btn variant="primary" onClick={() => setShowPreview(false)}>Close Preview</Btn>
+          </div>
+        </Modal>
       )}
     </div>
   );
