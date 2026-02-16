@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Input, Btn, Select, TextArea, Stat, Empty, Modal, Progress } from '../ui';
-import { LS, T, uid, fmt } from '../globals';
+import { Card, Input, Btn, Select, TextArea, Stat, Empty, Modal, Progress, Badge } from '../ui';
+import { LS, T, uid, fmt, PROFILE } from '../globals';
+import { API } from '../api';
 
 export const BudgetBuilder = ({ grants, updateGrant }) => {
   const [budgets, setBudgets] = useState(() => LS.get("budgets", {}));
   const [selectedGrant, setSelectedGrant] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [newItem, setNewItem] = useState({ category: "personnel", description: "", amount: 0, quantity: 1, unit: "year", justification: "", costShare: 0 });
+  const [loading, setLoading] = useState(false);
+  const [aiResult, setAiResult] = useState("");
+  const [showResult, setShowResult] = useState(false);
 
   useEffect(() => { LS.set("budgets", budgets); }, [budgets]);
 
@@ -59,13 +63,38 @@ export const BudgetBuilder = ({ grants, updateGrant }) => {
 
   const generateJustification = async () => {
     if (!selectedGrant || items.length === 0) return;
+    setLoading(true);
     const grant = grants.find(g => g.id === selectedGrant);
-    const text = `BUDGET JUSTIFICATION\nGrant: ${grant?.title || "Unknown"}\n\n${CATEGORIES.map(c => {
+
+    const budgetContext = CATEGORIES.map(c => {
       const catItems = items.filter(i => i.category === c.id);
       if (catItems.length === 0) return null;
-      return `${c.label}\n${catItems.map(i => `  ${i.description}: ${fmt(i.amount * i.quantity)} — ${i.justification || `${i.quantity} ${i.unit}(s) at ${fmt(i.amount)} each. Required for project implementation.`}`).join("\n")}`;
-    }).filter(Boolean).join("\n\n")}\n\nIndirect Costs: ${indirectRate}% of direct costs = ${fmt(indirectTotal)}\n\nTOTAL PROJECT COST: ${fmt(grandTotal)}\nFederal Share: ${fmt(federalShare)}\nCost Share: ${fmt(costShareTotal)}`;
-    navigator.clipboard?.writeText(text);
+      return `${c.label}:\n${catItems.map(i => `- ${i.description}: ${fmt(i.amount * i.quantity)} (${i.quantity} @ ${fmt(i.amount)}). User Note: ${i.justification || "None"}`).join("\n")}`;
+    }).filter(Boolean).join("\n\n");
+
+    const sys = `You are a professional grant financial consultant. Generate a detailed, persuasive Budget Justification narrative based on the provided budget data.
+Follow federal standards (e.g., Uniform Guidance). For each category, explain WHY the costs are necessary and HOW the calculations were derived.
+
+GRANT: ${grant?.title || "Unknown"}
+AGENCY: ${grant?.agency || "Unknown"}
+TOTAL PROJECT COST: ${fmt(grandTotal)}
+ORGANIZATION: ${PROFILE.name}
+LOCATION: ${PROFILE.loc}
+
+BUDGET DATA:
+${budgetContext}
+Indirect Rate: ${indirectRate}%
+
+Return a professional, structured narrative.`;
+
+    const result = await API.callAI([{ role: "user", content: "Generate Budget Justification." }], sys);
+    if (!result.error) {
+      setAiResult(result.text);
+      setShowResult(true);
+    } else {
+      alert("Error: " + result.error);
+    }
+    setLoading(false);
   };
 
   return (
@@ -131,8 +160,10 @@ export const BudgetBuilder = ({ grants, updateGrant }) => {
           ))}
 
           <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-            <Btn size="sm" onClick={generateJustification}>📋 Copy Budget Justification</Btn>
-            {updateGrant && selectedGrant && <Btn size="sm" variant="primary" onClick={() => {
+            <Btn size="sm" variant="primary" onClick={generateJustification} disabled={loading}>
+              {loading ? "⏳ Writing..." : "✨ AI Generate Justification"}
+            </Btn>
+            {updateGrant && selectedGrant && <Btn size="sm" variant="ghost" onClick={() => {
               updateGrant(selectedGrant, { budgetTotal: grandTotal, budgetFederal: federalShare, budgetCostShare: costShareTotal });
             }}>🔗 Sync to Grant</Btn>}
             <Btn size="sm" variant="ghost" onClick={() => {
@@ -141,6 +172,7 @@ export const BudgetBuilder = ({ grants, updateGrant }) => {
                 `\n"Indirect","${indirectRate}% of direct",1,"lump",${indirectTotal},${indirectTotal},0,"Negotiated rate"` +
                 `\n"TOTAL","",,,${grandTotal},${grandTotal},${costShareTotal},""`;
               navigator.clipboard?.writeText(csv);
+              alert("📊 CSV copied to clipboard!");
             }}>📊 Copy as CSV</Btn>
           </div>
         </div>
@@ -166,6 +198,17 @@ export const BudgetBuilder = ({ grants, updateGrant }) => {
           <Btn variant="primary" onClick={addItem}>Add Line Item</Btn>
         </div>
       </Modal>
+
+      <Modal open={showResult} onClose={() => setShowResult(false)} title="📄 AI Budget Justification" width={800}>
+        <div style={{ fontSize: 12, lineHeight: 1.7, color: T.text, whiteSpace: "pre-wrap", background: T.panel, padding: 16, borderRadius: 8, maxHeight: 500, overflow: "auto", border: `1px solid ${T.border}` }}>
+          {aiResult}
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 16, justifyContent: "flex-end" }}>
+          <Btn size="sm" variant="primary" onClick={() => { navigator.clipboard?.writeText(aiResult); alert("📋 Justification copied!"); }}>📋 Copy Content</Btn>
+          <Btn size="sm" variant="ghost" onClick={() => setShowResult(false)}>Close</Btn>
+        </div>
+      </Modal>
     </div>
   );
 };
+

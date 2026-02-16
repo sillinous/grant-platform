@@ -40,6 +40,7 @@ import { TimelineCalendar } from './components/TimelineCalendar';
 import { FinancialProjector } from './components/FinancialProjector';
 import { RelationshipMap } from './components/RelationshipMap';
 import { AIDrafter } from './components/AIDrafter';
+import { ComplianceMatrix } from './components/ComplianceMatrix';
 import { Settings } from './components/Settings';
 import { AIChatBar } from './components/AIChatBar';
 import { WinLossAnalysis } from './components/WinLossAnalysis';
@@ -266,7 +267,8 @@ export default function App() {
     { id: "budget", icon: "💵", label: "Budget Builder", group: "docs" },
     { id: "vault", icon: "🗄️", label: "Document Vault", group: "docs" },
     { id: "templates", icon: "📋", label: "Grant Templates", group: "docs" },
-    { id: "compliance", icon: "✅", label: "Compliance", group: "management" },
+    { id: "compliance_matrix", icon: "⚖️", label: "Compliance Matrix", group: "analysis" },
+    { id: "compliance_tracker", icon: "✅", label: "Compliance Tracker", group: "management" },
     { id: "tasks", icon: "📑", label: "Action Plan", group: "management" },
     { id: "awards", icon: "🏆", label: "Award Mgmt", group: "management" },
     { id: "outcomes", icon: "📈", label: "Outcome Tracker", group: "management" },
@@ -308,7 +310,8 @@ export default function App() {
       case "budget": return <BudgetBuilder grants={grants} updateGrant={updateGrant} />;
       case "vault": return <DocumentVault vaultDocs={vaultDocs} setVaultDocs={setVaultDocs} grants={grants} />;
       case "templates": return <GrantTemplates grants={grants} addGrant={addGrant} />;
-      case "compliance": return <ComplianceTracker grants={grants} updateGrant={updateGrant} />;
+      case "compliance_matrix": return <ComplianceMatrix grants={grants} />;
+      case "compliance_tracker": return <ComplianceTracker grants={grants} updateGrant={updateGrant} />;
       case "tasks": return <ActionPlan grants={grants} />;
       case "awards": return <AwardManagement grants={grants} updateGrant={updateGrant} />;
       case "outcomes": return <OutcomeTracker grants={grants} updateGrant={updateGrant} />;

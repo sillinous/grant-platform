@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Input, Btn, Select, TextArea, Stat, Badge, Empty, Modal } from '../ui';
 import { LS, T, uid } from '../globals';
+import { API } from '../api';
 
 export const SectionLibrary = ({ vaultDocs, setVaultDocs }) => {
   const [sections, setSections] = useState(() => LS.get("section_library", []));
   const [showAdd, setShowAdd] = useState(false);
   const [search, setSearch] = useState("");
   const [newSection, setNewSection] = useState({ title: "", category: "need", content: "", tags: [], useCount: 0 });
+  const [aiQuery, setAiQuery] = useState("");
+  const [aiSuggestions, setAiSuggestions] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => { LS.set("section_library", sections); }, [sections]);
 
@@ -39,13 +43,96 @@ export const SectionLibrary = ({ vaultDocs, setVaultDocs }) => {
     setVaultDocs(prev => [...prev, doc]);
   };
 
+  const findSimilar = async () => {
+    if (!aiQuery.trim() || sections.length === 0) return;
+    setLoading(true);
+    const context = sections.map(s => `ID:${s.id} | Title:${s.title} | Category:${s.category}`).join('\n');
+    const sys = `You are a grant platform AI. Rank the following reusable sections for relevance to the user's current need/RFP text.
+User Query/RFP: ${aiQuery}
+
+REUSABLE SECTIONS:
+${context}
+
+Return ONLY a JSON array of objects representing the top 5 matches:
+[{"id":"...", "score":N, "reason":"...brief 1-sentence reason..."}]`;
+
+    const result = await API.callAI([{ role: "user", content: "Find the most relevant sections." }], sys);
+    if (!result.error) {
+      try {
+        const cleaned = result.text.replace(/```json\n?|```/g, "").trim();
+        const parsed = JSON.parse(cleaned);
+        setAiSuggestions(parsed);
+      } catch (e) { console.error("AI Ranking Error", e); }
+    }
+    setLoading(false);
+  };
+
+  const adaptSection = async (sectionId) => {
+    const s = sections.find(x => x.id === sectionId);
+    if (!s || !aiQuery.trim()) return;
+    setLoading(true);
+    const sys = `Refine and adapt this grant section to match the specific context of the user's current grant/RFP. Maintain the core data but adjust tone and relevance.
+
+Current Section Title: ${s.title}
+Current Section Content: ${s.content}
+
+Target Context/RFP: ${aiQuery}
+
+Return the adapted content only.`;
+
+    const result = await API.callAI([{ role: "user", content: "Adapt this section." }], sys);
+    if (!result.error) {
+      navigator.clipboard?.writeText(result.text);
+      setSections(prev => prev.map(x => x.id === sectionId ? { ...x, useCount: (x.useCount || 0) + 1 } : x));
+      alert("✨ Adapted section copied to clipboard!");
+    }
+    setLoading(false);
+  };
+
   const filtered = sections.filter(s => !search || s.title.toLowerCase().includes(search.toLowerCase()) || s.content.toLowerCase().includes(search.toLowerCase()));
   const typeMap = Object.fromEntries(SECTION_TYPES.map(t => [t.id, t]));
 
   return (
     <div>
+      <Card style={{ marginBottom: 16, background: T.panel + "22" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>🧠 AI Smart Suggest</span>
+          <Badge size="xs" color={T.amber}>Beta</Badge>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Input value={aiQuery} onChange={setAiQuery} placeholder="Paste RFP text or describe what you're writing (e.g., 'Project goals for a rural health grant')..." style={{ flex: 1 }} />
+          <Btn variant="primary" size="sm" onClick={findSimilar} disabled={loading || !aiQuery.trim()}>{loading ? "⏳..." : "Find Similar"}</Btn>
+          {aiSuggestions && <Btn variant="ghost" size="sm" onClick={() => setAiSuggestions(null)}>✕</Btn>}
+        </div>
+      </Card>
+
+      {aiSuggestions && (
+        <Card style={{ marginBottom: 16, borderColor: T.amber + "88" }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: T.amber, marginBottom: 10 }}>Top AI Matches</div>
+          {aiSuggestions.map(match => {
+            const s = sections.find(x => x.id === match.id);
+            if (!s) return null;
+            return (
+              <div key={match.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${T.border}` }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>{s.title}</span>
+                    <Badge color={T.green}>{match.score}% Match</Badge>
+                  </div>
+                  <div style={{ fontSize: 11, color: T.sub, fontStyle: "italic", marginTop: 2 }}>"{match.reason}"</div>
+                </div>
+                <div style={{ display: "flex", gap: 4 }}>
+                  <Btn size="sm" variant="success" onClick={() => useSection(s)}>📋 Use</Btn>
+                  <Btn size="sm" variant="primary" onClick={() => adaptSection(s.id)} disabled={loading}>✨ Adapt</Btn>
+                </div>
+              </div>
+            );
+          })}
+        </Card>
+      )}
+
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        <Input value={search} onChange={setSearch} placeholder="Search library..." style={{ flex: 1 }} />
+        <Input value={search} onChange={setSearch} placeholder="Filter by keyword..." style={{ flex: 1 }} />
         <Btn variant="primary" onClick={() => setShowAdd(true)}>+ Add Section</Btn>
       </div>
 
@@ -88,3 +175,4 @@ export const SectionLibrary = ({ vaultDocs, setVaultDocs }) => {
     </div>
   );
 };
+

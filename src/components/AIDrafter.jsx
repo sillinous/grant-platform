@@ -1,7 +1,7 @@
-﻿import React, { useState } from 'react';
-import { Card, Btn, Input, Select, TextArea } from '../ui';
+﻿import React, { useState, useEffect } from 'react';
+import { Card, Btn, Input, Select, TextArea, Badge } from '../ui';
 import { API, buildPortfolioContext } from '../api';
-import { T } from '../globals';
+import { T, LS, uid, fmtDate } from '../globals';
 
 export const AIDrafter = ({ grants, vaultDocs }) => {
   const [prompt, setPrompt] = useState("");
@@ -10,6 +10,10 @@ export const AIDrafter = ({ grants, vaultDocs }) => {
   const [docType, setDocType] = useState("narrative");
   const [selectedGrant, setSelectedGrant] = useState("");
   const [refinements, setRefinements] = useState([]);
+  const [meta, setMeta] = useState(null);
+  const [snapshots, setSnapshots] = useState(() => LS.get("draft_snapshots", []));
+
+  useEffect(() => { LS.set("draft_snapshots", snapshots); }, [snapshots]);
 
   const draft = async () => {
     if (!prompt.trim()) return;
@@ -20,26 +24,40 @@ export const AIDrafter = ({ grants, vaultDocs }) => {
     const userMsg = `Draft a ${docType} section${grant ? ` for "${grant.title}"` : ""}:\n\n${prompt}`;
     const result = await API.callAI([{ role: "user", content: userMsg }], sys);
     if (result.error) setOutput(`Error: ${result.error}`);
-    else setOutput(result.text);
+    else {
+      setOutput(result.text);
+      setMeta({ provider: result.provider, model: result.model });
+    }
     setLoading(false);
   };
 
   const refine = async (instruction) => {
-    if (!draft) return; // Changed output to draft
+    if (!output) return;
     setLoading(true);
     const sys = `You are an expert grant writer. Refine the following draft based on the instruction given.`;
-    const res = await API.callAI([ // Changed result to res
-      { role: "user", content: `Current draft:\n\n${draft}\n\nRefinement instruction: ${instruction}` }, // Changed output to draft
+    const res = await API.callAI([
+      { role: "user", content: `Current draft:\n\n${output}\n\nRefinement instruction: ${instruction}` },
     ], sys);
-    if (res.error) { // Added error handling for refine
-      showToast?.(res.error, "error");
-      setLoading(false);
-      return;
+    if (!res.error) {
+      setRefinements([...refinements, { instruction, before: output, after: res.text }]);
+      setOutput(res.text);
+      setMeta({ provider: res.provider, model: res.model });
     }
-    setRefinements([...refinements, { instruction, before: draft, after: res.text }]); // Changed output to draft
-    setDraft(res.text); // Changed setOutput to setDraft
-    setMeta({ provider: res.provider, model: res.model }); // Update AI metadata on refinement
     setLoading(false);
+  };
+
+  const saveSnapshot = () => {
+    if (!output) return;
+    const snap = { id: uid(), date: new Date().toISOString(), text: output, type: docType, model: meta?.model || "AI" };
+    setSnapshots([snap, ...snapshots].slice(0, 20));
+    alert("📸 Snapshot saved!");
+  };
+
+  const restoreSnapshot = (snap) => {
+    if (confirm("Restore this version? current draft will be replaced.")) {
+      setOutput(snap.text);
+      setDocType(snap.type);
+    }
   };
 
   return (
@@ -72,6 +90,7 @@ export const AIDrafter = ({ grants, vaultDocs }) => {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>📄 Draft Output</div>
             <div style={{ display: "flex", gap: 4 }}>
+              <Btn size="sm" variant="success" onClick={saveSnapshot} title="Capture this version">📸 Save</Btn>
               <Btn size="sm" variant="ghost" onClick={() => navigator.clipboard?.writeText(output)}>📋 Copy</Btn>
               <Btn size="sm" variant="ghost" onClick={() => setOutput("")}>✕ Clear</Btn>
             </div>
@@ -85,14 +104,26 @@ export const AIDrafter = ({ grants, vaultDocs }) => {
               ))}
             </div>
           </div>
-          {refinements.length > 0 && (
-            <div style={{ marginTop: 12, fontSize: 10, color: T.dim }}>
-              {refinements.length} refinement{refinements.length > 1 ? "s" : ""} applied
-            </div>
-          )}
+        </Card>
+      )}
+
+      {snapshots.length > 0 && (
+        <Card style={{ marginTop: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: T.sub, marginBottom: 10 }}>📸 Snapshot History</div>
+          <div style={{ maxHeight: 200, overflow: "auto" }}>
+            {snapshots.map(snap => (
+              <div key={snap.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${T.border}` }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 11, color: T.text }}>{snap.text.slice(0, 60)}...</div>
+                  <div style={{ fontSize: 9, color: T.mute }}>{fmtDate(snap.date)} · {snap.type} · {snap.model?.split("/").pop()}</div>
+                </div>
+                <Btn size="xs" variant="ghost" onClick={() => restoreSnapshot(snap)}>Restore</Btn>
+              </div>
+            ))}
+          </div>
+          <Btn variant="ghost" size="xs" onClick={() => setSnapshots([])} style={{ marginTop: 8, color: T.red }}>Clear History</Btn>
         </Card>
       )}
     </div>
   );
 };
-

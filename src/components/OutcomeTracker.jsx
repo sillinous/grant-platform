@@ -5,6 +5,7 @@ import { T, uid, fmt, fmtDate, daysUntil } from '../globals';
 export const OutcomeTracker = ({ grants, updateGrant }) => {
   const awarded = grants.filter(g => ["awarded","active","closeout"].includes(g.stage));
   const [selectedId, setSelectedId] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const getOutcomes = (grant) => grant.outcomes || { kpis:[], milestones:[], deliverables:[], narrative:"" };
 
@@ -12,6 +13,39 @@ export const OutcomeTracker = ({ grants, updateGrant }) => {
     const grant = grants.find(g => g.id === grantId);
     if (!grant) return;
     updateGrant(grantId, { outcomes:{ ...getOutcomes(grant), ...updates } });
+  };
+
+  const suggestOutcomes = async (grantId) => {
+    const grant = grants.find(g => g.id === grantId);
+    if (!grant) return;
+    setLoading(true);
+    const outcomes = getOutcomes(grant);
+    const sys = `You are a Grant Performance Officer. Based on this grant and project narrative, suggest 3-5 measurable KPIs and 3-5 project milestones.
+GRANT: ${grant.title}
+NARRATIVE: ${outcomes.narrative || "No narrative provided."}
+
+Format as JSON:
+{
+  "kpis": [{"name": "KPI Name", "target": 100, "unit": "students/hours/etc"}],
+  "milestones": [{"title": "Milestone Title", "daysFromNow": 30}]
+}`;
+
+    const res = await API.callAI([{ role: "user", content: "Suggest outcomes." }], sys);
+    if (!res.error) {
+      try {
+        const cleaned = res.text.replace(/```json\n?|```/g, "").trim();
+        const parsed = JSON.parse(cleaned);
+        const newKpis = parsed.kpis.map(k => ({ ...k, id: uid(), current: 0, period: "quarterly" }));
+        const now = new Date();
+        const newMs = parsed.milestones.map(m => {
+          const d = new Date();
+          d.setDate(now.getDate() + (m.daysFromNow || 30));
+          return { id: uid(), title: m.title, dueDate: d.toISOString().split("T")[0], status: "pending" };
+        });
+        updateOutcomes(grantId, { kpis: [...outcomes.kpis, ...newKpis], milestones: [...outcomes.milestones, ...newMs] });
+      } catch (e) { alert("Failed to parse suggested outcomes."); }
+    } else { alert(res.error); }
+    setLoading(false);
   };
 
   const addKPI = (grantId) => {
@@ -79,9 +113,17 @@ export const OutcomeTracker = ({ grants, updateGrant }) => {
           <div>
             {!selected ? <Card><div style={{ color:T.mute, fontSize:12, textAlign:"center", padding:32 }}>Select an award to manage outcomes</div></Card> : (
               <div>
+                <Card style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 8 }}>📝 Outcome Narrative</div>
+                  <TextArea value={selOutcomes?.narrative || ""} onChange={v => updateOutcomes(selected.id, { narrative: v })} rows={3} placeholder="Describe outcomes achieved, impact on community, lessons learned..." />
+                  <Btn variant="ghost" size="sm" onClick={() => suggestOutcomes(selected.id)} disabled={loading} style={{ marginTop: 8 }}>
+                    {loading ? "⏳ Thinking..." : "🤖 Suggest Outcomes via AI"}
+                  </Btn>
+                </Card>
+
                 <Card style={{ marginBottom:12 }}>
                   <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-                    <div style={{ fontSize:14, fontWeight:600, color:T.text }}>{selected.title?.slice(0,40)}</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: T.text }}>📈 Key Performance Indicators</div>
                     <Btn size="sm" onClick={() => addKPI(selected.id)}>+ KPI</Btn>
                   </div>
                   {(selOutcomes?.kpis || []).length === 0 ? <div style={{ color:T.mute, fontSize:11 }}>No KPIs defined. Add key performance indicators to track progress.</div> :
@@ -116,11 +158,6 @@ export const OutcomeTracker = ({ grants, updateGrant }) => {
                     </div>
                   ))}
                   {(selOutcomes?.milestones || []).length === 0 && <div style={{ color:T.mute, fontSize:11 }}>No milestones yet</div>}
-                </Card>
-
-                <Card>
-                  <div style={{ fontSize:13, fontWeight:600, color:T.text, marginBottom:8 }}>📝 Outcome Narrative</div>
-                  <TextArea value={selOutcomes?.narrative || ""} onChange={v => updateOutcomes(selected.id, { narrative:v })} rows={4} placeholder="Describe outcomes achieved, impact on community, lessons learned..." />
                 </Card>
               </div>
             )}

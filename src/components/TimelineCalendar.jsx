@@ -2,6 +2,72 @@
 import { Card, Btn, Badge, Input, TextArea, Select, Tab, Progress, Modal, MiniBar, Empty } from '../ui';
 import { T, uid, fmtDate, daysUntil, STAGE_MAP } from '../globals';
 
+// ─── ICS EXPORT HELPER ─────────────────────────────────────────────
+function generateICS(events) {
+  const pad = (n) => String(n).padStart(2, '0');
+  const toICSDate = (dateStr) => {
+    const d = new Date(dateStr);
+    return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
+  };
+  const escapeICS = (str) => (str || '').replace(/[\\;,\n]/g, (m) => m === '\n' ? '\\n' : `\\${m}`);
+  const now = new Date();
+  const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}T${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+
+  let ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//UNLESS Grant Platform//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'X-WR-CALNAME:UNLESS Grant Deadlines',
+  ];
+
+  events.forEach((e) => {
+    const dt = toICSDate(e.date);
+    const nextDay = new Date(new Date(e.date).getTime() + 86400000);
+    const dtEnd = `${nextDay.getFullYear()}${pad(nextDay.getMonth() + 1)}${pad(nextDay.getDate())}`;
+    ics.push(
+      'BEGIN:VEVENT',
+      `DTSTART;VALUE=DATE:${dt}`,
+      `DTEND;VALUE=DATE:${dtEnd}`,
+      `DTSTAMP:${stamp}`,
+      `UID:${e.id || uid()}@unless-grants`,
+      `SUMMARY:${escapeICS(e.title)}`,
+      `DESCRIPTION:${escapeICS(`Type: ${e.type}${e.stage ? ` | Stage: ${STAGE_MAP[e.stage]?.label || e.stage}` : ''}${e.notes ? ` | Notes: ${e.notes}` : ''}`)}`,
+      `CATEGORIES:${e.type === 'deadline' ? 'GRANT DEADLINE' : e.type?.toUpperCase() || 'EVENT'}`,
+      'BEGIN:VALARM',
+      'TRIGGER:-P1D',
+      'ACTION:DISPLAY',
+      `DESCRIPTION:Reminder: ${escapeICS(e.title)} is tomorrow`,
+      'END:VALARM',
+      'BEGIN:VALARM',
+      'TRIGGER:-P7D',
+      'ACTION:DISPLAY',
+      `DESCRIPTION:Reminder: ${escapeICS(e.title)} is in 7 days`,
+      'END:VALARM',
+      'END:VEVENT'
+    );
+  });
+
+  ics.push('END:VCALENDAR');
+  return ics.join('\r\n');
+}
+
+function downloadICS(events) {
+  const upcoming = events.filter(e => new Date(e.date) >= new Date(new Date().toDateString()));
+  if (upcoming.length === 0) { alert('No upcoming events to export.'); return; }
+  const icsContent = generateICS(upcoming);
+  const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `unless-grants-${new Date().toISOString().slice(0, 10)}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export const TimelineCalendar = ({ grants, events, setEvents }) => {
   const [view, setView] = useState("month");
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -51,11 +117,18 @@ export const TimelineCalendar = ({ grants, events, setEvents }) => {
     }).sort((a, b) => new Date(a.date) - new Date(b.date));
   }, [allEvents]);
 
+  const upcomingCount = allEvents.filter(e => new Date(e.date) >= new Date(new Date().toDateString())).length;
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <Tab tabs={[{ id: "month", icon: "📅", label: "Month" }, { id: "timeline", icon: "📊", label: "Timeline" }, { id: "agenda", icon: "📋", label: "Agenda" }]} active={view} onChange={setView} />
-        <Btn variant="primary" size="sm" onClick={() => setShowAdd(true)}>+ Add Event</Btn>
+        <div style={{ display: "flex", gap: 6 }}>
+          <Btn variant="ghost" size="sm" onClick={() => downloadICS(allEvents)} title={`Export ${upcomingCount} upcoming events`}>
+            📤 Export .ics {upcomingCount > 0 && <Badge color={T.green} style={{ marginLeft: 4, fontSize: 9 }}>{upcomingCount}</Badge>}
+          </Btn>
+          <Btn variant="primary" size="sm" onClick={() => setShowAdd(true)}>+ Add Event</Btn>
+        </div>
       </div>
 
       {view === "month" && (
@@ -144,4 +217,3 @@ export const TimelineCalendar = ({ grants, events, setEvents }) => {
     </div>
   );
 };
-

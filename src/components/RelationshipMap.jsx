@@ -1,11 +1,16 @@
 ﻿import React, { useState, useMemo } from 'react';
 import { Card, Btn, Badge, Input, Select, TextArea, Tab, Progress, Empty, Modal } from '../ui';
-import { T, uid, fmt, STAGE_MAP } from '../globals';
+import { T, uid, fmt, STAGE_MAP, PROFILE } from '../globals';
+import { API } from '../api';
 
 export const RelationshipMap = ({ grants, contacts, setContacts }) => {
   const [view, setView] = useState("network");
   const [showAddContact, setShowAddContact] = useState(false);
   const [newContact, setNewContact] = useState({ name: "", org: "", role: "", email: "", type: "funder", notes: "", grantIds: [] });
+  const [showTeaming, setShowTeaming] = useState(false);
+  const [selectedGrantId, setSelectedGrantId] = useState("");
+  const [teamingResult, setTeamingResult] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const contactList = contacts || [];
 
@@ -33,6 +38,31 @@ export const RelationshipMap = ({ grants, contacts, setContacts }) => {
 
   const deleteContact = (id) => setContacts(contactList.filter(c => c.id !== id));
 
+  const runTeamingStrategy = async () => {
+    if (!selectedGrantId) return;
+    setLoading(true);
+    const grant = grants.find(g => g.id === selectedGrantId);
+
+    const sys = `You are a Senior Strategic Partnerships Consultant. Analyze this grant opportunity and provide a Teaming Strategy.
+Focus on:
+1. COMPLEMENTARY PARTNERS: What types of organizations (nonprofit, academic, private) should we partner with to strengthen this specific bid?
+2. ENGAGEMENT PATH: How should we approach the Program Officer at this agency?
+3. COMPETITIVE POSITIONING: What are our strengths/weaknesses compared to "usual winners" of this grant?
+
+ORGANIZATION: ${PROFILE.name} (${PROFILE.role})
+OUR PORTFOLIO: ${grants.length} grants, ${fmt(grants.reduce((s, x) => s + (x.amount || 0), 0))} total.
+AGENCY: ${grant?.agency || "Unknown"}
+GRANT: ${grant?.title || "Unknown"}
+DESCRIPTION: ${grant?.description || "No description provided."}
+
+Return a structured professional report.`;
+
+    const result = await API.callAI([{ role: "user", content: "Run Teaming Intelligence Analysis." }], sys);
+    if (!result.error) setTeamingResult(result.text);
+    else alert(result.error);
+    setLoading(false);
+  };
+
   const CONTACT_TYPES = [
     { id: "funder", label: "💰 Funder", color: T.green },
     { id: "program_officer", label: "👤 Program Officer", color: T.blue },
@@ -51,7 +81,10 @@ export const RelationshipMap = ({ grants, contacts, setContacts }) => {
           { id: "contacts", icon: "👥", label: "Contacts CRM" },
           { id: "insights", icon: "💡", label: "Insights" },
         ]} active={view} onChange={setView} />
-        <Btn variant="primary" size="sm" onClick={() => setShowAddContact(true)}>+ Add Contact</Btn>
+        <div style={{ display: "flex", gap: 6 }}>
+          <Btn variant="ghost" size="sm" onClick={() => setShowTeaming(true)}>✨ Teaming Intelligence</Btn>
+          <Btn variant="primary" size="sm" onClick={() => setShowAddContact(true)}>+ Add Contact</Btn>
+        </div>
       </div>
 
       {view === "network" && (
@@ -153,7 +186,28 @@ export const RelationshipMap = ({ grants, contacts, setContacts }) => {
           <Btn variant="primary" onClick={addContact}>Add Contact</Btn>
         </div>
       </Modal>
+
+      <Modal open={showTeaming} onClose={() => setShowTeaming(false)} title="🤝 AI Teaming Intelligence" width={800}>
+        {!teamingResult ? (
+          <div style={{ display: "grid", gap: 12 }}>
+            <div style={{ fontSize: 12, color: T.sub }}>Select a grant opportunity to generate a tailored partnership and engagement strategy.</div>
+            <Select value={selectedGrantId} onChange={setSelectedGrantId} options={[{ value: "", label: "Select a grant..." }, ...grants.map(g => ({ value: g.id, label: g.title?.slice(0, 60) }))]} />
+            <Btn variant="primary" onClick={runTeamingStrategy} disabled={loading || !selectedGrantId}>{loading ? "⏳ Analyzing Strategy..." : "🚀 Generate Strategy"}</Btn>
+          </div>
+        ) : (
+          <div>
+            <div style={{ fontSize: 12, lineHeight: 1.7, color: T.text, whiteSpace: "pre-wrap", background: T.panel, padding: 16, borderRadius: 8, maxHeight: 500, overflow: "auto", border: `1px solid ${T.border}` }}>
+              {teamingResult}
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 16, justifyContent: "flex-end" }}>
+              <Btn size="sm" variant="ghost" onClick={() => setTeamingResult(null)}>← Select Another Grant</Btn>
+              <Btn size="sm" variant="primary" onClick={() => { navigator.clipboard?.writeText(teamingResult); alert("📋 Strategy copied!"); }}>📋 Copy Strategy</Btn>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };
+
 
