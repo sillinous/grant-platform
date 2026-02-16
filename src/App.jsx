@@ -64,6 +64,9 @@ import { OnboardingWizard } from './components/OnboardingWizard';
 import { Toast } from './components/Toast';
 import { ExecutiveSummary } from './components/ExecutiveSummary';
 import { LegislativeTracker } from './components/LegislativeTracker';
+import { AdvisoryBoard } from './components/AdvisoryBoard';
+import { FundingStacker } from './components/FundingStacker';
+import { CloseoutWizard } from './components/CloseoutWizard';
 
 export default function App() {
   const [page, setPage] = useState("dashboard");
@@ -212,6 +215,7 @@ export default function App() {
     { id: "compliance_tracker", icon: "✅", label: "Compliance Tracker", group: "management" },
     { id: "tasks", icon: "📑", label: "Action Plan", group: "management" },
     { id: "awards", icon: "🏆", label: "Award Mgmt", group: "management" },
+    { id: "closeout", icon: "📑", label: "Closeout Engine", group: "management" },
     { id: "action_plan", icon: "📋", label: "Action Plan", group: "execution" },
     { id: "outcomes", icon: "📈", label: "Outcome Tracker", group: "management" },
     { id: "projector", icon: "💰", label: "Financial Projector", group: "intelligence" },
@@ -227,6 +231,8 @@ export default function App() {
     { id: "impact", icon: "📈", label: "Impact Portfolio", group: "intelligence" },
     { id: "impact_predict", icon: "🔮", label: "Impact Predictor", group: "intelligence" },
     { id: "win_prob", icon: "🎲", label: "Win Probability", group: "intelligence" },
+    { id: "advisory", icon: "🤝", label: "War Room", group: "intelligence" },
+    { id: "funding_stacker", icon: "📊", label: "Funding Stacker", group: "intelligence" },
     { id: "settings", icon: "⚙️", label: "Settings", group: "system" },
   ];
 
@@ -250,6 +256,7 @@ export default function App() {
       case "action_plan": return <ActionPlan grants={grants} tasks={tasks} setTasks={setTasks} />;
       case "awards": return <AwardManagement grants={grants} updateGrant={updateGrant} sections={sections} setSections={setSections} />;
       case "outcomes": return <OutcomeTracker grants={grants} updateGrant={updateGrant} />;
+      case "closeout": return <CloseoutWizard grants={grants} updateGrant={updateGrant} />;
       case "projector": return <FinancialProjector grants={grants} />;
       case "forecast": return <LegislativeTracker />;
       case "sentinel": return <GrantSentinel onAdd={addGrant} grants={grants} />;
@@ -263,6 +270,8 @@ export default function App() {
       case "winloss": return <WinLossAnalysis grants={grants} />;
       case "impact": return <ImpactPortfolio grants={grants} />;
       case "impact_predict": return <ImpactPredictor grants={grants} vaultDocs={vaultDocs} />;
+      case "advisory": return <AdvisoryBoard grants={grants} />;
+      case "funding_stacker": return <FundingStacker grants={grants} />;
       case "settings": return <Settings showToast={showToast} />;
       default: return <Dashboard grants={grants} docs={vaultDocs} contacts={contacts} vaultDocs={vaultDocs} events={events} navigate={setPage} />;
     }
