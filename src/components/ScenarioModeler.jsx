@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Card, Badge, Button, T } from '../ui';
-import { fmt } from '../globals';
+import { Card, Badge, Btn } from '../ui';
+import { T, fmt } from '../globals';
 
 export const ScenarioModeler = ({ grants = [] }) => {
     const [selectedGrants, setSelectedGrants] = useState([]);
@@ -104,13 +104,13 @@ export const ScenarioModeler = ({ grants = [] }) => {
                                 💡 **Personnel Insight**: At P95 confidence, this scenario requires a surge of **{Math.ceil(simulation.p95Burn / 10000)} FTEs** (assuming $10k/mo avg).
                             </div>
                             
-                            <Button 
-                                variant="outline" 
+                            <Btn
+                                variant="default" 
                                 style={{ width: '100%', marginTop: 12 }}
                                 onClick={() => setScenarios(s => s === 1000 ? 5000 : 1000)}
                             >
                                 Re-run with {scenarios === 1000 ? 5000 : 1000} Scenarios
-                            </Button>
+                            </Btn>
                         </div>
                     ) : (
                         <div style={{ textAlign: 'center', padding: 40, color: T.mute, background: T.card, borderRadius: 12, border: `1px dashed ${T.border}` }}>
