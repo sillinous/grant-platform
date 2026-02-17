@@ -5,12 +5,12 @@
 
 // ─── THEME ─────────────────────────────────────────────────────────────
 export const T = {
-    bg: "#060910", panel: "#0b1018", card: "#0e1420", border: "#182030",
-    borderHi: "#283548", text: "#ddd5c8", sub: "#9aa0ae", mute: "#5a6880",
-    dim: "#354058", amber: "#c49355", amberDim: "#8b6b3d", green: "#3dba7a",
-    red: "#e05555", blue: "#5b9cf5", purple: "#9b7ef5", yellow: "#e0b84a",
-    orange: "#e08c3a", cyan: "#4ab8c2", amberGlow: "rgba(196,147,85,0.08)",
-    glass: "rgba(11,16,24,0.85)", gradient: "linear-gradient(135deg,#c49355,#e0b84a)",
+    bg: "#020203", panel: "#0A0A0F", card: "#0A0A0F", border: "#1A1A25",
+    borderHi: "#2A2A38", text: "#F1EFF0", sub: "#8F8F9A", mute: "#5a6880",
+    dim: "#1E1E2A", amber: "#F3A319", amberDim: "#8b6b3d", green: "#17A16D",
+    red: "#DA2C0C", blue: "#4526E4", purple: "#7C3AED", yellow: "#FBBF24",
+    orange: "#F97316", cyan: "#06B6D4", amberGlow: "rgba(243,163,25,0.08)",
+    glass: "rgba(10,10,15,0.75)", gradient: "linear-gradient(135deg,#4526E4,#7C3AED)",
 };
 
 // ─── UTILITIES ─────────────────────────────────────────────────────────

@@ -4,6 +4,9 @@ import { Icon, Btn, Card, Badge, Input, TextArea, Select, Tab, Progress, Empty, 
 import { API } from "./api";
 import { auth } from "./auth";
 import { cloud } from "./cloud";
+import { OrganizationProvider, useOrganization } from "./context/OrganizationContext";
+import { ContextSwitcher } from "./components/ContextSwitcher";
+import { OrgProfile } from "./components/OrgProfile";
 
 
 // ═══════════════════════════════════════════════════════════════════
@@ -73,7 +76,16 @@ import { PolicyModeler } from './components/PolicyModeler';
 import { ImpactMapper } from './components/ImpactMapper';
 import { ComplianceWizard } from './components/ComplianceWizard';
 
-export default function App() {
+import { ComplianceWizard } from './components/ComplianceWizard';
+
+const AppContent = () => {
+    const { activeContext, isPersonal } = useOrganization();
+    
+    // Derived state for filtered grants based on context
+    // In a real app, we'd filter grants by orgId. For now, we'll simulare it.
+    // const contextGrants = isPersonal ? grants.filter(g => !g.orgId) : grants.filter(g => g.orgId === activeContext.id);
+    
+    // For prototype, we will just share grants but change the sidebar
   const [page, setPage] = useState("dashboard");
   const [grants, setGrants] = useState(() => LS.get("grants", []));
   const [vaultDocs, setVaultDocs] = useState(() => LS.get("vault_docs", []));
@@ -317,48 +329,59 @@ export default function App() {
       case "impact_mapper": return <ImpactMapper grants={grants} />;
       case "compliance_wizard": return <ComplianceWizard grants={grants} />;
       case "settings": return <Settings showToast={showToast} />;
+      case "settings": return <Settings showToast={showToast} />;
+      // Org Specific
+      case "org_profile": return <OrgProfile />;
       default: return <Dashboard grants={grants} docs={vaultDocs} contacts={contacts} vaultDocs={vaultDocs} events={events} navigate={setPage} />;
     }
   };
 
-  const currentNav = NAV.find(n => n.id === page);
+  const getNavItems = () => {
+      if (isPersonal) return NAV;
+      
+      // Filter NAV for Organizations
+      const orgAllowed = ["dashboard", "exec_dash", "calendar", "budget", "vault", "compliance_tracker", "tasks", "awards", "closeout", "outcomes", "network", "impact_mapper", "compliance_wizard", "org_profile"];
+      
+      // Add Org specific items
+      const ORG_NAV = [
+          { id: "org_profile", icon: "🏢", label: "Organization Profile", group: "system" },
+          ...NAV.filter(n => orgAllowed.includes(n.id))
+      ];
+      return ORG_NAV;
+  };
+
+  const currentNavItems = getNavItems();
+  const currentNav = currentNavItems.find(n => n.id === page) || NAV[0];
+
+  const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const [currencyMenuOpen, setCurrencyMenuOpen] = useState(false);
+
+  // Close menus when clicking outside
+  useEffect(() => {
+    const closeMenus = () => { setLangMenuOpen(false); setCurrencyMenuOpen(false); };
+    if (langMenuOpen || currencyMenuOpen) window.addEventListener("click", closeMenus);
+    return () => window.removeEventListener("click", closeMenus);
+  }, [langMenuOpen, currencyMenuOpen]);
 
   return (
     <div style={{ display: "flex", height: "100vh", background: T.bg, color: T.text, fontFamily: "'Inter', sans-serif" }}>
-      <div style={{ width: sidebarOpen ? 220 : 56, background: T.panel, borderRight: `1px solid ${T.border}`, display: "flex", flexDirection: "column", transition: "width 0.3s", overflow: "hidden", flexShrink: 0 }}>
-        <div style={{ padding:"16px 12px", borderBottom:`1px solid ${T.border}`, display:"flex", alignItems:"center", gap:8 }}>
-          <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: "none", border: "none", color: T.amber, cursor: "pointer", fontSize: 20 }}>{sidebarOpen ? "◀" : "▶"}</button>
-          {sidebarOpen && <div style={{ fontSize:14, fontWeight:700, color:T.amber, letterSpacing:1 }}>UNLESS</div>}
+      <div style={{ width: sidebarOpen ? 240 : 66, background: T.panel, borderRight: `1px solid ${T.border}`, display: "flex", flexDirection: "column", transition: "width 0.3s", overflow: "hidden", flexShrink: 0 }}>
+        
+        {/* Context Switcher / Brand Header */}
+        <div style={{ padding: "16px 12px", borderBottom: `1px solid ${T.border}` }}>
+             {sidebarOpen ? (
+                 <ContextSwitcher />
+             ) : (
+                 <div onClick={() => setSidebarOpen(true)} style={{ cursor: "pointer", textAlign: "center", fontSize: 24 }}>
+                     {isPersonal ? "👤" : "🏢"}
+                 </div>
+             )}
         </div>
 
-        {sidebarOpen && (
-          <div style={{ padding: "12px", borderBottom: `1px solid ${T.border}`, display: "flex", flexDirection: "column", gap: 8 }}>
-            <div style={{ display: "flex", gap: 4 }}>
-              {Object.entries(LANGS).map(([code, l]) => (
-                <button
-                  key={code}
-                  onClick={() => { setLocale(code, LOCALE.currency); window.location.reload(); }}
-                  style={{ flex: 1, padding: "4px", background: LOCALE.lang === code ? T.amber + "33" : T.bg, border: `1px solid ${LOCALE.lang === code ? T.amber : T.border}`, borderRadius: 4, cursor: "pointer", fontSize: 12 }}
-                  title={l.label}
-                >
-                  {l.flag}
-                </button>
-              ))}
-            </div>
-            <select
-              value={LOCALE.currency}
-              onChange={(e) => { setLocale(LOCALE.lang, e.target.value); window.location.reload(); }}
-              style={{ width: "100%", background: T.bg, border: `1px solid ${T.border}`, color: T.text, fontSize: 10, padding: 4, borderRadius: 4 }}
-            >
-              {Object.entries(CURRENCIES).map(([code, c]) => (
-                <option key={code} value={code}>{code} - {c.label}</option>
-              ))}
-            </select>
-          </div>
-        )}
+        {/* Sidebar Navigation */}
         <div style={{ flex:1, padding:"8px 4px", overflow:"auto" }}>
           {["core", "hyper_local", "analysis", "writing", "docs", "management", "intelligence", "system"].map(group => {
-            const items = NAV.filter(n => n.group === group);
+            const items = currentNavItems.filter(n => n.group === group);
             if (items.length === 0) return null;
             const label = group === "core" ? "" : group.toUpperCase();
             const isCollapsed = collapsedGroups[group];
@@ -380,6 +403,8 @@ export default function App() {
             );
           })}
         </div>
+        
+        {/* User Profile Footer */}
         {sidebarOpen && (
           <div style={{ padding: 12, borderTop: `1px solid ${T.border}`, fontSize: 10, color: T.dim }}>
             <div style={{ marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -404,8 +429,87 @@ export default function App() {
 
       <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden" }}>
         <div style={{ padding: "12px 20px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: T.text }}>{currentNav?.icon} {currentNav?.label}</h2>
-          <div style={{ fontSize: 11, color: T.mute }}>{grants.length} grants · {fmt(grants.filter(g => ["awarded", "active"].includes(g.stage)).reduce((s, g) => s + (g.amount || 0), 0))} awarded</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <button onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: "none", border: "none", color: T.sub, cursor: "pointer", fontSize: 18 }}>{sidebarOpen ? "◀" : "▶"}</button>
+                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: T.text }}>{currentNav?.icon} {currentNav?.label}</h2>
+            </div>
+            
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                 {/* Language Switcher */}
+                <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                    <button 
+                        onClick={() => { setLangMenuOpen(!langMenuOpen); setCurrencyMenuOpen(false); }}
+                        style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", padding: 4, borderRadius: "50%", background: langMenuOpen ? T.dim : "transparent" }}
+                        title="Change Language"
+                    >
+                        🌐
+                    </button>
+                    {langMenuOpen && (
+                        <div style={{ 
+                            position: "absolute", top: "120%", right: 0, width: 200, 
+                            background: T.panel, border: `1px solid ${T.border}`, borderRadius: 8, 
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.3)", zIndex: 100, overflow: "hidden"
+                        }}>
+                             <div style={{ padding: "8px 12px", fontSize: 11, fontWeight: 700, color: T.sub, background: T.dim }}>SELECT LANGUAGE</div>
+                            {Object.entries(LANGS).map(([code, l]) => (
+                                <div 
+                                    key={code}
+                                    onClick={() => { setLocale(code, LOCALE.currency); window.location.reload(); }}
+                                    style={{ 
+                                        padding: "8px 12px", display: "flex", alignItems: "center", gap: 8, cursor: "pointer",
+                                        background: LOCALE.lang === code ? `${T.blue}22` : "transparent",
+                                        color: LOCALE.lang === code ? T.blue : T.text
+                                    }}
+                                >
+                                    <span>{l.flag}</span>
+                                    <span style={{ fontSize: 13 }}>{l.label}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Currency Switcher */}
+                <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
+                    <button 
+                        onClick={() => { setCurrencyMenuOpen(!currencyMenuOpen); setLangMenuOpen(false); }}
+                        style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", padding: 4, borderRadius: "50%", background: currencyMenuOpen ? T.dim : "transparent" }}
+                        title="Change Currency"
+                    >
+                        💲
+                    </button>
+                    {currencyMenuOpen && (
+                        <div style={{ 
+                            position: "absolute", top: "120%", right: 0, width: 220, 
+                            background: T.panel, border: `1px solid ${T.border}`, borderRadius: 8, 
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.3)", zIndex: 100, overflow: "hidden"
+                        }}>
+                             <div style={{ padding: "8px 12px", fontSize: 11, fontWeight: 700, color: T.sub, background: T.dim }}>SELECT CURRENCY</div>
+                            {Object.entries(CURRENCIES).map(([code, c]) => (
+                                <div 
+                                    key={code}
+                                    onClick={() => { setLocale(LOCALE.lang, code); window.location.reload(); }} // Corrected to just change currency
+                                    style={{ 
+                                        padding: "8px 12px", display: "flex", alignItems: "center", gap: 8, cursor: "pointer",
+                                        background: LOCALE.currency === code ? `${T.amber}22` : "transparent",
+                                        color: LOCALE.currency === code ? T.amber : T.text
+                                    }}
+                                >
+                                    <span style={{ fontWeight: 700, width: 24 }}>{code}</span>
+                                    <span style={{ fontSize: 13 }}>{c.label}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                <div style={{ width: 1, height: 24, background: T.border, margin: "0 4px" }} />
+                
+                <div style={{ textAlign: "right", fontSize: 11, color: T.mute }}>
+                    <div style={{ fontWeight: 600, color: T.text }}>{activeContext.name || "Personal"} View</div>
+                    <div>{grants.length} grants</div>
+                </div>
+            </div>
         </div>
         <div style={{ flex:1, overflow:"auto", padding:20 }}>
           <ErrorBoundary name={currentNav?.label || page}>
@@ -419,4 +523,12 @@ export default function App() {
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
+};
+
+export default function App() {
+    return (
+        <OrganizationProvider>
+            <AppContent />
+        </OrganizationProvider>
+    );
 }
