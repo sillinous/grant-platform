@@ -1,6 +1,94 @@
 ﻿import React, { useState, useMemo } from 'react';
-import { Card, Stat, Btn, Input, Progress, MiniBar } from '../ui';
+import { Card, Stat, Btn, Input, Progress, MiniBar, Badge } from '../ui';
 import { T, fmt, pct, PROFILE, STAGE_MAP } from '../globals';
+
+// ─── HELPERS ────────────────────────────────────────────────────────────
+
+const RunwayRadial = ({ value, max = 24, color = T.amber }) => {
+  const radius = 40;
+  const circumference = 2 * Math.PI * radius;
+  const progress = Math.min(value / max, 1);
+  const offset = circumference - progress * circumference;
+
+  return (
+    <div style={{ position: "relative", width: 120, height: 120, margin: "0 auto" }}>
+      <svg width="120" height="120" viewBox="0 0 100 100">
+        {/* Background Track */}
+        <circle cx="50" cy="50" r={radius} fill="none" stroke={T.border} strokeWidth="8" />
+        {/* Progress Bar */}
+        <circle
+          cx="50" cy="50" r={radius} fill="none"
+          stroke={color} strokeWidth="8" strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          transform="rotate(-90 50 50)"
+          style={{ transition: "stroke-dashoffset 1s ease-out" }}
+        />
+      </svg>
+      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ fontSize: 22, fontWeight: 900, color: T.text }}>{value === Infinity ? "∞" : value.toFixed(1)}</span>
+        <span style={{ fontSize: 9, color: T.mute, fontWeight: 600 }}>MONTHS</span>
+      </div>
+    </div>
+  );
+};
+
+const CashFlowWave = ({ data, color = T.amber }) => {
+  const width = 300;
+  const height = 120;
+  const padding = 20;
+
+  const maxVal = Math.max(...data.map(d => d.value), 1);
+  const minVal = Math.min(...data.map(d => d.value), 0);
+  const range = maxVal - minVal || 1;
+
+  const points = data.map((d, i) => {
+    const x = (i / (data.length - 1)) * (width - padding * 2) + padding;
+    const y = height - ((d.value - minVal) / range) * (height - padding * 2) - padding;
+    return `${x},${y}`;
+  }).join(" ");
+
+  const areaPoints = `${points} ${width - padding},${height} ${padding},${height}`;
+
+  return (
+    <div style={{ width: "100%", height: height, marginTop: 10 }}>
+      <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="waveGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.4" />
+            <stop offset="100%" stopColor={color} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {/* Area */}
+        <polyline points={areaPoints} fill="url(#waveGradient)" />
+        {/* Line */}
+        <polyline
+          points={points}
+          fill="none"
+          stroke={color}
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ transition: "all 0.5s ease" }}
+        />
+        {/* Dots at key points */}
+        {data.map((d, i) => {
+          const x = (i / (data.length - 1)) * (width - padding * 2) + padding;
+          const y = height - ((d.value - minVal) / range) * (height - padding * 2) - padding;
+          return (i % 3 === 0 || i === data.length - 1) && (
+            <circle key={i} cx={x} cy={y} r="4" fill={T.bg} stroke={color} strokeWidth="2" />
+          );
+        })}
+      </svg>
+      <div style={{ display: "flex", justifyContent: "space-between", padding: "0 10px", marginTop: 4 }}>
+        <span style={{ fontSize: 9, color: T.mute }}>{data[0]?.label}</span>
+        <span style={{ fontSize: 9, color: T.mute }}>{data[data.length - 1]?.label}</span>
+      </div>
+    </div>
+  );
+};
+
+// ─── COMPONENT ──────────────────────────────────────────────────────────
 
 export const FinancialProjector = ({ grants }) => {
   const [runway, setRunway] = useState({ monthly_expenses: 3000, current_savings: 500, other_income: 0 });
@@ -14,135 +102,121 @@ export const FinancialProjector = ({ grants }) => {
   const totalPending = pending.reduce((s, g) => s + (g.amount || 0), 0);
   const totalPipeline = pipeline.reduce((s, g) => s + (g.amount || 0), 0);
 
-  // Scenario modeling
   const scenarios = {
-    conservative: { winRate: 0.15, label: "Conservative (15% win rate)", color: T.red },
-    expected: { winRate: 0.30, label: "Expected (30% win rate)", color: T.yellow },
-    optimistic: { winRate: 0.50, label: "Optimistic (50% win rate)", color: T.green },
-  };
+      conservative: { winRate: 0.15, label: "CONSERVATIVE", color: T.red, desc: "15% Win Rate" },
+      expected: { winRate: 0.30, label: "EXPECTED", color: T.blue, desc: "30% Win Rate" },
+      optimistic: { winRate: 0.55, label: "OPTIMISTIC", color: T.green, desc: "55% Win Rate" },
+    };
 
   const sc = scenarios[scenario];
   const projectedFromPending = totalPending * sc.winRate;
-  const projectedFromPipeline = totalPipeline * sc.winRate * 0.5; // pipeline is less certain
+  const projectedFromPipeline = totalPipeline * sc.winRate * 0.5;
   const totalProjected = totalAwarded + projectedFromPending + projectedFromPipeline;
-  const monthlyBurn = runway.monthly_expenses - runway.other_income;
-  const currentRunway = monthlyBurn > 0 ? runway.current_savings / monthlyBurn : Infinity;
-  const projectedRunway = monthlyBurn > 0 ? (runway.current_savings + totalProjected) / monthlyBurn : Infinity;
+  const monthlyBurn = Math.max(runway.monthly_expenses - runway.other_income, 0);
 
-  // 12-month projection
+  const currentRunway = monthlyBurn > 0 ? runway.current_savings / monthlyBurn : 24;
+  const projectedRunway = monthlyBurn > 0 ? (runway.current_savings + totalProjected) / monthlyBurn : 24;
+
   const monthlyProjection = useMemo(() => {
     const months = [];
     let balance = runway.current_savings;
     const monthlyGrant = totalProjected / 12;
     for (let i = 0; i < 12; i++) {
       balance = balance - monthlyBurn + monthlyGrant;
-      months.push({ month: i + 1, label: `M${i + 1}`, balance: Math.max(balance, 0), value: Math.max(balance, 0) });
-    }
-    return months;
-  }, [runway, totalProjected, monthlyBurn]);
-
-  // Business allocation
-  const bizAllocation = PROFILE.businesses.filter(b => b.st === "active").map(b => ({
-    name: b.n, sector: b.sec,
-    suggestedAllocation: totalProjected / PROFILE.businesses.filter(b2 => b2.st === "active").length,
-  }));
+        months.push({ label: `M${i + 1}`, value: Math.max(balance, 0) });
+      }
+      return months;
+    }, [runway, totalProjected, monthlyBurn]);
 
   return (
-    <div>
-      {/* Summary Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 8, marginBottom: 16 }}>
-        <Card glow><Stat label="Awarded" value={fmt(totalAwarded)} color={T.green} /></Card>
-        <Card><Stat label="Pending" value={fmt(totalPending)} color={T.yellow} sub={`${pending.length} applications`} /></Card>
-        <Card><Stat label="Pipeline" value={fmt(totalPipeline)} color={T.blue} sub={`${pipeline.length} opportunities`} /></Card>
-        <Card><Stat label="Projected Total" value={fmt(totalProjected)} color={T.amber} sub={sc.label} /></Card>
-      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gridTemplateRows: "auto auto", gap: 16 }}>
 
-      {/* Scenario Selector */}
-      <Card style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>🎲 Scenario Modeling</div>
-        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-          {Object.entries(scenarios).map(([key, s]) => (
-            <Btn key={key} size="sm" variant={scenario === key ? "primary" : "default"} onClick={() => setScenario(key)} style={{ borderColor: s.color + "44" }}>{s.label}</Btn>
-          ))}
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-          <div>
-            <label style={{ fontSize: 10, color: T.mute, display: "block", marginBottom: 4 }}>Monthly Expenses</label>
-            <Input type="number" value={runway.monthly_expenses} onChange={v => setRunway({ ...runway, monthly_expenses: Number(v) })} />
+        {/* 1. RUNWAY RADIAL (Bento Block A) */}
+        <Card glow shadow style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24, background: `linear-gradient(180deg, ${T.card}, ${T.bg})` }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: T.mute, letterSpacing: 1.5, marginBottom: 20 }}>PROJECTED RUNWAY</div>
+          <RunwayRadial value={projectedRunway} color={sc.color} />
+          <div style={{ marginTop: 20, textAlign: "center" }}>
+            <div style={{ fontSize: 13, color: T.text, fontWeight: 600 }}>{fmt(totalProjected)} Pipeline Value</div>
+            <div style={{ fontSize: 10, color: T.mute }}>Based on {sc.label} scenario</div>
           </div>
-          <div>
-            <label style={{ fontSize: 10, color: T.mute, display: "block", marginBottom: 4 }}>Current Savings</label>
-            <Input type="number" value={runway.current_savings} onChange={v => setRunway({ ...runway, current_savings: Number(v) })} />
-          </div>
-          <div>
-            <label style={{ fontSize: 10, color: T.mute, display: "block", marginBottom: 4 }}>Other Monthly Income</label>
-            <Input type="number" value={runway.other_income} onChange={v => setRunway({ ...runway, other_income: Number(v) })} />
-          </div>
-        </div>
-      </Card>
-
-      {/* Runway Analysis */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-        <Card>
-          <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>🛤️ Runway Analysis</div>
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
-              <span style={{ color: T.sub }}>Current Runway</span>
-              <span style={{ color: currentRunway < 3 ? T.red : T.green, fontWeight: 600 }}>{currentRunway === Infinity ? "∞" : `${currentRunway.toFixed(1)} months`}</span>
-            </div>
-            <Progress value={Math.min(currentRunway, 24)} max={24} color={currentRunway < 3 ? T.red : currentRunway < 6 ? T.yellow : T.green} />
-          </div>
-          <div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
-              <span style={{ color: T.sub }}>Projected Runway</span>
-              <span style={{ color: T.green, fontWeight: 600 }}>{projectedRunway === Infinity ? "∞" : `${projectedRunway.toFixed(1)} months`}</span>
-            </div>
-            <Progress value={Math.min(projectedRunway, 24)} max={24} color={T.green} />
-          </div>
-          <div style={{ fontSize: 11, color: T.mute, marginTop: 8 }}>Monthly burn: {fmt(monthlyBurn)}/mo</div>
         </Card>
 
-        <Card>
-          <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 8 }}>📊 12-Month Cash Flow</div>
-          <MiniBar data={monthlyProjection} height={100} color={T.amber} />
+        {/* 2. CASH FLOW WAVE (Bento Block B) */}
+        <Card style={{ padding: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: T.mute, letterSpacing: 1.5 }}>CASH FLOW FORECAST</div>
+            <Badge color={T.blue}>12 MONTHS</Badge>
+          </div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: T.text }}>{fmt(monthlyProjection[11].value)}</div>
+          <div style={{ fontSize: 10, color: T.mute, marginBottom: 8 }}>Estimated EOY Balance</div>
+          <CashFlowWave data={monthlyProjection} color={sc.color} />
         </Card>
-      </div>
 
-      {/* Business Allocation */}
-      <Card style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>🏢 Suggested Business Allocation</div>
-        {bizAllocation.map((b, i) => (
-          <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${T.border}` }}>
+        {/* 3. SCENARIO CONTROL (Bento Block C) */}
+        <Card style={{ padding: 20 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: T.mute, letterSpacing: 1.5, marginBottom: 16 }}>RISK ARCHITECTURE</div>
+
+          <div style={{ display: "flex", background: T.panel, padding: 4, borderRadius: 8, marginBottom: 20 }}>
+            {Object.entries(scenarios).map(([key, s]) => (
+                      <button
+                        key={key}
+                        onClick={() => setScenario(key)}
+                        style={{
+                          flex: 1, padding: "8px 0", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 10, fontWeight: 700,
+                          background: scenario === key ? s.color : "transparent",
+                          color: scenario === key ? T.bg : T.mute,
+                          transition: "0.2s"
+                        }}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+          </div>
+
+          <div style={{ display: "grid", gap: 12 }}>
             <div>
-              <div style={{ fontSize: 12, color: T.text }}>{b.name}</div>
-              <div style={{ fontSize: 10, color: T.mute }}>{b.sector}</div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: T.sub, marginBottom: 4 }}>
+                <span>MONTHLY BURN</span>
+                <span style={{ fontWeight: 700, color: T.text }}>{fmt(monthlyBurn)}</span>
+              </div>
+              <Input type="number" value={runway.monthly_expenses} onChange={v => setRunway({ ...runway, monthly_expenses: Number(v) })} style={{ height: 32, fontSize: 12 }} />
             </div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: T.amber }}>{fmt(b.suggestedAllocation)}</div>
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: T.sub, marginBottom: 4 }}>
+                <span>LIQUID RESERVES</span>
+                <span style={{ fontWeight: 700, color: T.text }}>{fmt(runway.current_savings)}</span>
+              </div>
+              <Input type="number" value={runway.current_savings} onChange={v => setRunway({ ...runway, current_savings: Number(v) })} style={{ height: 32, fontSize: 12 }} />
+            </div>
           </div>
-        ))}
-      </Card>
+        </Card>
 
-      {/* Grant-Level Projections */}
-      <Card>
-        <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>📋 Grant-Level Projections</div>
-        {[...awarded, ...pending, ...pipeline].map(g => {
-          const probability = awarded.some(a => a.id === g.id) ? 1 : pending.some(p => p.id === g.id) ? sc.winRate : sc.winRate * 0.5;
-          return (
-            <div key={g.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${T.border}` }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, color: T.text }}>{g.title?.slice(0, 40)}</div>
-                <div style={{ fontSize: 10, color: T.mute }}>{STAGE_MAP[g.stage]?.label}</div>
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: T.green }}>{fmt(g.amount || 0)}</div>
-                <div style={{ fontSize: 10, color: probability === 1 ? T.green : T.mute }}>{pct(probability * 100)} likely → {fmt((g.amount || 0) * probability)}</div>
-              </div>
-            </div>
-          );
-        })}
-        {grants.length === 0 && <div style={{ color: T.mute, fontSize: 12 }}>Add grants to see financial projections</div>}
-      </Card>
-    </div>
-  );
+        {/* 4. GRANT PIPELINE (Bento Block D) */}
+        <Card style={{ padding: 20, overflow: "hidden" }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: T.mute, letterSpacing: 1.5, marginBottom: 12 }}>PROBABILISTIC PIPELINE</div>
+          <div style={{ display: "grid", gap: 8, maxHeight: 220, overflowY: "auto", paddingRight: 4 }}>
+            {[...pending, ...pipeline].slice(0, 5).map(g => {
+              const prob = pending.includes(g) ? sc.winRate : sc.winRate * 0.5;
+              return (
+                          <div key={g.id} style={{ padding: 10, background: T.panel, borderRadius: 8, border: `1px solid ${T.border}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                              <span style={{ fontSize: 11, fontWeight: 600, color: T.text }}>{g.title?.slice(0, 25)}...</span>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: sc.color }}>{fmt(g.amount * prob)}</span>
+                            </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <Progress value={prob * 100} color={sc.color} height={4} />
+                            <span style={{ fontSize: 9, color: T.mute, minWidth: 25 }}>{pct(prob * 100)}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+            {pending.length + pipeline.length === 0 && (
+              <div style={{ textAlign: "center", padding: 40, fontSize: 12, color: T.dim }}>No active pipeline found.</div>
+            )}
+          </div>
+        </Card>
+
+      </div>
+    );
 };
 

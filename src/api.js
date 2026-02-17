@@ -363,11 +363,149 @@ export const API = {
         const cached = SimpleCache.get(cacheKey);
         if (cached) return cached;
 
-        // Simulating county-level "Hyper-Local" results
-        const results = [
-            { id: uid(), title: `${county} County Community Reinvestment`, agency: `${county} Commissioners`, amount: 50000, source: "County Portal", type: "Local", description: `Specialized ${county} funding for local infrastructure.` },
+        // Simulating municipality-level "Hyper-Local" results
+        const mocks = {
+            "Cook": [
+                { id: uid(), title: "Chicago Neighborhood Grant Program", agency: "City of Chicago", amount: 25000, source: "Municipal Portal", type: "Local", description: "Funding for neighborhood-level infrastructure and beautification." },
+                { id: uid(), title: "Cook County Small Biz Relief", agency: "Cook County Commissioners", amount: 10000, source: "County Portal", type: "Local", description: "Micro-grants for businesses affected by economic shifts." }
+            ],
+            "Los Angeles": [
+                { id: uid(), title: "LA County Arts Commission Grant", agency: "LA County", amount: 45000, source: "County Arts", type: "Local", description: "Support for local digital media and arts initiatives." },
+                { id: uid(), title: "Santa Monica Innovation Fund", agency: "City of Santa Monica", amount: 20000, source: "City Clerk", type: "Local", description: "Tech-focused grants for beach-local startups." }
+            ]
+        };
+
+        const results = (mocks[county] || [
+            { id: uid(), title: `${county} Community Reinvestment`, agency: `${county} Commissioners`, amount: 50000, source: "County Portal", type: "Local", description: `Specialized ${county} funding for local infrastructure.` },
             { id: uid(), title: `Municipal Workforce Bridge`, agency: "Local City Council", amount: 15000, source: "City Clerk", type: "Local", description: "Small-scale workforce grants for city residents." }
-        ].filter(r => r.title.toLowerCase().includes(query.toLowerCase()) || r.description.toLowerCase().includes(query.toLowerCase()));
+        ]).filter(r => r.title.toLowerCase().includes(query.toLowerCase()) || r.description.toLowerCase().includes(query.toLowerCase()));
+
+        SimpleCache.set(cacheKey, results);
+        return results;
+    },
+
+    async searchHyperLocalSignals(zip, tags = []) {
+        const cacheKey = `signals_${zip}_${tags.join(",")}`;
+        const cached = SimpleCache.get(cacheKey);
+        if (cached) return cached;
+
+        // Simulate "Whisper Feed" signals from local minutes/news
+        const signals = [
+            { id: uid(), type: "Signal", title: "City Council Agenda Item: New Small Biz Tech Fund", agency: "City Hall", probability: 0.75, timing: "Expected Q3-2026", description: "Discussion of a $2M allocation for local AI integration." },
+            { id: uid(), type: "Direct", title: "Rotary Club Local Innovation Grant", agency: "Local Rotary", amount: 5000, timing: "Deadline: rolling", description: "Unpublished micro-grant for community impact projects." },
+            { id: uid(), type: "Signal", title: "Mayor's Office Workforce Initiative", agency: "Mayor's Office", probability: 0.90, timing: "Drafting Phase", description: "Signal detected in recent municipal budget proposal." }
+        ];
+
+        SimpleCache.set(cacheKey, signals);
+        return signals;
+    },
+
+    async searchSubGrantOpportunities() {
+        const cacheKey = "sub_grants";
+        const cached = SimpleCache.get(cacheKey);
+        if (cached) return cached;
+
+        // Simulate Prime Awards that need sub-recipients
+        const data = [
+            { id: uid(), prime: "State Dept. of Energy", recipient: "Large Global Corp", amount: 50000000, subGrantAlloc: 2500000, title: "Clean Energy Grid Expansion", requirement: "Requires 15% local community partnership", status: "Recent Award" },
+            { id: uid(), prime: "Federal DOT", recipient: "University Consortium", amount: 15000000, subGrantAlloc: 1200000, title: "Next-Gen Mobility Lab", requirement: "Must sub-contract with 3 minority-led startups", status: "Planning Sub-awards" }
+        ];
+
+        SimpleCache.set(cacheKey, data);
+        return data;
+    },
+
+    async getCrossSectorSynergies(tags = []) {
+        const cacheKey = `synergies_${tags.join(",")}`;
+        const cached = SimpleCache.get(cacheKey);
+        if (cached) return cached;
+
+        // Find "Adjacent" sector opportunities
+        const mapping = {
+            "technology": ["Workforce Education", "Digital Inclusion", "Civic Tech"],
+            "rural": ["Agri-Tech", "Rural Health", "Broadband Access"],
+            "education": ["Social-Emotional Learning", "STEAM", "Career Readiness"]
+        };
+
+        const synergies = [
+            { id: uid(), sector: "Social Impact", title: "Digital Literacy for At-Risk Youth", matchingTags: ["Technology"], synergyScore: 92, amount: 75000, source: "Private Social Fund" },
+            { id: uid(), sector: "Logistics", title: "Rural Supply Chain Innovation", matchingTags: ["Rural"], synergyScore: 85, amount: 200000, source: "Biz Alliance" }
+        ];
+
+        SimpleCache.set(cacheKey, synergies);
+        return synergies;
+    },
+
+    async getSurplusSignals() {
+        const cacheKey = "surplus_signals";
+        const cached = SimpleCache.get(cacheKey);
+        if (cached) return cached;
+
+        // Simulate EOFY spend-down signals
+        const signals = [
+            { id: uid(), jurisdiction: "State of California", budgetPool: "Emergency Preparedness", surplus: 4500000, eofy: "2026-06-30", alert: "Rapid intake open for tech-enabled resilience." },
+            { id: uid(), jurisdiction: "Cook County", budgetPool: "Workforce Training", surplus: 1200000, eofy: "2026-11-30", alert: "High priority for immediate Q4 spend on community pilot programs." }
+        ];
+
+        SimpleCache.set(cacheKey, signals);
+        return signals;
+    },
+
+    async discoverUnsolicitedFunders() {
+        const cacheKey = "unsolicited_prospector";
+        const cached = SimpleCache.get(cacheKey);
+        if (cached) return cached;
+
+        // Simulate 990-PF behavioral analysis
+        const funders = [
+            { id: uid(), name: "Global Innovation Trust", inquiryPolicy: "Open Inquiries", medianAward: 120000, unsolicitedRate: "85%", logic: "No public RFPs, but 85% of funding goes to unsolicited tech pitches." },
+            { id: uid(), name: "The Sanders Family Foundation", inquiryPolicy: "Intake Form", medianAward: 40000, unsolicitedRate: "60%", logic: "Focuses on 'Emerging Solutions' exclusively through direct inquiry." }
+        ];
+
+        SimpleCache.set(cacheKey, funders);
+        return funders;
+    },
+
+    async getPRISignals() {
+        const cacheKey = "pri_signals";
+        const cached = SimpleCache.get(cacheKey);
+        if (cached) return cached;
+
+        // Simulate Program-Related Investment discovery
+        const signals = [
+            { id: uid(), foundation: "MacArthur-Linked Social Fund", amount: 25000000, rate: "1.5%", term: "7 years", focus: "Affordable Housing Tech", logic: "Seeking to deploy $25M in recoverable grants / low-interest loans for high-impact tech." },
+            { id: uid(), foundation: "The Global Resilience Fund", amount: 10000000, rate: "0%", term: "5 years", focus: "Climate Adaptation", logic: "Zero-interest capital for non-profit infrastructure expansion." }
+        ];
+
+        SimpleCache.set(cacheKey, signals);
+        return signals;
+    },
+
+    async searchCSRPartnerships() {
+        const cacheKey = "csr_partnerships";
+        const cached = SimpleCache.get(cacheKey);
+        if (cached) return cached;
+
+        // Simulate CSR Strategic Partnerships (Direct)
+        const results = [
+            { id: uid(), company: "ComputeCorp Systems", goal: "Expand Rural Digital Literacy", budget: 500000, status: "Seeking implementation partner", synergeticTags: ["Rural", "Technology"], description: "Direct CSR allocation for organizations that can scale their rural education module." },
+            { id: uid(), company: "GreenGrid Energy", goal: "Urban Resilience Pilots", budget: 250000, status: "Open inquiry for pilots", synergeticTags: ["Infrastructure", "Sustainability"], description: "Strategic partnership funding for community-led energy pilots." }
+        ];
+
+        SimpleCache.set(cacheKey, results);
+        return results;
+    },
+
+    async searchCharityConsortiums(query) {
+        const cacheKey = `charity_consortium_${query}`;
+        const cached = SimpleCache.get(cacheKey);
+        if (cached) return cached;
+
+    // Simulate specialized private foundation consortiums
+        const results = [
+            { id: uid(), title: "Family Foundation Tech Collective", agency: "Private Consortium", amount: 150000, type: "Private Grant", description: "A group of 5 private family foundations co-funding innovation." },
+            { id: uid(), title: "Corporate Social Responsibility Pool", agency: "Regional Business Alliance", amount: 30000, type: "Corporate Grant", description: "CSR funds pooled from local enterprises for community growth." }
+        ].filter(r => r.title.toLowerCase().includes(query.toLowerCase()));
 
         SimpleCache.set(cacheKey, results);
         return results;

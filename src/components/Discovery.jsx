@@ -4,6 +4,22 @@ import { Tab, Card, Input, Btn, Select, Badge, Empty, Progress } from "../ui";
 import { API } from "../api";
 
 import { RegionalPulse } from "./RegionalPulse";
+import { PolicySentinel } from "./PolicySentinel";
+import { SubGrantRadar } from "./SubGrantRadar";
+import { SynergyEngine } from "./SynergyEngine";
+import { SurplusSentinel } from "./SurplusSentinel";
+import { UnsolicitedProspector } from "./UnsolicitedProspector";
+import { PRINavigator } from "./PRINavigator";
+import { CSRAllianceMapper } from "./CSRAllianceMapper";
+import { CyPresScout } from "./CyPresScout";
+import { DAOMap } from "./DAOMap";
+import { InKindVault } from "./InKindVault";
+import { DAFSignal } from "./DAFSignal";
+import { GivingCircleScout } from "./GivingCircleScout";
+import { ChamberPulse } from "./ChamberPulse";
+import { CBALedger } from "./CBALedger";
+import { FaithFunder } from "./FaithFunder";
+import { UniversalApplication } from "./UniversalApplication";
 
 
 
@@ -299,6 +315,9 @@ Narratives: ${PROFILE.narratives.founder}`;
     // ─── RENDER ───
     return (
         <div>
+            {/* Universal Application Modal (Hidden unless active) */}
+            {/* <UniversalApplication /> -- Integrated via logic later */}
+
             <Tab tabs={[
                 { id: "search", icon: "🔍", label: "Smart Search" },
                 { id: "recommended", icon: "🧠", label: "AI Recommended" },
@@ -309,7 +328,42 @@ Narratives: ${PROFILE.narratives.founder}`;
                 { id: "regs", icon: "⚖️", label: "Regulatory Intel" },
                 { id: "foresight", icon: "🔮", label: "Strategic Foresight" },
                 { id: "regional", icon: "🏘️", label: "Regional Pulse" },
+                { id: "sentinel", icon: "📡", label: "Policy Sentinel" },
+                { id: "subgrants", icon: "🛰️", label: "Sub-Grants" },
+                { id: "synergy", icon: "🧬", label: "Synergy Engine" },
+                { id: "surplus", icon: "⏳", label: "Surplus" },
+                { id: "prospector", icon: "💎", label: "Prospector" },
+                { id: "pri", icon: "🏦", label: "PRI Navigator" },
+                { id: "csr", icon: "🤝", label: "CSR Alliance" },
+                { id: "cypres", icon: "⚖️", label: "Cy Pres" },
+                { id: "dao", icon: "⛓️", label: "DAO Treasury" },
+                { id: "inkind", icon: "💳", label: "In-Kind Vault" },
+                { id: "daf", icon: "🤫", label: "DAF Signal" },
+                { id: "circles", icon: "⭕", label: "Giving Circles" },
+                { id: "chamber", icon: "🏛️", label: "Chamber Pulse" },
+                { id: "cba", icon: "🏗️", label: "CBA Ledger" },
+                { id: "faith", icon: "🕌", label: "Faith Funder" },
             ]} active={tab} onChange={setTab} />
+
+            {tab === "regional" && <RegionalPulse />}
+            {tab === "sentinel" && <PolicySentinel />}
+            {tab === "subgrants" && <SubGrantRadar />}
+            {tab === "synergy" && <SynergyEngine />}
+            {tab === "surplus" && <SurplusSentinel />}
+            {tab === "prospector" && <UnsolicitedProspector />}
+            {tab === "pri" && <PRINavigator />}
+            {tab === "csr" && <CSRAllianceMapper />}
+            {tab === "cypres" && <CyPresScout />}
+            {tab === "dao" && <DAOMap />}
+            {tab === "inkind" && <InKindVault />}
+            {tab === "daf" && <DAFSignal />}
+            {tab === "circles" && <GivingCircleScout />}
+            {tab === "chamber" && <ChamberPulse />}
+            {tab === "cba" && <CBALedger />}
+            {tab === "faith" && <FaithFunder />}
+            {tab === "chamber" && <ChamberPulse />}
+            {tab === "cba" && <CBALedger />}
+            {tab === "faith" && <FaithFunder />}
 
             {/* ━━━ SMART SEARCH TAB ━━━ */}
             {tab === "search" && (
