@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { T, PROFILE, LS, uid, fmt, fmtDate, daysUntil } from "../globals";
 import { Tab, Card, Input, Btn, Select, Badge, Empty, Progress } from "../ui";
 import { API } from "../api";
-import { PolicySentinel } from "./PolicySentinel";
+
 import { RegionalPulse } from "./RegionalPulse";
 
 
@@ -1112,7 +1112,7 @@ Narratives: ${PROFILE.narratives.founder}`;
                             Identify funding opportunities <i>before</i> they are officially posted. We track Congressional bills (Legislative Foresight) and real-time FEMA disaster declarations (Emergency Response Pulse) to predict upcoming shifts in the grant environment.
                         </div>
                     </Card>
-                    <PolicySentinel />
+
                 </div>
             )}
 
