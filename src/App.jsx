@@ -4,7 +4,7 @@ import { Icon, Btn, Card, Badge, Input, TextArea, Select, Tab, Progress, Empty, 
 import { API } from "./api";
 import { auth } from "./auth";
 import { cloud } from "./cloud";
-import { OrganizationProvider, useOrganization } from "./context/OrganizationContext";
+import { OrganizationProvider, useOrganization } from "./context/OrganizationContext.jsx";
 import { ContextSwitcher } from "./components/ContextSwitcher";
 import { OrgProfile } from "./components/OrgProfile";
 

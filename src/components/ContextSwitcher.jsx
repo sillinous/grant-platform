@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useOrganization } from '../context/OrganizationContext';
+import { useOrganization } from '../context/OrganizationContext.jsx';
 import { T } from '../globals';
 import { Btn, Card } from '../ui';
 

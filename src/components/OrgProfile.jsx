@@ -1,5 +1,5 @@
 import React from 'react';
-import { useOrganization } from '../context/OrganizationContext';
+import { useOrganization } from '../context/OrganizationContext.jsx';
 import { T } from '../globals';
 import { Card, Btn, Input, Badge } from '../ui';
 
