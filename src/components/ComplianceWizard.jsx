@@ -45,17 +45,26 @@ export const ComplianceWizard = ({ grants }) => {
 
             {!crosswalk ? (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 12 }}>
-                    {grants.filter(g => ["active", "awarded", "preparing"].includes(g.stage)).map(g => (
-                        <Card key={g.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <div>
-                                <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{g.title?.slice(0, 45)}</div>
-                                <div style={{ fontSize: 11, color: T.mute }}>{g.agency}</div>
+                    {grants.filter(g => ["active", "awarded", "preparing"].includes(g.stage)).length > 0 ?
+                        grants.filter(g => ["active", "awarded", "preparing"].includes(g.stage)).map(g => (
+                            <Card key={g.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <div>
+                                    <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{g.title?.slice(0, 45)}</div>
+                                    <div style={{ fontSize: 11, color: T.mute }}>{g.agency}</div>
+                                </div>
+                                <Btn size="sm" onClick={() => runCrossWalk(g)} disabled={loading}>
+                                    {loading && selectedGrant?.id === g.id ? "⏳" : "🪄 Align"}
+                                </Btn>
+                            </Card>
+                        )) : (
+                            <div style={{ gridColumn: "1 / -1" }}>
+                                <Empty
+                                    title="No Eligible Grants Found"
+                                    sub="The Cross-Walk requires grants in 'Active', 'Awarded', or 'Preparing' stages. Please advance a grant in your Pipeline first."
+                                />
                             </div>
-                            <Btn size="sm" onClick={() => runCrossWalk(g)} disabled={loading}>
-                                {loading && selectedGrant?.id === g.id ? "⏳" : "🪄 Align"}
-                            </Btn>
-                        </Card>
-                    ))}
+                        )
+                    }
                 </div>
             ) : (
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 16 }}>

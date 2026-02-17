@@ -37,7 +37,12 @@ export const ImpactMapper = ({ grants }) => {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
                 <div>
                     <h2 style={{ fontSize: 18, fontWeight: 700, color: T.text, margin: 0 }}>Zip-Code Impact Mapper</h2>
-                    <div style={{ fontSize: 13, color: T.sub }}>Mapping ${fmt(stats.totalImpact)} in awarded funding to community outcomes.</div>
+                    <div style={{ fontSize: 13, color: T.sub }}>
+                        {stats.totalImpact > 0
+                            ? `Mapping ${fmt(stats.totalImpact)} in awarded funding to community outcomes.`
+                            : "No awarded funding found. Add 'Active' or 'Awarded' grants to see impact distribution."
+                        }
+                    </div>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
                     <Select value={timeframe} onChange={setTimeframe} 
