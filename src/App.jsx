@@ -329,7 +329,7 @@ const AppContent = () => {
       case "impact_mapper": return <ImpactMapper grants={grants} />;
       case "compliance_wizard": return <ComplianceWizard grants={grants} />;
       case "settings": return <Settings showToast={showToast} />;
-      case "settings": return <Settings showToast={showToast} />;
+
       // Org Specific
       case "org_profile": return <OrgProfile />;
       default: return <Dashboard grants={grants} docs={vaultDocs} contacts={contacts} vaultDocs={vaultDocs} events={events} navigate={setPage} />;
@@ -439,7 +439,7 @@ const AppContent = () => {
                 <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
                     <button 
                         onClick={() => { setLangMenuOpen(!langMenuOpen); setCurrencyMenuOpen(false); }}
-                        style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", padding: 4, borderRadius: "50%", background: langMenuOpen ? T.dim : "transparent" }}
+                style={{ border: "none", fontSize: 18, cursor: "pointer", padding: 4, borderRadius: "50%", background: langMenuOpen ? T.dim : "transparent" }}
                         title="Change Language"
                     >
                         🌐
@@ -473,7 +473,7 @@ const AppContent = () => {
                 <div style={{ position: 'relative' }} onClick={(e) => e.stopPropagation()}>
                     <button 
                         onClick={() => { setCurrencyMenuOpen(!currencyMenuOpen); setLangMenuOpen(false); }}
-                        style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", padding: 4, borderRadius: "50%", background: currencyMenuOpen ? T.dim : "transparent" }}
+                style={{ border: "none", fontSize: 18, cursor: "pointer", padding: 4, borderRadius: "50%", background: currencyMenuOpen ? T.dim : "transparent" }}
                         title="Change Currency"
                     >
                         💲
