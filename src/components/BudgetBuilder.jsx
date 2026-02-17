@@ -11,6 +11,15 @@ export const BudgetBuilder = ({ grants, updateGrant, budgets, setBudgets }) => {
   const [aiResult, setAiResult] = useState("");
   const [showResult, setShowResult] = useState(false);
   const [magicLoading, setMagicLoading] = useState(false);
+  const [hudIntel, setHudIntel] = useState(null);
+
+  useEffect(() => {
+    if (PROFILE.zip) {
+      API.getHUDFairMarketRents(PROFILE.zip).then(d => {
+        if (d && !d._error) setHudIntel(d);
+      });
+    }
+  }, [PROFILE.zip]);
 
   const handleMagicDraft = async () => {
     const grant = grants.find(g => g.id === selectedGrant);
@@ -255,6 +264,19 @@ Return a professional, structured narrative.`;
               ]} />
             </div>
           </div>
+          {(hudIntel && (newItem.category === "personnel" || newItem.category === "fringe")) && (
+            <div style={{ padding: 10, background: T.blue + "11", borderRadius: 8, border: `1px solid ${T.blue}33`, fontSize: 11 }}>
+              <div style={{ fontWeight: 700, color: T.blue, marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                🏠 HUD Fair Market Rent Intelligence ({PROFILE.zip})
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", color: T.sub }}>
+                <span>1-BR: <b>{fmt(hudIntel.fmr_1br || 0)}</b></span>
+                <span>2-BR: <b>{fmt(hudIntel.fmr_2br || 0)}</b></span>
+                <span>3-BR: <b>{fmt(hudIntel.fmr_3br || 0)}</b></span>
+              </div>
+              <div style={{ fontSize: 9, color: T.mute, marginTop: 4 }}>Use these local benchmarks to justify cost-of-living differentials in your personnel narrative.</div>
+            </div>
+          )}
           <div><label style={{ fontSize: 10, color: T.mute }}>Cost Share (if any)</label><Input type="number" value={newItem.costShare} onChange={v => setNewItem({ ...newItem, costShare: Number(v) })} /></div>
           <div style={{ position: "relative" }}>
             <TextArea value={newItem.justification} onChange={v => setNewItem({ ...newItem, justification: v })} rows={3} placeholder="Budget justification for this item..." />

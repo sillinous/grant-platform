@@ -20,6 +20,13 @@ export const ExecutiveSummary = ({ grants, tasks = [], budgets = {} }) => {
 
   const [insights, setInsights] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
+  const [censusData, setCensusData] = React.useState(null);
+
+  React.useEffect(() => {
+    API.getCensusData().then(d => {
+      if (d && !d._error) setCensusData(d);
+    });
+  }, []);
 
   const generateAIAnalysis = async () => {
     setLoading(true);
@@ -153,6 +160,35 @@ export const ExecutiveSummary = ({ grants, tasks = [], budgets = {} }) => {
               ))}
             </div>
           </Card>
+
+          {censusData && (
+            <Card style={{ background: T.purple + "05", borderLeft: `4px solid ${T.purple}` }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: T.purple, marginBottom: 12 }}>🌱 Social ROI Intensity</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 10, color: T.mute }}>Community Poverty</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: T.text }}>{censusData[1]?.[1]}%</div>
+                  <Progress value={parseFloat(censusData[1]?.[1])} max={30} color={T.red} height={3} style={{ marginTop: 4 }} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: T.mute }}>Unemployment</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: T.text }}>{censusData[1]?.[2]}%</div>
+                  <Progress value={parseFloat(censusData[1]?.[2])} max={15} color={T.amber} height={3} style={{ marginTop: 4 }} />
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: T.mute }}>Higher Ed. %</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: T.text }}>{censusData[1]?.[3]}%</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, color: T.mute }}>Median Income</div>
+                  <div style={{ fontSize: 16, fontWeight: 800, color: T.green }}>{fmt(parseInt(censusData[1]?.[4] || 0))}</div>
+                </div>
+              </div>
+              <div style={{ fontSize: 9, color: T.sub, marginTop: 12, lineHeight: 1.4 }}>
+                <b>Strategic Impact</b>: Your portfolio directly targets a region with {censusData[1]?.[1]}% poverty. Each dollar of awarded funding ({fmt(totalAwarded)}) delivers hyper-local economic stabilizing value.
+              </div>
+            </Card>
+          )}
 
           <div style={{ marginTop: "auto", padding: 16, background: T.bg, borderRadius: 12, border: `1px solid ${T.border}` }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: T.mute, marginBottom: 8 }}>EXECUTIVE APPROVAL</div>

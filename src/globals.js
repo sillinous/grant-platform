@@ -59,10 +59,11 @@ export const setLocale = (lang, currency) => {
 
 // ─── PROFILE ───────────────────────────────────────────────────────────
 export const DEFAULT_PROFILE = {
-    name: "", loc: "", rural: false, disabled: false,
+    name: "", loc: "", zip: "", rural: false, disabled: false,
     poverty: false, selfEmployed: false,
+    naics: "",
     tags: [],
-    businesses: [],
+    businesses: [], // e.g., { n: "Tech Corp", sec: "Software", naics: "541511", zip: "60601" }
     narratives: {
         founder: "",
         need: "",

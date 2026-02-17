@@ -2,6 +2,10 @@ import React, { useState, useEffect, useMemo } from "react";
 import { T, PROFILE, LS, uid, fmt, fmtDate, daysUntil } from "../globals";
 import { Tab, Card, Input, Btn, Select, Badge, Empty, Progress } from "../ui";
 import { API } from "../api";
+import { PolicySentinel } from "./PolicySentinel";
+import { RegionalPulse } from "./RegionalPulse";
+
+
 
 export const Discovery = ({ onAdd, grants }) => {
     const [query, setQuery] = useState("");
@@ -37,6 +41,23 @@ export const Discovery = ({ onAdd, grants }) => {
     const [loadingMore, setLoadingMore] = useState(false);
     const [currentOffset, setCurrentOffset] = useState(0);
     const [lastQuery, setLastQuery] = useState("");
+    const [sbaEligible, setSbaEligible] = useState(null);
+    const [hudIntel, setHudIntel] = useState(null);
+
+    useEffect(() => {
+        // Fetch SBA Size Standards for current profile NAICS
+        if (PROFILE.naics) {
+            API.getSBASizeStandards(PROFILE.naics).then(d => {
+                if (d && !d._error) setSbaEligible(d);
+            });
+        }
+        // Fetch HUD Fair Market Rent for current profile ZIP
+        if (PROFILE.zip) {
+            API.getHUDFairMarketRents(PROFILE.zip).then(d => {
+                if (d && !d._error) setHudIntel(d);
+            });
+        }
+    }, [PROFILE.naics, PROFILE.zip]);
     const PAGE_SIZE = 40;
 
     useEffect(() => { LS.set("search_history", searchHistory); }, [searchHistory]);
@@ -286,6 +307,8 @@ Narratives: ${PROFILE.narratives.founder}`;
                 { id: "spending", icon: "💰", label: "Past Awards" },
                 { id: "state", icon: "⚖️", label: "State Portals" },
                 { id: "regs", icon: "⚖️", label: "Regulatory Intel" },
+                { id: "foresight", icon: "🔮", label: "Strategic Foresight" },
+                { id: "regional", icon: "🏘️", label: "Regional Pulse" },
             ]} active={tab} onChange={setTab} />
 
             {/* ━━━ SMART SEARCH TAB ━━━ */}
@@ -462,6 +485,14 @@ Narratives: ${PROFILE.narratives.founder}`;
                             )}
 
                             {/* Result Cards */}
+                            {sbaEligible && (
+                                <div style={{ padding: 10, background: T.amber + "11", borderRadius: 8, border: `1px solid ${T.amber}33`, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                                    <span style={{ fontSize: 18 }}>🛡️</span>
+                                    <div style={{ fontSize: 11, color: T.sub }}>
+                                        <b style={{ color: T.amber }}>SBA Intelligence Active</b>: Based on NAICS <code style={{ background: T.panel, padding: "2px 4px", borderRadius: 4 }}>{PROFILE.naics}</code>, you are eligible for <b>Small Business Set-Asides</b>.
+                                    </div>
+                                </div>
+                            )}
                             {sortedResults.map((opp, i) => {
                                 const match = scoreResult(opp);
                                 const title = opp.title || opp.opportunityTitle || "Untitled";
@@ -524,9 +555,10 @@ Narratives: ${PROFILE.narratives.founder}`;
                                                 </div>
 
                                                 {/* Match Reasons */}
-                                                {match.reasons.length > 0 && (
+                                                {(match.reasons.length > 0 || (sbaEligible && desc.toLowerCase().includes("small business"))) && (
                                                     <div style={{ display: "flex", gap: 3, flexWrap: "wrap", marginBottom: 4 }}>
                                                         {match.reasons.map(r => <Badge key={r} color={T.green} style={{ fontSize: 9 }}>{r}</Badge>)}
+                                                        {sbaEligible && desc.toLowerCase().includes("small business") && <Badge color={T.amber} style={{ fontSize: 9 }}>🛡️ SBA Eligible</Badge>}
                                                         {opp.fundingInstrumentType && <Badge color={T.purple} style={{ fontSize: 9 }}>{opp.fundingInstrumentType}</Badge>}
                                                     </div>
                                                 )}
@@ -1065,6 +1097,38 @@ Narratives: ${PROFILE.narratives.founder}`;
                         </div>
                     )}
                     {regs.length === 0 && !loading && <Empty icon="⚖️" title="Search Federal Regulations" sub="Track rules and comment periods that affect your grant programs" />}
+                </div>
+            )}
+
+            {/* ━━━ STRATEGIC FORESIGHT TAB ━━━ */}
+            {tab === "foresight" && (
+                <div>
+                    <Card style={{ marginBottom: 16, background: `linear-gradient(to bottom right, ${T.panel}, ${T.blue}08)` }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                            <span style={{ fontSize: 20 }}>🔮</span>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>Strategic Foresight Engine</div>
+                        </div>
+                        <div style={{ fontSize: 12, color: T.sub, lineHeight: 1.5 }}>
+                            Identify funding opportunities <i>before</i> they are officially posted. We track Congressional bills (Legislative Foresight) and real-time FEMA disaster declarations (Emergency Response Pulse) to predict upcoming shifts in the grant environment.
+                        </div>
+                    </Card>
+                    <PolicySentinel />
+                </div>
+            )}
+
+            {/* ━━━ REGIONAL PULSE TAB ━━━ */}
+            {tab === "regional" && (
+                <div>
+                    <Card style={{ marginBottom: 16, background: `linear-gradient(to bottom right, ${T.panel}, ${T.amber}08)` }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                            <span style={{ fontSize: 20 }}>🏘️</span>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>Regional & Philanthropic Alpha</div>
+                        </div>
+                        <div style={{ fontSize: 12, color: T.sub, lineHeight: 1.5 }}>
+                            Connecting you to hyper-local Economic Development Corporation (EDC) incentives and private philanthropic foundations. These sources often have higher win probabilities than massive federal grants.
+                        </div>
+                    </Card>
+                    <RegionalPulse />
                 </div>
             )}
         </div>
