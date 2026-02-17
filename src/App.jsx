@@ -76,7 +76,7 @@ import { PolicyModeler } from './components/PolicyModeler';
 import { ImpactMapper } from './components/ImpactMapper';
 import { ComplianceWizard } from './components/ComplianceWizard';
 
-import { ComplianceWizard } from './components/ComplianceWizard';
+
 
 const AppContent = () => {
     const { activeContext, isPersonal } = useOrganization();
