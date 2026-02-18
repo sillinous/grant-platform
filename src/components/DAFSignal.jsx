@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn } from '../ui';
-import { T, API } from '../globals';
+import { T } from '../globals';
+import { API } from '../api';
 
 export const DAFSignal = () => {
     const [signals, setSignals] = useState([]);
@@ -19,6 +20,18 @@ export const DAFSignal = () => {
                 <h2 style={{ fontSize: 22, fontWeight: 900, color: T.text, margin: 0 }}>DAF Signal 🤫</h2>
                 <p style={{ color: T.mute, fontSize: 13, marginTop: 4 }}>Interception of "Advisor-Led" funding through Donor Advised Funds (anonymous philanthropy).</p>
             </div>
+
+            {API.fortuna.isLinked() && (
+                <Card style={{ marginBottom: 24, background: T.green + "08", border: `1px solid ${T.green}33` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: T.green }}>Fortuna Auto-Philanthropy Active ⚡</div>
+                            <div style={{ fontSize: 12, color: T.text, marginTop: 4 }}>Profit Milestone reached: **$10,000 surplus** detected.</div>
+                        </div>
+                        <Btn variant="primary" size="sm">Execute DAF Transfer</Btn>
+                    </div>
+                </Card>
+            )}
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
                 {loading ? <div style={{ color: T.mute }}>Listening to wealth advisor channels...</div> : 

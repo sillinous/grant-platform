@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn } from '../ui';
-import { T, API, fmt } from '../globals';
+import { T, fmt } from '../globals';
+import { API } from '../api';
 
 export const GivingCircleScout = () => {
     const [circles, setCircles] = useState([]);

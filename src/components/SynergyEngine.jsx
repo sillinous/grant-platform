@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn, MiniBar } from '../ui';
-import { T, API, PROFILE, fmt } from '../globals';
+import { T, PROFILE, fmt } from '../globals';
+import { API } from '../api';
 
 export const SynergyEngine = () => {
     const [synergies, setSynergies] = useState([]);

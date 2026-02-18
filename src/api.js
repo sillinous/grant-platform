@@ -1,6 +1,7 @@
 
-import { LS, T, getProfileState, STAGES, fmt, fmtDate, daysUntil, PROFILE } from "./globals";
+import { LS, T, getProfileState, STAGES, fmt, fmtDate, daysUntil, PROFILE, uid } from "./globals";
 import { AI_PROVIDERS, getActiveProvider } from "./ai-config";
+import { FortunaAPI } from "./fortuna";
 
 // ─── SIMPLE CACHE ───
 const SimpleCache = {
@@ -635,7 +636,7 @@ export const API = {
             const result = data.DisasterDeclarationsSummaries || [];
             this._cache["fema_active"] = result;
             return result;
-        } catch (e) {
+        } catch {
             // Fallback for demo stability
             const mock = [{ disasterNumber: 4756, state: "CA", declarationDate: new Date().toISOString(), incidentType: "Flood", declarationTitle: "Severe Winter Storms" }];
             return mock;
@@ -719,5 +720,135 @@ export const API = {
             this._cache[cacheKey] = result;
             return result;
         } catch (e) { return { _error: e.message }; }
-    }
+    },
+
+    // ─── PHASE 2: APPLICATION ENGINE ─────────────────────────────────────
+
+    checkEligibilityFirewall(profile, opportunity) {
+        const issues = [];
+        const opp = opportunity || {};
+        const p = profile || {};
+
+        // 1. Geographic Check (Simple logic)
+        if (opp.zip && p.zip && opp.zip !== p.zip && !opp.title.toLowerCase().includes("national")) {
+            issues.push(`Geographic Mismatch: Funder targets ${opp.zip}, organization is in ${p.zip}.`);
+        }
+
+        // 2. Rural requirement
+        if (opp.rural && !p.rural) {
+            issues.push("Funder requires rural status. Your profile is marked as Urban/Suburban.");
+        }
+
+        // 3. Amount Floor
+        if (opp.awardFloor > 1000000 && (p.revenue || 0) < 500000) {
+            issues.push("Organization revenue is insufficient for this award size.");
+        }
+
+        return {
+            eligible: issues.length === 0,
+            issues,
+            score: issues.length === 0 ? 95 : 20
+        };
+    },
+
+    async autoMapToGrant(profile, opportunity) {
+        // Simulate mapping logic
+        const mappedFields = {
+            "Applicant Name": profile.name || "Default Org",
+            "EIN": "XX-XXXXXXX",
+            "Primary Sector": (profile.businesses?.[0]?.sec) || "Non-Profit",
+            "Project Location": profile.loc || "Chicago, IL",
+            "Executive Director": "User Name",
+            "Contact Email": "office@grantplatform.ai"
+        };
+
+        return {
+            mappedFields,
+            compatibility: 88,
+            format: opportunity.docType || "Standard SF-424",
+            missingFields: profile.naics ? [] : ["NAICS Code"]
+        };
+    },
+
+    async generateApplicationNarratives(profile, opportunity) {
+        const portfolioContext = buildPortfolioContext(LS.get("grants", []), LS.get("vault_docs", []), LS.get("contacts", []));
+        const sys = `You are an expert Grant Writer.
+        ${portfolioContext}
+        Create a 3-paragraph compelling narrative for this grant.
+        Opportunity: ${opportunity.title} (${opportunity.agency})
+        Amount: ${fmt(opportunity.amount)}
+        
+        Structure:
+        1. Problem Statement (Local Gap)
+        2. Proposed Solution (The Innovation)
+        3. Strategic Impact (The Result)
+        `;
+
+        const result = await this.callAI([{ role: "user", content: "Draft the full narrative for this application." }], sys);
+        return result.text || "Drafting failed. Using local template...";
+    },
+
+    async submitApplication(application) {
+        const grants = LS.get("grants", []);
+        const newGrant = {
+            ...application.opportunity,
+            id: uid(),
+            stage: "submitted",
+            submissionDate: new Date().toISOString(),
+            narrative: application.narrative,
+            status: "Pending Review"
+        };
+        const updated = [...grants, newGrant];
+        LS.set("grants", updated);
+
+        logActivity("Application Submitted", `Triggered autonomous submission to ${newGrant.agency}`, {
+            icon: "📤",
+            color: T.green,
+            amount: newGrant.amount
+        });
+
+        return { success: true, grantId: newGrant.id };
+    },
+
+    async getCuratedBriefing(profile) {
+        // Simulate AI curation logic
+        await new Promise(r => setTimeout(r, 1500)); // Simulate thinking
+        return {
+            topPicks: [
+                {
+                    sector: "Smart Search (Gov)",
+                    title: "Regional Innovation Engines - Type II",
+                    amount: 15000000,
+                    matchScore: 98,
+                    reasoning: "Perfect alignment with your recent circular economy pilot and rural manufacturing capacity.",
+                    agency: "NSF"
+                },
+                {
+                    sector: "DAF Signal",
+                    title: "Sustainable Manufacturing Leadership Grant",
+                    amount: 500000,
+                    matchScore: 94,
+                    info: "Advisor signal from Goldman Sachs DAF pool.",
+                    reasoning: "Matches your focus on ESG-driven industrial automation. Highly responsive funder.",
+                    agency: "GS Philanthropy"
+                },
+                {
+                    sector: "Synergy Engine",
+                    title: "Digital Twin Integration for Rural Hubs",
+                    amount: 2500000,
+                    matchScore: 91,
+                    reasoning: "Leverages your existing IoT assets to qualify for infrastructure modernization funds.",
+                    agency: "USDA / DoE"
+                }
+            ],
+            insights: [
+                { icon: "📉", label: "Market Shift", text: "Federal interest is pivoting from pure R&D to deployment-ready infrastructure. Your 'Ready-to-Scale' assets are gaining value." },
+                { icon: "🛡️", label: "Compliance Watch", text: "New Build America Buy America (BABA) requirements are hitting the manufacturing sector. Review your supply chain docs." },
+                { icon: "🤝", label: "Network Opportunity", text: "Two prime contractors reached out to the platform seeking sub-awardees in your NAICS code. Check Sub-Grant Radar." }
+            ]
+        };
+    },
+
+    // ─── FORTUNA FINTECH EXTENSION ─────────────────────────────────────────
+    fortuna: FortunaAPI
 };

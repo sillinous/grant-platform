@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn } from '../ui';
-import { T, API } from '../globals';
+import { T } from '../globals';
+import { API } from '../api';
 
 export const DAOMap = () => {
     const [treasuries, setTreasuries] = useState([]);

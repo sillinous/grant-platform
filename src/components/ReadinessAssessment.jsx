@@ -37,6 +37,17 @@ export const ReadinessAssessment = ({ grants, vaultDocs, contacts }) => {
     if (activeBiz.length > 0) checks.push({ cat:"Profile", item:"Active Business", status:true });
     else checks.push({ cat:"Profile", item:"Active Business", status:false, fix:"Add business details in Settings" });
 
+    // Fintech Integration
+    const fortunaLinked = API.fortuna.isLinked();
+    if (fortunaLinked) {
+      checks.push({ cat: "Fintech", item: "Fortuna Connection", status: true });
+      const health = await API.fortuna.getFinancialHealth();
+      if (health && health.score >= 80) checks.push({ cat: "Fintech", item: "Financial Health (>80)", status: true });
+      else checks.push({ cat: "Fintech", item: "Financial Health (>80)", status: false, fix: "Improve liquidity ratio to boost score" });
+    } else {
+      checks.push({ cat: "Fintech", item: "Fortuna Connection", status: false, fix: "Link Fortuna account for automated audit" });
+    }
+
     const passed = checks.filter(c => c.status).length;
     const total = checks.length;
     const score = Math.round((passed / total) * 100);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn, Progress } from '../ui';
-import { T, API, fmt } from '../globals';
+import { T, fmt } from '../globals';
+import { API } from '../api';
 
 export const CBALedger = () => {
     const [projects, setProjects] = useState([]);
@@ -48,7 +49,14 @@ export const CBALedger = () => {
                                     <b>Focus:</b> {p.focus}
                                 </p>
 
-                                <Btn variant="primary" style={{ width: "100%", marginTop: 15 }}>Contact {p.contact}</Btn>
+                                <div style={{ display: "flex", gap: 8, marginTop: 15 }}>
+                                    <Btn variant="primary" style={{ flex: 1 }}>Contact {p.contact}</Btn>
+                                    <Btn variant="ghost" size="sm" onClick={() => {
+                                        API.fortuna.syncToLedger().then(res => {
+                                            alert(`Synced ${res.synced} Fortuna transactions to ${p.project} ledger.`);
+                                        });
+                                    }}>🔄 Sync Fortuna</Btn>
+                                </div>
                             </Card>
                         );
                     })

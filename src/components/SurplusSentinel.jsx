@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn, Progress } from '../ui';
-import { T, API, fmt, daysUntil } from '../globals';
+import { T, fmt, daysUntil } from '../globals';
+import { API } from '../api';
 
 export const SurplusSentinel = () => {
     const [signals, setSignals] = useState([]);

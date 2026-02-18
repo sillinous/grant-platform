@@ -20,6 +20,7 @@ import { ChamberPulse } from "./ChamberPulse";
 import { CBALedger } from "./CBALedger";
 import { FaithFunder } from "./FaithFunder";
 import { UniversalApplication } from "./UniversalApplication";
+import { Concierge } from "./Concierge";
 
 
 
@@ -59,6 +60,7 @@ export const Discovery = ({ onAdd, grants }) => {
     const [lastQuery, setLastQuery] = useState("");
     const [sbaEligible, setSbaEligible] = useState(null);
     const [hudIntel, setHudIntel] = useState(null);
+    const [view, setView] = useState("concierge"); // 'concierge' | 'grid'
 
     useEffect(() => {
         // Fetch SBA Size Standards for current profile NAICS
@@ -239,6 +241,13 @@ Narratives: ${PROFILE.narratives.founder}`;
         });
     };
 
+    const handleSelectPick = (pick) => {
+        setQuery(pick.title);
+        setView("grid");
+        setTab("search");
+        search(pick.title);
+    };
+
     // ─── SORT & FILTER ───
     const sortedResults = useMemo(() => {
         let filtered = [...results];
@@ -313,10 +322,31 @@ Narratives: ${PROFILE.narratives.founder}`;
     }, []);
 
     // ─── RENDER ───
+    if (expanded) {
+        const opp = detailData[expanded.id] || expanded;
+        return <UniversalApplication opportunity={opp} onClose={() => setExpanded(null)} />;
+    }
+
+    if (view === "concierge") {
+        return (
+            <div style={{ padding: 32 }}>
+                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 24 }}>
+                    <Btn variant="ghost" icon={<Icon name="chart" />} onClick={() => setView("grid")}>Switch to Advanced Grid</Btn>
+                </div>
+                <Concierge onSelect={handleSelectPick} />
+            </div>
+        );
+    }
+
     return (
-        <div>
-            {/* Universal Application Modal (Hidden unless active) */}
-            {/* <UniversalApplication /> -- Integrated via logic later */}
+        <div style={{ padding: 24, animation: "fadeIn 0.5s" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+                <div style={{ display: "flex", gap: 12 }}>
+                    <Btn variant="ghost" icon={<Icon name="search" />} onClick={() => setView("concierge")}>&larr; Return to Concierge</Btn>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: T.text }}>Discovery Hub</div>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}></div>
+            </div>
 
             <Tab tabs={[
                 { id: "search", icon: "🔍", label: "Smart Search" },
@@ -358,9 +388,6 @@ Narratives: ${PROFILE.narratives.founder}`;
             {tab === "inkind" && <InKindVault />}
             {tab === "daf" && <DAFSignal />}
             {tab === "circles" && <GivingCircleScout />}
-            {tab === "chamber" && <ChamberPulse />}
-            {tab === "cba" && <CBALedger />}
-            {tab === "faith" && <FaithFunder />}
             {tab === "chamber" && <ChamberPulse />}
             {tab === "cba" && <CBALedger />}
             {tab === "faith" && <FaithFunder />}

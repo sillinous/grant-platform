@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn, Stat } from '../ui';
-import { T, API, fmt } from '../globals';
+import { T, fmt } from '../globals';
+import { API } from '../api';
 
 export const CyPresScout = () => {
     const [cases, setCases] = useState([]);
