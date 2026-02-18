@@ -21,6 +21,9 @@ import { CBALedger } from "./CBALedger";
 import { FaithFunder } from "./FaithFunder";
 import { UniversalApplication } from "./UniversalApplication";
 import { Concierge } from "./Concierge";
+import { PhilanthropyPulse } from "./PhilanthropyPulse";
+import { FoundationScout990 } from "./FoundationScout990";
+import { FamilyOfficeProspector } from "./FamilyOfficeProspector";
 
 
 
@@ -373,6 +376,9 @@ Narratives: ${PROFILE.narratives.founder}`;
                 { id: "chamber", icon: "🏛️", label: "Chamber Pulse" },
                 { id: "cba", icon: "🏗️", label: "CBA Ledger" },
                 { id: "faith", icon: "🕌", label: "Faith Funder" },
+                { id: "pulse", icon: "📡", label: "Philanthropy Pulse" },
+                { id: "scout990", icon: "🧐", label: "990 Scout" },
+                { id: "familyoffice", icon: "💎", label: "Family Office" },
             ]} active={tab} onChange={setTab} />
 
             {tab === "regional" && <RegionalPulse />}
@@ -391,6 +397,9 @@ Narratives: ${PROFILE.narratives.founder}`;
             {tab === "chamber" && <ChamberPulse />}
             {tab === "cba" && <CBALedger />}
             {tab === "faith" && <FaithFunder />}
+            {tab === "pulse" && <PhilanthropyPulse />}
+            {tab === "scout990" && <FoundationScout990 />}
+            {tab === "familyoffice" && <FamilyOfficeProspector />}
 
             {/* ━━━ SMART SEARCH TAB ━━━ */}
             {tab === "search" && (
