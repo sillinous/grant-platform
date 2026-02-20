@@ -68,9 +68,6 @@ function downloadICS(events) {
   URL.revokeObjectURL(url);
 }
 
-import React, { useState, useMemo } from 'react';
-import { Card, Btn, Badge, Input, TextArea, Select, Tab, Progress, Modal, MiniBar, Empty } from '../ui';
-import { T, uid, fmtDate, daysUntil, STAGE_MAP } from '../globals';
 import { useStore } from '../store';
 
 export const TimelineCalendar = () => {
