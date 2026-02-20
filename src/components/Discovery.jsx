@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { T, PROFILE, LS, uid, fmt, fmtDate, daysUntil } from "../globals";
-import { Tab, Card, Input, Btn, Select, Badge, Empty, Progress } from "../ui";
+import { Tab, Card, Input, Btn, Select, Badge, Empty, Progress, Icon } from "../ui";
 import { API } from "../api";
 
 import { RegionalPulse } from "./RegionalPulse";
