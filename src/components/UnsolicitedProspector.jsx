@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn, Stat } from '../ui';
-import { T, fmt } from '../globals';
+import { T, fmt, uid } from '../globals';
 import { API } from '../api';
 
-export const UnsolicitedProspector = () => {
+export const UnsolicitedProspector = ({ onAdd }) => {
     const [funders, setFunders] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -42,6 +42,21 @@ export const UnsolicitedProspector = () => {
                                     <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{fmt(f.medianAward)}</div>
                                 </div>
                                 <Btn size="sm" variant="primary">Launch Pitch Builder</Btn>
+                                {onAdd && (
+                                    <Btn variant="success" size="sm" onClick={() => {
+                                        onAdd({
+                                            id: uid(),
+                                            title: f.name,
+                                            agency: "Private Funder",
+                                            amount: f.medianAward,
+                                            deadline: "Rolling",
+                                            stage: "discovered",
+                                            description: `Unsolicited Inquiry Policy: ${f.inquiryPolicy}. Logic: ${f.logic}`,
+                                            category: "Unsolicited Foundation",
+                                            createdAt: new Date().toISOString()
+                                        });
+                                    }}>+ Track Funder</Btn>
+                                )}
                             </div>
                         </Card>
                     ))

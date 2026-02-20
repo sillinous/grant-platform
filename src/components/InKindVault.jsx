@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn, Stat } from '../ui';
-import { T, fmt } from '../globals';
+import { T, fmt, uid } from '../globals';
 import { API } from '../api';
 
-export const InKindVault = () => {
+export const InKindVault = ({ onAdd }) => {
     const [credits, setCredits] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -43,7 +43,24 @@ export const InKindVault = () => {
                             
                             <p style={{ fontSize: 13, color: T.sub, lineHeight: 1.4 }}>{c.impact}</p>
 
-                            <Btn size="sm" variant="primary" style={{ marginTop: 15, width: "100%" }}>Claim Credits</Btn>
+                            <div style={{ display: "flex", gap: 10, marginTop: 15 }}>
+                                <Btn size="sm" variant="primary" style={{ flex: 1 }}>Claim Credits</Btn>
+                                {onAdd && (
+                                    <Btn variant="success" size="sm" onClick={() => {
+                                        onAdd({
+                                            id: uid(),
+                                            title: `${c.provider} - ${c.type}`,
+                                            agency: c.provider,
+                                            amount: c.value,
+                                            deadline: "Rolling",
+                                            stage: "discovered",
+                                            description: `Difficulty: ${c.claimDifficulty}. ${c.impact}`,
+                                            category: "In-Kind Subsidy",
+                                            createdAt: new Date().toISOString()
+                                        });
+                                    }}>+ Track Value</Btn>
+                                )}
+                            </div>
                         </Card>
                     ))
                 }

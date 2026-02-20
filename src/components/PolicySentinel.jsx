@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn, Stat } from '../ui';
-import { T } from '../globals';
+import { T, uid } from '../globals';
 import { API } from '../api';
 
-export const PolicySentinel = () => {
+export const PolicySentinel = ({ onAdd }) => {
     const [signals, setSignals] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -52,6 +52,21 @@ export const PolicySentinel = () => {
                                 <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20, paddingTop: 15, borderTop: `1px solid ${T.border}` }}>
                                     <Btn variant="ghost" size="sm">Regulatory Analysis</Btn>
                                     <Btn variant="primary" size="sm">Draft Rebuttal/Support</Btn>
+                                    {onAdd && (
+                                        <Btn variant="success" size="sm" onClick={() => {
+                                            onAdd({
+                                                id: uid(),
+                                                title: s.title,
+                                                agency: s.agency,
+                                                amount: 0,
+                                                deadline: s.date,
+                                                stage: "discovered",
+                                                description: `Sentiment: ${s.sentiment.toUpperCase()}. ${s.description}`,
+                                                category: "Policy Signal",
+                                                createdAt: new Date().toISOString()
+                                            });
+                                        }}>+ Track Signal</Btn>
+                                    )}
                                 </div>
                             </Card>
                         ))

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn, Stat } from '../ui';
-import { T, fmt } from '../globals';
+import { T, fmt, uid } from '../globals';
 import { API } from '../api';
 
-export const SubGrantRadar = () => {
+export const SubGrantRadar = ({ onAdd }) => {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -49,6 +49,21 @@ export const SubGrantRadar = () => {
                             <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
                                 <Btn variant="primary" style={{ flex: 1 }}>Contact Prime Partner</Btn>
                                 <Btn variant="ghost">Analysis</Btn>
+                                {onAdd && (
+                                    <Btn variant="success" size="sm" onClick={() => {
+                                        onAdd({
+                                            id: uid(),
+                                            title: item.title,
+                                            agency: item.prime, // Prime Funders
+                                            amount: item.subGrantAlloc,
+                                            deadline: "Rolling",
+                                            stage: "discovered",
+                                            description: `Prime Recipient: ${item.recipient}. Requirement: ${item.requirement}`,
+                                            category: "Sub-Grant",
+                                            createdAt: new Date().toISOString()
+                                        });
+                                    }}>+ Track Sub-Grant</Btn>
+                                )}
                             </div>
                         </Card>
                     ))

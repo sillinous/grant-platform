@@ -381,25 +381,25 @@ Narratives: ${PROFILE.narratives.founder}`;
                 { id: "familyoffice", icon: "💎", label: "Family Office" },
             ]} active={tab} onChange={setTab} />
 
-            {tab === "regional" && <RegionalPulse />}
-            {tab === "sentinel" && <PolicySentinel />}
-            {tab === "subgrants" && <SubGrantRadar />}
-            {tab === "synergy" && <SynergyEngine />}
-            {tab === "surplus" && <SurplusSentinel />}
-            {tab === "prospector" && <UnsolicitedProspector />}
-            {tab === "pri" && <PRINavigator />}
-            {tab === "csr" && <CSRAllianceMapper />}
-            {tab === "cypres" && <CyPresScout />}
-            {tab === "dao" && <DAOMap />}
-            {tab === "inkind" && <InKindVault />}
-            {tab === "daf" && <DAFSignal />}
-            {tab === "circles" && <GivingCircleScout />}
-            {tab === "chamber" && <ChamberPulse />}
-            {tab === "cba" && <CBALedger />}
-            {tab === "faith" && <FaithFunder />}
-            {tab === "pulse" && <PhilanthropyPulse />}
-            {tab === "scout990" && <FoundationScout990 />}
-            {tab === "familyoffice" && <FamilyOfficeProspector />}
+            {tab === "regional" && <RegionalPulse onAdd={onAdd} />}
+            {tab === "sentinel" && <PolicySentinel onAdd={onAdd} />}
+            {tab === "subgrants" && <SubGrantRadar onAdd={onAdd} />}
+            {tab === "synergy" && <SynergyEngine onAdd={onAdd} />}
+            {tab === "surplus" && <SurplusSentinel onAdd={onAdd} />}
+            {tab === "prospector" && <UnsolicitedProspector onAdd={onAdd} />}
+            {tab === "pri" && <PRINavigator onAdd={onAdd} />}
+            {tab === "csr" && <CSRAllianceMapper onAdd={onAdd} />}
+            {tab === "cypres" && <CyPresScout onAdd={onAdd} />}
+            {tab === "dao" && <DAOMap onAdd={onAdd} />}
+            {tab === "inkind" && <InKindVault onAdd={onAdd} />}
+            {tab === "daf" && <DAFSignal onAdd={onAdd} />}
+            {tab === "circles" && <GivingCircleScout onAdd={onAdd} />}
+            {tab === "chamber" && <ChamberPulse onAdd={onAdd} />}
+            {tab === "cba" && <CBALedger onAdd={onAdd} />}
+            {tab === "faith" && <FaithFunder onAdd={onAdd} />}
+            {tab === "pulse" && <PhilanthropyPulse onAdd={onAdd} />}
+            {tab === "scout990" && <FoundationScout990 onAdd={onAdd} />}
+            {tab === "familyoffice" && <FamilyOfficeProspector onAdd={onAdd} />}
 
             {/* ━━━ SMART SEARCH TAB ━━━ */}
             {tab === "search" && (

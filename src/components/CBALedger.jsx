@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn, Progress } from '../ui';
-import { T, fmt } from '../globals';
+import { T, fmt, uid } from '../globals';
 import { API } from '../api';
 
-export const CBALedger = () => {
+export const CBALedger = ({ onAdd }) => {
     const [projects, setProjects] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -56,6 +56,21 @@ export const CBALedger = () => {
                                             alert(`Synced ${res.synced} Fortuna transactions to ${p.project} ledger.`);
                                         });
                                     }}>🔄 Sync Fortuna</Btn>
+                                    {onAdd && (
+                                        <Btn variant="success" size="sm" onClick={() => {
+                                            onAdd({
+                                                id: uid(),
+                                                title: `${p.project} - CBA Fund`,
+                                                agency: p.developer,
+                                                amount: p.remaining,
+                                                deadline: "Rolling",
+                                                stage: "discovered",
+                                                description: `CBA fund for ${p.project} focused on ${p.focus}. Contact: ${p.contact}`,
+                                                category: "CBA",
+                                                createdAt: new Date().toISOString()
+                                            });
+                                        }}>+ Track Focus</Btn>
+                                    )}
                                 </div>
                             </Card>
                         );

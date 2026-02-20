@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn, MiniBar } from '../ui';
-import { T, PROFILE, fmt } from '../globals';
+import { T, PROFILE, fmt, uid } from '../globals';
 import { API } from '../api';
 
-export const SynergyEngine = () => {
+export const SynergyEngine = ({ onAdd }) => {
     const [synergies, setSynergies] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -40,9 +40,26 @@ export const SynergyEngine = () => {
                                 {s.matchingTags.map(t => <Badge key={t} size="xs" color={T.shade}>{t}</Badge>)}
                             </div>
 
-                            <div style={{ marginTop: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div style={{ marginTop: 20, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
                                 <div style={{ fontSize: 14, fontWeight: 700, color: T.green }}>{fmt(s.amount)}</div>
-                                <Btn size="xs" variant="primary">Match Logic</Btn>
+                                <div style={{ display: "flex", gap: 6 }}>
+                                    <Btn size="xs" variant="primary">Match Logic</Btn>
+                                    {onAdd && (
+                                        <Btn size="xs" variant="success" onClick={() => {
+                                            onAdd({
+                                                id: uid(),
+                                                title: s.title,
+                                                agency: s.sector, // Broadest categorization for agency
+                                                amount: s.amount,
+                                                deadline: "Rolling",
+                                                stage: "discovered",
+                                                description: `Synergy Score: ${s.synergyScore}%. Matching Tags: ${s.matchingTags.join(', ')}`,
+                                                category: "Cross-Sector Synergy",
+                                                createdAt: new Date().toISOString()
+                                            });
+                                        }}>+ Track</Btn>
+                                    )}
+                                </div>
                             </div>
                         </Card>
                     ))

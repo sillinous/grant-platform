@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn, Progress } from '../ui';
-import { T, fmt, daysUntil } from '../globals';
+import { T, fmt, daysUntil, uid } from '../globals';
 import { API } from '../api';
 
-export const SurplusSentinel = () => {
+export const SurplusSentinel = ({ onAdd }) => {
     const [signals, setSignals] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -50,7 +50,24 @@ export const SurplusSentinel = () => {
                                     </div>
                                 </div>
 
-                                <Btn variant="primary" style={{ width: "100%", marginTop: 20 }}>Initialize Rapid Inquiry</Btn>
+                                <div style={{ marginTop: 20, display: "flex", gap: 8 }}>
+                                    <Btn variant="primary" style={{ flex: 1 }}>Initialize Rapid Inquiry</Btn>
+                                    {onAdd && (
+                                        <Btn variant="success" size="sm" onClick={() => {
+                                            onAdd({
+                                                id: uid(),
+                                                title: `${s.jurisdiction} - ${s.budgetPool} Surplus`,
+                                                agency: s.jurisdiction,
+                                                amount: s.surplus,
+                                                deadline: s.eofy,
+                                                stage: "discovered",
+                                                description: `${s.alert}. Budget Pool: ${s.budgetPool}`,
+                                                category: "Surplus Fund",
+                                                createdAt: new Date().toISOString()
+                                            });
+                                        }}>+ Track Pool</Btn>
+                                    )}
+                                </div>
                             </Card>
                         );
                     })

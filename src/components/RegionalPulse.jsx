@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { T, fmt, PROFILE, getProfileState } from '../globals';
+import { T, fmt, PROFILE, getProfileState, uid } from '../globals';
 import { API } from '../api';
 import { Card, Badge, Btn, Empty } from '../ui';
 
-export const RegionalPulse = () => {
+export const RegionalPulse = ({ onAdd }) => {
     const [foundations, setFoundations] = useState([]);
     const [incentives, setIncentives] = useState([]);
     const [signals, setSignals] = useState([]);
@@ -51,6 +51,21 @@ export const RegionalPulse = () => {
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
                                         <div style={{ fontSize: 12, fontWeight: 700, color: T.green }}>{fmt(f.amount)}</div>
                                         <Btn size="xs" variant="ghost">View 990-PF</Btn>
+                                        {onAdd && (
+                                            <Btn size="xs" variant="success" onClick={() => {
+                                                onAdd({
+                                                    id: uid(),
+                                                    title: f.agency,
+                                                    agency: "Philanthropy",
+                                                    amount: f.amount,
+                                                    deadline: "Rolling",
+                                                    stage: "discovered",
+                                                    description: f.description,
+                                                    category: f.type,
+                                                    createdAt: new Date().toISOString()
+                                                });
+                                            }}>+ Track</Btn>
+                                        )}
                                     </div>
                                 </Card>
                             ))

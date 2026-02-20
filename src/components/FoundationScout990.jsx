@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn, Input, Progress } from '../ui';
-import { T } from '../globals';
+import { T, uid } from '../globals';
 import { PhilanthropyAPI } from '../philanthropy';
 
-export const FoundationScout990 = () => {
+export const FoundationScout990 = ({ onAdd }) => {
     const [search, setSearch] = useState("");
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -64,6 +64,21 @@ export const FoundationScout990 = () => {
                             </div>
                         ))}
                         <Btn variant="ghost" size="sm" style={{ width: "100%", marginTop: 15 }}>Generate Connection Strategy</Btn>
+                        {onAdd && (
+                            <Btn variant="success" size="sm" style={{ width: "100%", marginTop: 8 }} onClick={() => {
+                                onAdd({
+                                    id: uid(),
+                                    title: search || "Foundation Target",
+                                    agency: "Private Foundation",
+                                    amount: 0,
+                                    deadline: "Rolling",
+                                    stage: "discovered",
+                                    description: `Identified via 990-PF Scout. Growth Rate: ${data.growthRate}.`,
+                                    category: "Foundation",
+                                    createdAt: new Date().toISOString()
+                                });
+                            }}>+ Track Foundation</Btn>
+                        )}
                     </Card>
                 </div>
             )}

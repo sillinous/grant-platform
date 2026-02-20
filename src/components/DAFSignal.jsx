@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn } from '../ui';
-import { T } from '../globals';
+import { T, uid } from '../globals';
 import { API } from '../api';
 
-export const DAFSignal = () => {
+export const DAFSignal = ({ onAdd }) => {
     const [signals, setSignals] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -55,7 +55,24 @@ export const DAFSignal = () => {
                                 <span>Deadline: {s.deadline}</span>
                             </div>
 
-                            <Btn variant="primary" style={{ width: "100%", marginTop: 20 }}>Generate One-Sheet Pitch</Btn>
+                            <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
+                                <Btn variant="primary" style={{ flex: 1 }}>Generate One-Sheet Pitch</Btn>
+                                {onAdd && (
+                                    <Btn variant="success" size="sm" onClick={() => {
+                                        onAdd({
+                                            id: uid(),
+                                            title: s.advisorFirm,
+                                            agency: "Donor Advised Fund",
+                                            amount: 0,
+                                            deadline: s.deadline || "Rolling",
+                                            stage: "discovered",
+                                            description: `Advisor: ${s.advisorFirm}. Focus: ${s.clientFocus}. Note: ${s.note}`,
+                                            category: "DAF",
+                                            createdAt: new Date().toISOString()
+                                        });
+                                    }}>+ Track Lead</Btn>
+                                )}
+                            </div>
                         </Card>
                     ))
                 }

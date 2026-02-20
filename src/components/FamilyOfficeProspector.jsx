@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn, Stat } from '../ui';
-import { T } from '../globals';
+import { T, uid } from '../globals';
 import { PhilanthropyAPI } from '../philanthropy';
 
-export const FamilyOfficeProspector = () => {
+export const FamilyOfficeProspector = ({ onAdd }) => {
     const [signals, setSignals] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -38,9 +38,24 @@ export const FamilyOfficeProspector = () => {
                                 <div style={{ fontSize: 12, color: T.text, fontStyle: "italic" }}>"{s.outreachTip}"</div>
                             </div>
 
-                            <div style={{ marginTop: 15, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <div style={{ fontSize: 10, color: T.mute }}>Source: {s.source}</div>
+                            <div style={{ marginTop: 15, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                                <div style={{ fontSize: 10, color: T.mute, flex: 1 }}>Source: {s.source}</div>
                                 <Btn variant="primary" size="sm">Request Warm Intro</Btn>
+                                {onAdd && (
+                                    <Btn variant="success" size="sm" onClick={() => {
+                                        onAdd({
+                                            id: uid(),
+                                            title: s.name,
+                                            agency: "Private Wealth",
+                                            amount: 0,
+                                            deadline: "Rolling",
+                                            stage: "discovered",
+                                            description: `${s.intent} Tip: ${s.outreachTip}`,
+                                            category: "Family Office",
+                                            createdAt: new Date().toISOString()
+                                        });
+                                    }}>+ Track</Btn>
+                                )}
                             </div>
                         </Card>
                     ))}

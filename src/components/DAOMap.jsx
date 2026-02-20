@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn } from '../ui';
-import { T } from '../globals';
+import { T, uid } from '../globals';
 import { API } from '../api';
 
-export const DAOMap = () => {
+export const DAOMap = ({ onAdd }) => {
     const [treasuries, setTreasuries] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -45,7 +45,24 @@ export const DAOMap = () => {
                                 <div style={{ marginTop: 8, fontSize: 12, color: T.green }}>💰 Grant Size: {dao.GrantSize}</div>
                             </div>
 
-                            <Btn variant="primary" style={{ width: "100%", marginTop: 20 }}>Draft Governance Proposal</Btn>
+                            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+                                <Btn variant="primary" style={{ flex: 1 }}>Draft Governance Proposal</Btn>
+                                {onAdd && (
+                                    <Btn variant="success" size="sm" onClick={() => {
+                                        onAdd({
+                                            id: uid(),
+                                            title: dao.name,
+                                            agency: "DAO Treasury",
+                                            amount: 0, // Usually DAO grants are variable, amount not explicitly typed as number in the mock
+                                            deadline: dao.activeProp,
+                                            stage: "discovered",
+                                            description: `Token: ${dao.token}. Focus: ${dao.focus}. AUM: ${dao.aum}. Grant Size Expected: ${dao.GrantSize}`,
+                                            category: "Web3/DAO",
+                                            createdAt: new Date().toISOString()
+                                        });
+                                    }}>+ Track</Btn>
+                                )}
+                            </div>
                         </Card>
                     ))
                 }

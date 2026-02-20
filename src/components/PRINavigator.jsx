@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn, Stat } from '../ui';
-import { T, fmt } from '../globals';
+import { T, fmt, uid } from '../globals';
 import { API } from '../api';
 
-export const PRINavigator = () => {
+export const PRINavigator = ({ onAdd }) => {
     const [signals, setSignals] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -44,6 +44,21 @@ export const PRINavigator = () => {
                             <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
                                 <Btn variant="primary" style={{ flex: 1 }}>Submit Investment Prequel</Btn>
                                 <Btn variant="ghost">Tax Compliance</Btn>
+                                {onAdd && (
+                                    <Btn variant="success" size="sm" onClick={() => {
+                                        onAdd({
+                                            id: uid(),
+                                            title: s.foundation,
+                                            agency: s.foundation,
+                                            amount: s.amount,
+                                            deadline: "Rolling",
+                                            stage: "discovered",
+                                            description: `Term: ${s.term}. Rate: ${s.rate}. Focus: ${s.focus}.`,
+                                            category: "PRI",
+                                            createdAt: new Date().toISOString()
+                                        });
+                                    }}>+ Track PRI</Btn>
+                                )}
                             </div>
                         </Card>
                     ))

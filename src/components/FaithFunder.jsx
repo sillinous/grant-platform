@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn } from '../ui';
-import { T, fmt } from '../globals';
+import { T, fmt, uid } from '../globals';
 import { API } from '../api';
 
-export const FaithFunder = () => {
+export const FaithFunder = ({ onAdd }) => {
     const [grants, setGrants] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -39,7 +39,24 @@ export const FaithFunder = () => {
                                 🕊️ <b>Mission Fit:</b> {g.focus}
                             </div>
 
-                            <Btn size="sm" variant="primary" style={{ width: "100%", marginTop: 15 }}>Review Guidelines</Btn>
+                            <div style={{ display: "flex", gap: 10, marginTop: 15 }}>
+                                <Btn size="sm" variant="primary" style={{ flex: 1 }}>Review Guidelines</Btn>
+                                {onAdd && (
+                                    <Btn variant="success" size="sm" onClick={() => {
+                                        onAdd({
+                                            id: uid(),
+                                            title: g.grant,
+                                            agency: g.org,
+                                            amount: g.amount,
+                                            deadline: g.deadline,
+                                            stage: "discovered",
+                                            description: g.focus,
+                                            category: "Faith-Based Grant",
+                                            createdAt: new Date().toISOString()
+                                        });
+                                    }}>+ Track</Btn>
+                                )}
+                            </div>
                         </Card>
                     ))
                 }

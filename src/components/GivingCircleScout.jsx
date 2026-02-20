@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn } from '../ui';
-import { T, fmt } from '../globals';
+import { T, fmt, uid } from '../globals';
 import { API } from '../api';
 
-export const GivingCircleScout = () => {
+export const GivingCircleScout = ({ onAdd }) => {
     const [circles, setCircles] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -40,7 +40,24 @@ export const GivingCircleScout = () => {
                                 <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>Vote Date: {c.votingDate}</div>
                             </div>
 
-                            <Btn size="sm" variant="primary" style={{ width: "100%", marginTop: 15 }}>Present to Members</Btn>
+                            <div style={{ marginTop: 15, display: "flex", gap: 10 }}>
+                                <Btn size="sm" variant="primary" style={{ flex: 1 }}>Present to Members</Btn>
+                                {onAdd && (
+                                    <Btn variant="success" size="sm" onClick={() => {
+                                        onAdd({
+                                            id: uid(),
+                                            title: c.name,
+                                            agency: "Giving Circle",
+                                            amount: c.pool,
+                                            deadline: c.votingDate,
+                                            stage: "discovered",
+                                            description: `Cycle: ${c.cycle}. Focus: ${c.focus}. Voters: ${c.members}`,
+                                            category: "Giving Circle",
+                                            createdAt: new Date().toISOString()
+                                        });
+                                    }}>+ Track</Btn>
+                                )}
+                            </div>
                         </Card>
                     ))
                 }

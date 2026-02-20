@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn, Stat } from '../ui';
-import { T, fmt } from '../globals';
+import { T, fmt, uid } from '../globals';
 import { API } from '../api';
 
-export const CyPresScout = () => {
+export const CyPresScout = ({ onAdd }) => {
     const [cases, setCases] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -43,6 +43,21 @@ export const CyPresScout = () => {
                             <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
                                 <Btn variant="primary" style={{ flex: 1 }}>Draft Amicus Letter</Btn>
                                 <Btn variant="ghost">Docket View</Btn>
+                                {onAdd && (
+                                    <Btn variant="success" size="sm" onClick={() => {
+                                        onAdd({
+                                            id: uid(),
+                                            title: c.caseName,
+                                            agency: "Cy Pres Settlement",
+                                            amount: c.residualFund,
+                                            deadline: "Rolling",
+                                            stage: "discovered",
+                                            description: `Docket: ${c.docket}. Cause: ${c.cause}. ${c.description}`,
+                                            category: "Cy Pres",
+                                            createdAt: new Date().toISOString()
+                                        });
+                                    }}>+ Track Fund</Btn>
+                                )}
                             </div>
                         </Card>
                     ))

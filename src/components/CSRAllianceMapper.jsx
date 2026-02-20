@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn, Stat } from '../ui';
-import { T, fmt } from '../globals';
+import { T, fmt, uid } from '../globals';
 import { API } from '../api';
 
-export const CSRAllianceMapper = () => {
+export const CSRAllianceMapper = ({ onAdd }) => {
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -39,7 +39,24 @@ export const CSRAllianceMapper = () => {
 
                             <div style={{ marginTop: 20, paddingTop: 15, borderTop: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                 <div style={{ fontSize: 18, fontWeight: 900, color: T.text }}>{fmt(r.budget)}</div>
-                                <Btn variant="primary" size="sm">Request Alliance Deck</Btn>
+                                <div style={{ display: "flex", gap: 10 }}>
+                                    <Btn variant="primary" size="sm">Request Alliance Deck</Btn>
+                                    {onAdd && (
+                                        <Btn variant="success" size="sm" onClick={() => {
+                                            onAdd({
+                                                id: uid(),
+                                                title: r.goal,
+                                                agency: r.company,
+                                                amount: r.budget,
+                                                deadline: "Rolling",
+                                                stage: "discovered",
+                                                description: `Status: ${r.status}. ${r.description}`,
+                                                category: "CSR Partnership",
+                                                createdAt: new Date().toISOString()
+                                            });
+                                        }}>+ Track CSR</Btn>
+                                    )}
+                                </div>
                             </div>
                         </Card>
                     ))

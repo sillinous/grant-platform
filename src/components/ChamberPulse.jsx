@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn } from '../ui';
-import { T, fmt } from '../globals';
+import { T, fmt, uid } from '../globals';
 import { API } from '../api';
 
-export const ChamberPulse = () => {
+export const ChamberPulse = ({ onAdd }) => {
     const [grants, setGrants] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -35,7 +35,24 @@ export const ChamberPulse = () => {
                             </div>
                             <div style={{ textAlign: "right", minWidth: 100 }}>
                                 <div style={{ fontSize: 18, fontWeight: 900, color: T.text }}>{fmt(g.amount)}</div>
-                                <Btn size="xs" variant="primary" style={{ marginTop: 8 }}>Apply</Btn>
+                                <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", marginTop: 8 }}>
+                                    <Btn size="xs" variant="primary">Apply</Btn>
+                                    {onAdd && (
+                                        <Btn size="xs" variant="success" onClick={() => {
+                                            onAdd({
+                                                id: uid(),
+                                                title: g.title,
+                                                agency: g.org,
+                                                amount: g.amount,
+                                                deadline: "Rolling",
+                                                stage: "discovered",
+                                                description: g.description,
+                                                category: "Chamber Pulse",
+                                                createdAt: new Date().toISOString()
+                                            });
+                                        }}>+ Track</Btn>
+                                    )}
+                                </div>
                             </div>
                         </Card>
                     ))

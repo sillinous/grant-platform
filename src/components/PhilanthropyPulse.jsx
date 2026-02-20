@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn, Progress } from '../ui';
-import { T, LS } from '../globals';
+import { T, LS, uid } from '../globals';
 import { PhilanthropyAPI } from '../philanthropy';
 
-export const PhilanthropyPulse = () => {
+export const PhilanthropyPulse = ({ onAdd }) => {
     const [news, setNews] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -53,7 +53,25 @@ export const PhilanthropyPulse = () => {
 
                         <div style={{ display: "flex", gap: 8 }}>
                             <Btn variant="primary" size="sm" style={{ flex: 1 }}>Analyze Alignment</Btn>
-                            <Btn variant="ghost" size="sm">💾 Save Lead</Btn>
+                            <Btn variant="ghost" size="sm" onClick={() => {
+                                // Simulate Save Lead
+                                alert("Saved Lead locally (PhilanthropyPulse -> Saved array)");
+                            }}>💾 Save Lead</Btn>
+                            {onAdd && (
+                                <Btn variant="success" size="sm" onClick={() => {
+                                    onAdd({
+                                        id: uid(),
+                                        title: item.title,
+                                        agency: item.source,
+                                        amount: 0,
+                                        deadline: "Rolling",
+                                        stage: "discovered",
+                                        description: item.summary,
+                                        category: "News Signal",
+                                        createdAt: new Date().toISOString()
+                                    });
+                                }}>+ Track Signal</Btn>
+                            )}
                         </div>
                     </Card>
                 ))
