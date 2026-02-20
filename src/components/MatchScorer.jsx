@@ -2,9 +2,11 @@
 import { Card, Btn, Empty, Progress } from '../ui';
 import { API } from '../api';
 import { T, LS, fmt, fmtDate, PROFILE, STAGE_MAP } from '../globals';
+import { useStore } from '../store';
 
-export const MatchScorer = ({ grants }) => {
-  const [analyses, setAnalyses] = useState(() => LS.get("match_analyses", {}));
+export const MatchScorer = () => {
+  const { grants } = useStore();
+  const [results, setResults] = useState(() => LS.get("match_analyses", {}));
   const [loading, setLoading] = useState(null);
 
   const quickScore = (grant) => {

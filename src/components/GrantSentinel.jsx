@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Card, Btn, Badge, Progress, Empty } from '../ui';
 import { T, LS, uid, PROFILE, fmt } from '../globals';
 import { API } from '../api';
+import { useStore } from '../store';
 
-export const GrantSentinel = ({ onAdd, grants }) => {
+export const GrantSentinel = ({ onAdd }) => {
+  const { grants } = useStore();
   const [active, setActive] = useState(() => LS.get("sentinel_active", false));
   const [matches, setMatches] = useState(() => LS.get("sentinel_matches", []));
   const [scanning, setScanning] = useState(false);
@@ -109,10 +111,22 @@ Return ONLY a JSON array of opportunities:
                   <span style={{ color: T.amber }}>Why:</span> {m.reason}
                 </div>
                 <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                  <Btn size="xs" variant="primary" onClick={() => {
-                    onAdd({ ...m, stage: "discovered", source: "sentinel" });
-                    setMatches(prev => prev.filter(x => x.id !== m.id));
-                  }}>🎯 Capture Pursuit</Btn>
+                  {onAdd && (
+                    <Btn size="xs" variant="primary" onClick={() => {
+                      onAdd({
+                        id: uid(),
+                        title: m.title,
+                        agency: m.agency,
+                        amount: m.amount,
+                        deadline: m.deadline || "Rolling",
+                        stage: "discovered",
+                        description: m.reason,
+                        category: "AI Sentinel Match",
+                        createdAt: new Date().toISOString()
+                      });
+                      setMatches(prev => prev.filter(x => x.id !== m.id));
+                    }}>🎯 Track Pursuit</Btn>
+                  )}
                   <Btn size="xs" variant="ghost" onClick={() => setMatches(prev => prev.filter(x => x.id !== m.id))}>Hide</Btn>
                 </div>
               </div>

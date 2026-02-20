@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Card, Btn, Badge, Input, Select, TextArea, Tab, Progress, Empty, Modal, Stat } from '../ui';
 import { T, LS, uid, fmtDate } from '../globals';
 import { API } from '../api';
+import { useStore } from '../store';
 
-export const SectionLibrary = ({ vaultDocs, setVaultDocs, grants, sections, setSections }) => {
+export const SectionLibrary = () => {
+  const { vaultDocs, setVaultDocs, grants, sectionLibrary: sections, setSectionLibrary: setSections } = useStore();
   const [activeGrantId, setActiveGrantId] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [search, setSearch] = useState("");

@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { Card, Btn, Progress, Badge, Stat } from '../ui';
 import { T, PROFILE } from '../globals';
 import { API } from '../api';
+import { useStore } from '../store';
 
-export const ReadinessAssessment = ({ grants, vaultDocs, contacts }) => {
+export const ReadinessAssessment = () => {
+  const { grants, vaultDocs, contacts } = useStore();
   const [assessment, setAssessment] = useState(null);
   const [loading, setLoading] = useState(false);
 

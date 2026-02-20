@@ -1,9 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Input, Btn, Select, TextArea, Stat, Empty, Modal, Progress, Badge, MagicBtn } from '../ui';
-import { LS, T, uid, fmt, PROFILE } from '../globals';
-import { API } from '../api';
+import { useStore } from '../store';
 
-export const BudgetBuilder = ({ grants, updateGrant, budgets, setBudgets }) => {
+export const BudgetBuilder = () => {
+  const { grants, updateGrant, budgets, setBudgets } = useStore();
   const [selectedGrant, setSelectedGrant] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [newItem, setNewItem] = useState({ category: "personnel", description: "", amount: 0, quantity: 1, unit: "year", justification: "", costShare: 0, spent: 0 });

@@ -1,9 +1,7 @@
-﻿import React, { useState, useEffect } from 'react';
-import { Card, Btn, Stat, Empty, Badge, Select, Input, TextArea, Modal, MagicBtn } from '../ui';
-import { API } from '../api';
-import { T, LS, uid, daysUntil } from '../globals';
+﻿import { useStore } from '../store';
 
-export const ActionPlan = ({ grants, tasks, setTasks }) => {
+export const ActionPlan = () => {
+  const { grants, tasks, setTasks } = useStore();
   const [showAdd, setShowAdd] = useState(false);
   const [newTask, setNewTask] = useState({ title: "", grantId: "", priority: "medium", dueDate: "", status: "todo", notes: "" });
   const [filter, setFilter] = useState("all");

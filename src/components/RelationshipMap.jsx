@@ -2,8 +2,10 @@
 import { Card, Btn, Badge, Input, Select, TextArea, Tab, Progress, Empty, Modal } from '../ui';
 import { T, uid, fmt, STAGE_MAP, PROFILE } from '../globals';
 import { API } from '../api';
+import { useStore } from '../store';
 
-export const RelationshipMap = ({ grants, contacts, setContacts }) => {
+export const RelationshipMap = () => {
+  const { grants, contacts, setContacts } = useStore();
   const [view, setView] = useState("network");
   const [showAddContact, setShowAddContact] = useState(false);
   const [newContact, setNewContact] = useState({ name: "", org: "", role: "", email: "", type: "funder", notes: "", grantIds: [] });
@@ -73,16 +75,16 @@ Provide the 'Most Strategic Path' to secure a meeting with a Program Officer. Me
   const typeMap = Object.fromEntries(CONTACT_TYPES.map(t => [t.id, t]));
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+    <div style={{ padding: 20, animation: "fadeIn 0.4s" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <Tab tabs={[
           { id: "network", icon: "🕸️", label: "Agency Network" },
           { id: "contacts", icon: "👥", label: "Contacts CRM" },
           { id: "insights", icon: "💡", label: "Insights" },
         ]} active={view} onChange={setView} />
-        <div style={{ display: "flex", gap: 6 }}>
-          <Btn variant="ghost" size="sm" onClick={() => setShowTeaming(true)}>✨ Teaming Intelligence</Btn>
-          <Btn variant="primary" size="sm" onClick={() => setShowAddContact(true)}>+ Add Contact</Btn>
+        <div style={{ display: "flex", gap: 10 }}>
+          <Btn variant="ghost" onClick={() => setShowTeaming(true)}>✨ Teaming Intelligence</Btn>
+          <Btn variant="primary" onClick={() => setShowAddContact(true)}>+ Add Contact</Btn>
         </div>
       </div>
 

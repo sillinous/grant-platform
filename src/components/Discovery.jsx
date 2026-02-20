@@ -27,8 +27,10 @@ import { FamilyOfficeProspector } from "./FamilyOfficeProspector";
 import { GovContractRadar } from "./GovContractRadar";
 import { TaxCreditNavigator } from "./TaxCreditNavigator";
 import { EarmarkScout } from "./EarmarkScout";
+import { useStore } from "../store";
 
-export const Discovery = ({ onAdd, grants }) => {
+export const Discovery = () => {
+    const { grants, addGrant: onAdd } = useStore();
     const [query, setQuery] = useState("");
     const [results, setResults] = useState([]);
     const [spendingResults, setSpendingResults] = useState([]);
@@ -448,14 +450,14 @@ Narratives: ${PROFILE.narratives.founder}`;
 
                 {/* ━━━ MAIN CONTENT AREA ━━━ */}
                 <div style={{ flex: 1, minWidth: 0, paddingBottom: 64 }}>
-                    {tab === "contracts" && <GovContractRadar onAdd={onAdd} />}
-                    {tab === "taxcredits" && <TaxCreditNavigator onAdd={onAdd} />}
-                    {tab === "earmarks" && <EarmarkScout onAdd={onAdd} />}
+                    {tab === "contracts" && <GovContractRadar onAdd={onAdd} grants={grants} />}
+                    {tab === "taxcredits" && <TaxCreditNavigator onAdd={onAdd} grants={grants} />}
+                    {tab === "earmarks" && <EarmarkScout onAdd={onAdd} grants={grants} />}
 
-                    {tab === "regional" && <RegionalPulse onAdd={onAdd} />}
+                    {tab === "regional" && <RegionalPulse onAdd={onAdd} grants={grants} />}
             {tab === "sentinel" && <PolicySentinel onAdd={onAdd} />}
-            {tab === "subgrants" && <SubGrantRadar onAdd={onAdd} />}
-            {tab === "synergy" && <SynergyEngine onAdd={onAdd} />}
+                    {tab === "subgrants" && <SubGrantRadar onAdd={onAdd} grants={grants} />}
+                    {tab === "synergy" && <SynergyEngine onAdd={onAdd} grants={grants} />}
             {tab === "surplus" && <SurplusSentinel onAdd={onAdd} />}
             {tab === "prospector" && <UnsolicitedProspector onAdd={onAdd} />}
             {tab === "pri" && <PRINavigator onAdd={onAdd} />}
@@ -468,9 +470,9 @@ Narratives: ${PROFILE.narratives.founder}`;
             {tab === "chamber" && <ChamberPulse onAdd={onAdd} />}
             {tab === "cba" && <CBALedger onAdd={onAdd} />}
             {tab === "faith" && <FaithFunder onAdd={onAdd} />}
-            {tab === "pulse" && <PhilanthropyPulse onAdd={onAdd} />}
-            {tab === "scout990" && <FoundationScout990 onAdd={onAdd} />}
-            {tab === "familyoffice" && <FamilyOfficeProspector onAdd={onAdd} />}
+                    {tab === "pulse" && <PhilanthropyPulse onAdd={onAdd} grants={grants} />}
+                    {tab === "scout990" && <FoundationScout990 onAdd={onAdd} grants={grants} />}
+                    {tab === "familyoffice" && <FamilyOfficeProspector onAdd={onAdd} grants={grants} />}
 
             {/* ━━━ SMART SEARCH TAB ━━━ */}
             {tab === "search" && (

@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Card, Input, Btn, Badge } from '../ui';
 import { LS, T, uid } from '../globals';
 import { API } from '../api';
+import { useStore } from '../store';
 
-export const FunderResearch = ({ savedFunders, setSavedFunders, vaultDocs, grants, setGrants }) => {
+export const FunderResearch = () => {
+  const { savedFunders, setSavedFunders, vaultDocs, grants, setGrants } = useStore();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);

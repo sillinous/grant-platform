@@ -16,15 +16,18 @@ export const FoundationScout990 = ({ onAdd }) => {
     };
 
     return (
-        <div>
-            <div style={{ marginBottom: 20 }}>
-                <h3 style={{ fontSize: 18, fontWeight: 900, color: T.text, margin: 0 }}>990-PF Deep Scout 🧐</h3>
-                <p style={{ color: T.mute, fontSize: 13, marginTop: 4 }}>Reverse-engineering private foundation priorities via IRS Form 990-PF Schedule I.</p>
+        <div style={{ padding: 20, animation: "fadeIn 0.4s" }}>
+            <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 24 }}>
+                <div style={{ fontSize: 24, padding: "8px", background: `${T.gold}11`, borderRadius: "8px" }}>🧐</div>
+                <div>
+                    <h2 style={{ fontSize: 24, fontWeight: 900, color: T.text, margin: 0 }}>990-PF Deep Scout</h2>
+                    <p style={{ color: T.mute, fontSize: 13, marginTop: 4 }}>Reverse-engineering private foundation priorities via IRS Form 990-PF Schedule I.</p>
+                </div>
             </div>
 
-            <Card style={{ marginBottom: 20 }}>
-                <div style={{ display: "flex", gap: 8 }}>
-                    <Input value={search} onChange={setSearch} placeholder="Enter foundation name or EIN (e.g. Gates Foundation)" />
+            <Card style={{ marginBottom: 20, background: T.panel }}>
+                <div style={{ display: "flex", gap: 12 }}>
+                    <Input value={search} onChange={setSearch} placeholder="Enter foundation name or EIN (e.g. Gates Foundation)" style={{ flex: 1 }} />
                     <Btn variant="primary" onClick={runAnalysis} disabled={loading}>{loading ? "Analyzing..." : "Analyze Filing"}</Btn>
                 </div>
             </Card>
@@ -63,22 +66,24 @@ export const FoundationScout990 = ({ onAdd }) => {
                                 </div>
                             </div>
                         ))}
-                        <Btn variant="ghost" size="sm" style={{ width: "100%", marginTop: 15 }}>Generate Connection Strategy</Btn>
-                        {onAdd && (
-                            <Btn variant="success" size="sm" style={{ width: "100%", marginTop: 8 }} onClick={() => {
-                                onAdd({
-                                    id: uid(),
-                                    title: search || "Foundation Target",
-                                    agency: "Private Foundation",
-                                    amount: 0,
-                                    deadline: "Rolling",
-                                    stage: "discovered",
-                                    description: `Identified via 990-PF Scout. Growth Rate: ${data.growthRate}.`,
-                                    category: "Foundation",
-                                    createdAt: new Date().toISOString()
-                                });
-                            }}>+ Track Foundation</Btn>
-                        )}
+                        <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+                            <Btn variant="primary" style={{ flex: 1 }}>Connection Strategy</Btn>
+                            {onAdd && (
+                                <Btn variant="success" onClick={() => {
+                                    onAdd({
+                                        id: uid(),
+                                        title: search || "Foundation Target",
+                                        agency: "Private Foundation",
+                                        amount: 0,
+                                        deadline: "Rolling",
+                                        stage: "discovered",
+                                        description: `Identified via 990-PF Scout. Growth Rate: ${data.growthRate}.`,
+                                        category: "Foundation",
+                                        createdAt: new Date().toISOString()
+                                    });
+                                }}>+ Track Foundation</Btn>
+                            )}
+                        </div>
                     </Card>
                 </div>
             )}

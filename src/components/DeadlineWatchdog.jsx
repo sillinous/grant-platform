@@ -1,8 +1,7 @@
-import React, { useMemo } from 'react';
-import { Card, Stat, Badge, Empty } from '../ui';
-import { T, fmtDate, daysUntil, STAGE_MAP } from '../globals';
+import { useStore } from '../store';
 
-export const DeadlineWatchdog = ({ grants, events }) => {
+export const DeadlineWatchdog = () => {
+  const { grants, events } = useStore();
   const allDeadlines = useMemo(() => {
     const items = [];
     grants.filter(g => g.deadline && !["declined","closeout","awarded","active"].includes(g.stage)).forEach(g => {
@@ -45,8 +44,16 @@ export const DeadlineWatchdog = ({ grants, events }) => {
   };
 
   return (
-    <div>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(5, 1fr)", gap:8, marginBottom:16 }}>
+    <div style={{ padding: 20, animation: "fadeIn 0.4s" }}>
+      <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 24 }}>
+        <div style={{ fontSize: 24, padding: "8px", background: `${T.red}11`, borderRadius: "8px" }}>⏰</div>
+        <div>
+          <h2 style={{ fontSize: 24, fontWeight: 900, color: T.text, margin: 0 }}>Deadline Watchdog</h2>
+          <p style={{ color: T.mute, fontSize: 13, marginTop: 4 }}>Monitor critical deadlines across your entire grant portfolio.</p>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, marginBottom: 24 }}>
         <Card><Stat label="Overdue" value={overdue.length} color={T.red} /></Card>
         <Card><Stat label="Critical (≤3d)" value={critical.length} color={T.orange} /></Card>
         <Card><Stat label="Urgent (≤7d)" value={urgent.length} color={T.yellow} /></Card>
@@ -64,8 +71,8 @@ export const DeadlineWatchdog = ({ grants, events }) => {
         </div>
       )}
 
-      <Card style={{ marginTop:16 }}>
-        <div style={{ fontSize:13, fontWeight:600, color:T.text, marginBottom:12 }}>📅 This Week</div>
+      <Card style={{ marginTop: 24, borderTop: `4px solid ${T.blue}` }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: T.text, marginBottom: 16 }}>📅 This Week</div>
         {(() => {
           const days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
           const today = new Date();

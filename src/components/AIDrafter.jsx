@@ -3,8 +3,14 @@ import { Card, Btn, Select, TextArea, Badge, Progress } from '../ui';
 import { API, buildPortfolioContext } from '../api';
 import { T, LS, uid, fmtDate } from '../globals';
 import { useOrganization } from '../context/OrganizationContext.jsx';
+import { useStore } from '../store';
 
-export const AIDrafter = ({ grants, vaultDocs, snapshots, setSnapshots, voicePersona, setVoicePersona, sections, setSections }) => {
+export const AIDrafter = () => {
+  const {
+    grants, vaultDocs, draftSnapshots: snapshots, setDraftSnapshots: setSnapshots,
+    orgVoicePersona: voicePersona, setOrgVoicePersona: setVoicePersona,
+    sectionLibrary: sections, setSectionLibrary: setSections
+  } = useStore();
   const { activeOrg } = useOrganization();
   const [prompt, setPrompt] = useState("");
   const [output, setOutput] = useState("");

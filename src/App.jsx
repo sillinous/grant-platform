@@ -75,7 +75,7 @@ import { CloseoutWizard } from './components/CloseoutWizard';
 import { PolicyModeler } from './components/PolicyModeler';
 import { ImpactMapper } from './components/ImpactMapper';
 import { ComplianceWizard } from './components/ComplianceWizard';
-
+import { useStore } from './store';
 
 
 const AppContent = () => {
@@ -87,23 +87,27 @@ const AppContent = () => {
     
     // For prototype, we will just share grants but change the sidebar
   const [page, setPage] = useState("dashboard");
-  const [grants, setGrants] = useState(() => LS.get("grants", []));
-  const [vaultDocs, setVaultDocs] = useState(() => LS.get("vault_docs", []));
-  const [contacts, setContacts] = useState(() => LS.get("contacts", []));
-  const [events, setEvents] = useState(() => LS.get("events", []));
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [collapsedGroups, setCollapsedGroups] = useState(() => LS.get("sidebar_collapsed", {}));
   const [toast, setToast] = useState(null);
-  const [onboardingComplete, setOnboardingComplete] = useState(() => LS.get("onboarding_complete", false));
-  const [sections, setSections] = useState(() => LS.get("section_library", []));
-  const [savedFunders, setSavedFunders] = useState(() => LS.get("saved_funders", []));
-  const [scoreHistory, setScoreHistory] = useState(() => LS.get("score_history", []));
-  const [draftSnapshots, setDraftSnapshots] = useState(() => LS.get("draft_snapshots", []));
-  const [voicePersona, setVoicePersona] = useState(() => LS.get("org_voice_persona", null));
-  const [tasks, setTasks] = useState(() => LS.get("tasks", []));
-  const [budgets, setBudgets] = useState(() => LS.get("budgets", {}));
   const [user, setUser] = useState(null);
   const [syncStatus, setSyncStatus] = useState("local");
+
+  const {
+    grants,
+    vaultDocs,
+    contacts,
+    events,
+    sidebarCollapsed, setSidebarCollapsed,
+    onboardingComplete, setOnboardingComplete,
+    sectionLibrary: sections,
+    savedFunders,
+    scoreHistory,
+    draftSnapshots,
+    orgVoicePersona: voicePersona,
+    tasks,
+    budgets,
+    syncFromCloud
+  } = useStore();
 
   useEffect(() => {
     auth.init((u) => {
@@ -111,18 +115,7 @@ const AppContent = () => {
       if (u) {
         cloud.pull().then((data) => {
           if (data) {
-            if (data.grants) setGrants(data.grants);
-            if (data.docs) setVaultDocs(data.docs);
-            if (data.contacts) setContacts(data.contacts);
-            if (data.events) setEvents(data.events);
-            if (data.library) setSections(data.library);
-            if (data.funders) setSavedFunders(data.funders);
-            if (data.scores) setScoreHistory(data.scores);
-            if (data.snapshots) setDraftSnapshots(data.snapshots);
-            if (data.onboarding !== undefined) setOnboardingComplete(data.onboarding);
-            if (data.voicePersona) setVoicePersona(data.voicePersona);
-            if (data.tasks) setTasks(data.tasks);
-            if (data.budgets) setBudgets(data.budgets);
+            syncFromCloud(data);
             showToast("Data synced from cloud", "success");
           }
         });
@@ -147,30 +140,16 @@ const AppContent = () => {
     }
   }, [grants]);
 
-  const debounceRef = useRef({});
-  const debouncedPersist = useCallback((key, value) => {
-    clearTimeout(debounceRef.current[key]);
-    debounceRef.current[key] = setTimeout(() => {
-      LS.set(key, value);
-      if (auth.user) {
+  // Cloud Sync on state change (throttled)
+  useEffect(() => {
+    if (auth.user) {
+      const timer = setTimeout(() => {
         setSyncStatus("syncing");
         cloud.push().then(() => setSyncStatus("synced")).catch(() => setSyncStatus("error"));
-      }
-    }, 1000);
-  }, []);
-
-  useEffect(() => { debouncedPersist("grants", grants); }, [grants, debouncedPersist]);
-  useEffect(() => { debouncedPersist("vault_docs", vaultDocs); }, [vaultDocs, debouncedPersist]);
-  useEffect(() => { debouncedPersist("contacts", contacts); }, [contacts, debouncedPersist]);
-  useEffect(() => { debouncedPersist("events", events); }, [events, debouncedPersist]);
-  useEffect(() => { debouncedPersist("section_library", sections); }, [sections, debouncedPersist]);
-  useEffect(() => { debouncedPersist("saved_funders", savedFunders); }, [savedFunders, debouncedPersist]);
-  useEffect(() => { debouncedPersist("score_history", scoreHistory); }, [scoreHistory, debouncedPersist]);
-  useEffect(() => { debouncedPersist("draft_snapshots", draftSnapshots); }, [draftSnapshots, debouncedPersist]);
-  useEffect(() => { debouncedPersist("org_voice_persona", voicePersona); }, [voicePersona, debouncedPersist]);
-  useEffect(() => { debouncedPersist("onboarding_complete", onboardingComplete); }, [onboardingComplete, debouncedPersist]);
-  useEffect(() => { debouncedPersist("tasks", tasks); }, [tasks, debouncedPersist]);
-  useEffect(() => { debouncedPersist("budgets", budgets); }, [budgets, debouncedPersist]);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [grants, vaultDocs, contacts, events, tasks, budgets, sections, savedFunders, scoreHistory, draftSnapshots, voicePersona, auth.user]);
 
   useEffect(() => {
     const backupInterval = setInterval(() => {
@@ -181,56 +160,6 @@ const AppContent = () => {
     }, 300000);
     return () => clearInterval(backupInterval);
   }, [grants, vaultDocs, contacts, events]);
-
-  const addGrant = (grant) => {
-    if (grant.oppNumber && grants.some(g => g.oppNumber === grant.oppNumber)) return;
-    if (grant.id && grants.some(g => g.id === grant.id)) return;
-    const newGrant = { ...grant, createdAt: new Date().toISOString() };
-    setGrants(prev => [...prev, newGrant]);
-
-    // Auto-generate standard pursuit tasks
-    const defaultTasks = [
-      { id: uid(), grantId: newGrant.id, title: "🔍 RFP Deep Dive", status: "todo", notes: "Initial review of requirements and eligibility.", priority: "high" },
-      { id: uid(), grantId: newGrant.id, title: "📋 Compliance Matrix", status: "todo", notes: "Draft the internal compliance and requirements matrix.", priority: "medium" },
-      { id: uid(), grantId: newGrant.id, title: "✍️ Narrative Skeleton", status: "todo", notes: "Build the initial draft framework based on the RFP.", priority: "high" },
-      { id: uid(), grantId: newGrant.id, title: "💰 Budget Alignment", status: "todo", notes: "Cross-check budget placeholders against award limits.", priority: "medium" }
-    ];
-    setTasks(prev => [...prev, ...defaultTasks]);
-
-    // Initialize budget with award ceiling as guideline
-    if (newGrant.amount > 0) {
-      setBudgets(prev => ({
-        ...prev,
-        [newGrant.id]: {
-          items: [
-            { id: uid(), category: "personnel", description: "Program Director / Lead", amount: Math.round(newGrant.amount * 0.4), quantity: 1, justification: "Estimated leadership for program implementation." },
-            { id: uid(), category: "other", description: "Operational Reserve", amount: Math.round(newGrant.amount * 0.6), quantity: 1, justification: "Balance of award ceiling for program activities." }
-          ],
-          updatedAt: new Date().toISOString()
-        }
-      }));
-    }
-
-    logActivity("grant_added", grant.title || "New Grant", { icon: "📈", color: T.green });
-    showToast(`Lead injected: ${defaultTasks.length} tasks generated`, "success");
-  };
-
-  const updateGrant = (id, updates) => {
-    setGrants(prev => prev.map(g => {
-      if (g.id !== id) return g;
-      const updated = { ...g, ...updates, updatedAt: new Date().toISOString() };
-      if (updates.stage && updates.stage !== g.stage) {
-        updated.stageHistory = [...(g.stageHistory || []), { from: g.stage || "new", to: updates.stage, date: new Date().toISOString() }];
-      }
-      return updated;
-    }));
-    showToast("Grant updated", "success");
-  };
-
-  const deleteGrant = (id) => {
-    setGrants(prev => prev.filter(x => x.id !== id));
-    showToast("Grant deleted", "info");
-  };
 
   useEffect(() => {
     const handler = (e) => {
@@ -289,45 +218,45 @@ const AppContent = () => {
 
   const renderPage = () => {
     switch (page) {
-      case "dashboard": return <Dashboard grants={grants} docs={vaultDocs} contacts={contacts} vaultDocs={vaultDocs} events={events} navigate={setPage} />;
-      case "exec_dash": return <ExecutiveDashboard grants={grants} />;
-      case "discovery": return <Discovery onAdd={addGrant} grants={grants} setGrants={setGrants} />;
-      case "pipeline": return <Pipeline grants={grants} updateGrant={updateGrant} deleteGrant={deleteGrant} />;
-      case "calendar": return <TimelineCalendar grants={grants} events={events} setEvents={setEvents} />;
-      case "rfp_parser": return <RFPParser grants={grants} onUpdate={updateGrant} tasks={tasks} setTasks={setTasks} />;
-      case "match_scorer": return <MatchScorer grants={grants} />;
-      case "preflight": return <PreFlightCheck grants={grants} vaultDocs={vaultDocs} />;
-      case "ai_drafter": return <AIDrafter grants={grants} vaultDocs={vaultDocs} snapshots={draftSnapshots} setSnapshots={setDraftSnapshots} voicePersona={voicePersona} setVoicePersona={setVoicePersona} sections={sections} setSections={setSections} />;
-      case "narrative_scorer": return <NarrativeScorer grants={grants} history={scoreHistory} setHistory={setScoreHistory} />;
-      case "submission_assembler": return <SubmissionAssembler grants={grants} vaultDocs={vaultDocs} sections={sections} />;
-      case "scenario_modeler": return <ScenarioModeler grants={grants} />;
-      case "section_library": return <SectionLibrary vaultDocs={vaultDocs} setVaultDocs={setVaultDocs} grants={grants} sections={sections} setSections={setSections} />;
-      case "budget": return <BudgetBuilder grants={grants} updateGrant={updateGrant} budgets={budgets} setBudgets={setBudgets} />;
-      case "vault": return <DocumentVault vaultDocs={vaultDocs} setVaultDocs={setVaultDocs} grants={grants} />;
-      case "compliance_tracker": return <ComplianceTracker grants={grants} updateGrant={updateGrant} />;
-      case "tasks": return <ActionPlan grants={grants} tasks={tasks} setTasks={setTasks} />;
-      case "action_plan": return <ActionPlan grants={grants} tasks={tasks} setTasks={setTasks} />;
-      case "awards": return <AwardManagement grants={grants} updateGrant={updateGrant} sections={sections} setSections={setSections} />;
-      case "outcomes": return <OutcomeTracker grants={grants} updateGrant={updateGrant} />;
-      case "closeout": return <CloseoutWizard grants={grants} updateGrant={updateGrant} />;
-      case "projector": return <FinancialProjector grants={grants} />;
+      case "dashboard": return <Dashboard />;
+      case "exec_dash": return <ExecutiveDashboard />;
+      case "discovery": return <Discovery />;
+      case "pipeline": return <Pipeline />;
+      case "calendar": return <TimelineCalendar />;
+      case "rfp_parser": return <RFPParser />;
+      case "match_scorer": return <MatchScorer />;
+      case "preflight": return <PreFlightCheck />;
+      case "ai_drafter": return <AIDrafter />;
+      case "narrative_scorer": return <NarrativeScorer />;
+      case "submission_assembler": return <SubmissionAssembler />;
+      case "scenario_modeler": return <ScenarioModeler />;
+      case "section_library": return <SectionLibrary />;
+      case "budget": return <BudgetBuilder />;
+      case "vault": return <DocumentVault />;
+      case "compliance_tracker": return <ComplianceTracker />;
+      case "tasks": return <ActionPlan />;
+      case "action_plan": return <ActionPlan />;
+      case "awards": return <AwardManagement />;
+      case "outcomes": return <OutcomeTracker />;
+      case "closeout": return <CloseoutWizard />;
+      case "projector": return <FinancialProjector />;
       case "forecast": return <LegislativeTracker />;
-      case "sentinel": return <GrantSentinel onAdd={addGrant} grants={grants} />;
-      case "advisor": return <StrategicAdvisor grants={grants} vaultDocs={vaultDocs} contacts={contacts} />;
-      case "network": return <RelationshipMap grants={grants} contacts={contacts} setContacts={setContacts} />;
-      case "funder_research": return <FunderResearch savedFunders={savedFunders} setSavedFunders={setSavedFunders} vaultDocs={vaultDocs} grants={grants} setGrants={setGrants} />;
-      case "optimizer": return <PortfolioOptimizer grants={grants} />;
-      case "portfolio_optimizer": return <PortfolioOptimizer grants={grants} />;
-      case "executive_summary": return <ExecutiveSummary grants={grants} tasks={tasks} budgets={budgets} />;
-      case "win_prob": return <WinProbabilityDashboard grant={grants.find(g => ["drafting", "reviewing", "submitting"].includes(g.stage)) || grants[0]} vaultDocs={vaultDocs} />;
-      case "winloss": return <WinLossAnalysis grants={grants} />;
-      case "impact": return <ImpactPortfolio grants={grants} />;
-      case "impact_predict": return <ImpactPredictor grants={grants} vaultDocs={vaultDocs} />;
-      case "advisory": return <AdvisoryBoard grants={grants} />;
-      case "funding_stacker": return <FundingStacker grants={grants} />;
-      case "policy_modeler": return <PolicyModeler grants={grants} />;
-      case "impact_mapper": return <ImpactMapper grants={grants} />;
-      case "compliance_wizard": return <ComplianceWizard grants={grants} />;
+      case "sentinel": return <GrantSentinel />;
+      case "advisor": return <StrategicAdvisor />;
+      case "network": return <RelationshipMap />;
+      case "funder_research": return <FunderResearch />;
+      case "optimizer": return <PortfolioOptimizer />;
+      case "portfolio_optimizer": return <PortfolioOptimizer />;
+      case "executive_summary": return <ExecutiveSummary />;
+      case "win_prob": return <WinProbabilityDashboard />;
+      case "winloss": return <WinLossAnalysis />;
+      case "impact": return <ImpactPortfolio />;
+      case "impact_predict": return <ImpactPredictor />;
+      case "advisory": return <AdvisoryBoard />;
+      case "funding_stacker": return <FundingStacker />;
+      case "policy_modeler": return <PolicyModeler />;
+      case "impact_mapper": return <ImpactMapper />;
+      case "compliance_wizard": return <ComplianceWizard />;
       case "settings": return <Settings showToast={showToast} />;
 
       // Org Specific
@@ -384,11 +313,11 @@ const AppContent = () => {
             const items = currentNavItems.filter(n => n.group === group);
             if (items.length === 0) return null;
             const label = group === "core" ? "" : group.toUpperCase();
-            const isCollapsed = collapsedGroups[group];
+            const isCollapsed = sidebarCollapsed[group];
             return (
               <div key={group}>
                 {sidebarOpen && label && (
-                  <div onClick={() => setCollapsedGroups({ ...collapsedGroups, [group]: !isCollapsed })} style={{ padding: "8px 12px 2px", fontSize: 9, fontWeight: 700, color: T.dim, letterSpacing: 1.5, cursor: "pointer", display: "flex", justifyContent: "space-between" }}>
+                  <div onClick={() => setSidebarCollapsed({ ...sidebarCollapsed, [group]: !isCollapsed })} style={{ padding: "8px 12px 2px", fontSize: 9, fontWeight: 700, color: T.dim, letterSpacing: 1.5, cursor: "pointer", display: "flex", justifyContent: "space-between" }}>
                     <span>{label}</span>
                     <span>{isCollapsed ? "▶" : "▼"}</span>
                   </div>
@@ -518,7 +447,7 @@ const AppContent = () => {
         </div>
       </div>
 
-      {!onboardingComplete && <OnboardingWizard onComplete={(profile) => { saveProfile(profile); setOnboardingComplete(true); LS.set("onboarding_complete", true); }} />}
+      {!onboardingComplete && <OnboardingWizard onComplete={(profile) => { LS.set("profile", profile); setOnboardingComplete(true); }} />}
       <AIChatBar grants={grants} vaultDocs={vaultDocs} contacts={contacts} />
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
     </div>

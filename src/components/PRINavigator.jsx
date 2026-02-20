@@ -15,37 +15,41 @@ export const PRINavigator = ({ onAdd }) => {
     }, []);
 
     return (
-        <div style={{ padding: 20 }}>
-            <div style={{ marginBottom: 24 }}>
-                <h2 style={{ fontSize: 22, fontWeight: 900, color: T.text, margin: 0 }}>PRI Navigator 🏦</h2>
-                <p style={{ color: T.mute, fontSize: 13, marginTop: 4 }}>Accessing Program-Related Investments: Low-interest, high-impact capital that foundations MUST deploy.</p>
+        <div style={{ padding: 20, animation: "fadeIn 0.4s" }}>
+            <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 24 }}>
+                <div style={{ fontSize: 24, padding: "8px", background: `${T.green}11`, borderRadius: "8px" }}>🏦</div>
+                <div>
+                    <h2 style={{ fontSize: 24, fontWeight: 900, color: T.text, margin: 0 }}>PRI Navigator</h2>
+                    <p style={{ color: T.mute, fontSize: 13, marginTop: 4 }}>Accessing Program-Related Investments: Low-interest, high-impact capital that foundations MUST deploy.</p>
+                </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                 {loading ? <div style={{ color: T.mute }}>Analyzing foundation balance sheets...</div> : 
                     signals.map(s => (
-                        <Card key={s.id} glow style={{ borderTop: `4px solid ${T.green}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 15 }}>
+                        <Card key={s.id} style={{ borderTop: `4px solid ${T.green}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
                                 <Badge color={T.green}>RATE: {s.rate}</Badge>
                                 <div style={{ textAlign: "right" }}>
-                                    <div style={{ fontSize: 10, color: T.mute }}>TERM</div>
-                                    <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{s.term}</div>
+                                    <div style={{ fontSize: 10, color: T.mute, fontWeight: 700, letterSpacing: 0.5 }}>TERM</div>
+                                    <div style={{ fontSize: 15, fontWeight: 800, color: T.text }}>{s.term}</div>
                                 </div>
                             </div>
 
-                            <h3 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0 }}>{s.foundation}</h3>
-                            <div style={{ fontSize: 20, fontWeight: 900, color: T.green, marginTop: 8 }}>{fmt(s.amount)}</div>
+                            <h3 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0, marginBottom: 8 }}>{s.foundation}</h3>
+                            <div style={{ fontSize: 24, fontWeight: 900, color: T.green, marginBottom: 16 }}>{fmt(s.amount)}</div>
                             
-                            <div style={{ marginTop: 15, padding: 10, background: `${T.shade}10`, borderRadius: 6, fontSize: 13, color: T.sub, lineHeight: 1.5 }}>
-                                🎯 <b>FOCUS:</b> {s.focus}<br/>
-                                <span style={{ fontSize: 12, marginTop: 5, display: "block" }}>{s.logic}</span>
+                            <div style={{ padding: 12, background: T.panel, borderRadius: 8, fontSize: 13, color: T.sub, lineHeight: 1.5, marginBottom: 20 }}>
+                                <div style={{ fontSize: 11, color: T.mute, fontWeight: 700, letterSpacing: 0.5, marginBottom: 4 }}>🎯 FOCUS</div>
+                                <div style={{ color: T.text, fontWeight: 600, marginBottom: 6 }}>{s.focus}</div>
+                                <span style={{ fontSize: 12, display: "block" }}>{s.logic}</span>
                             </div>
 
-                            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-                                <Btn variant="primary" style={{ flex: 1 }}>Submit Investment Prequel</Btn>
+                            <div style={{ display: "flex", gap: 10, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
+                                <Btn variant="primary" style={{ flex: 1 }}>Investment Prequel</Btn>
                                 <Btn variant="ghost">Tax Compliance</Btn>
                                 {onAdd && (
-                                    <Btn variant="success" size="sm" onClick={() => {
+                                    <Btn variant="success" onClick={() => {
                                         onAdd({
                                             id: uid(),
                                             title: s.foundation,
@@ -65,12 +69,11 @@ export const PRINavigator = ({ onAdd }) => {
                 }
             </div>
 
-            <Card style={{ marginTop: 30, background: `linear-gradient(90deg, ${T.green}10, transparent)`, borderColor: T.green + "33" }}>
-                <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-                    <div style={{ fontSize: 32 }}>📈</div>
-                    <div>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>The PRI Opportunity</div>
-                        <p style={{ fontSize: 12, color: T.sub, margin: "4px 0 0" }}>Program-Related Investments count towards a foundation's mandatory 5% annual payout but are often underutilized. For you, this is "Recoverable Funding" that builds organizational credit.</p>
+            <Card style={{ marginTop: 24, background: `linear-gradient(90deg, ${T.green}11, transparent)`, borderColor: T.green + "33", borderLeft: `4px solid ${T.green}` }}>
+                <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+                    <div style={{ fontSize: 24 }}>📈</div>
+                    <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.5 }}>
+                        <strong style={{ color: T.text, display: "block", marginBottom: 4 }}>The PRI Opportunity</strong> Program-Related Investments count towards a foundation's mandatory 5% annual payout but are often underutilized. For you, this is "Recoverable Funding" that builds organizational credit.
                     </div>
                 </div>
             </Card>

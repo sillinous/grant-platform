@@ -1,171 +1,91 @@
-import React, { useState } from "react";
-import { STAGES, STAGE_MAP, T, fmt, daysUntil, fmtDate } from "../globals";
-import { Badge, Card, Btn, Input, Select, TextArea, Modal } from "../ui";
+import React, { useState } from 'react';
+import { Card, Badge, Btn, Stat, Progress, Empty, Modal, Tab } from '../ui';
+import { T, fmt, fmtDate, daysUntil, STAGE_MAP, uid } from '../globals';
+import { useStore } from '../store';
 
-// ════════════════════════════════════════════════════════════════════════
-// MODULE: GRANT PIPELINE (KANBAN BOARD)
-// ════════════════════════════════════════════════════════════════════════
-export const Pipeline = ({ grants, updateGrant, deleteGrant }) => {
-  const [selected, setSelected] = useState(null);
-  const [draggedGrant, setDraggedGrant] = useState(null);
-  const [dragOverCol, setDragOverCol] = useState(null);
-  const [showArchived, setShowArchived] = useState(false);
+export const Pipeline = () => {
+    const { grants, updateGrant, deleteGrant } = useStore();
+    const [filter, setFilter] = useState("all");
+    const [selectedGrant, setSelectedGrant] = useState(null);
 
-  // Group grants by stage
-  const columns = STAGES
-    .filter(s => showArchived || s.id !== "archived")
-    .map(stage => ({
-      ...stage,
-      items: grants.filter(g => g.stage === stage.id).sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
-    }));
+    const STAGES = Object.entries(STAGE_MAP).map(([id, data]) => ({ id, ...data }));
 
-  const moveGrant = (grant, direction) => {
-    const currentIndex = STAGES.findIndex(s => s.id === grant.stage);
-    const newIndex = currentIndex + direction;
-    if (newIndex >= 0 && newIndex < STAGES.length) {
-      updateGrant(grant.id, { stage: STAGES[newIndex].id });
-    }
-  };
+    const filtered = grants.filter(g => filter === "all" || g.stage === filter);
 
-  const onDragStart = (e, grant) => {
-    setDraggedGrant(grant);
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", grant.id);
-  };
+    const handleStageChange = (id, newStage) => {
+        updateGrant(id, { stage: newStage });
+    };
 
-  const onDragOver = (e, colId) => {
-    e.preventDefault();
-    setDragOverCol(colId);
-  };
-
-  const onDrop = (e, colId) => {
-    e.preventDefault();
-    setDragOverCol(null);
-    if (draggedGrant && draggedGrant.stage !== colId) {
-      updateGrant(draggedGrant.id, { stage: colId });
-    }
-    setDraggedGrant(null);
-  };
-
-  const getStageColor = (stageId) => STAGE_MAP[stageId]?.color || T.mute;
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 140px)" }}>
-      <div style={{ display: "flex", justifyContent: "flex-end", padding: "0 16px 12px" }}>
-        <button
-          onClick={() => setShowArchived(!showArchived)}
-          style={{
-            background: "none", border: `1px solid ${showArchived ? T.amber : T.border}`,
-            color: showArchived ? T.amber : T.sub, padding: "4px 8px", borderRadius: 4,
-            fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", gap: 4
-          }}
-        >
-          {showArchived ? "📂 Hide Archived" : "📁 Show Archived"}
-        </button>
-      </div>
-
-      <div style={{ flex: 1, overflowX: "auto", overflowY: "hidden", display: "flex", gap: 16, paddingBottom: 12 }}>
-        {columns.map(col => (
-          <div key={col.id}
-            onDragOver={(e) => onDragOver(e, col.id)}
-            onDragLeave={() => setDragOverCol(null)}
-            onDrop={(e) => onDrop(e, col.id)}
-            style={{
-              minWidth: 300, width: 300, display: "flex", flexDirection: "column",
-              background: dragOverCol === col.id ? `${T.panel}cc` : T.panel,
-              borderRadius: 12, border: `1px solid ${dragOverCol === col.id ? T.blue : T.border}`,
-              maxHeight: "100%", transition: "all 0.2s"
-            }}>
-            {/* Column Header */}
-            <div style={{ padding: "12px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", background: getStageColor(col.id) + "10", borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 16 }}>{col.icon}</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{col.label}</span>
-              </div>
-              <Badge color={col.items.length > 0 ? getStageColor(col.id) : T.mute} style={{ fontSize: 11 }}>{col.items.length}</Badge>
-            </div>
-
-            {/* Column Content */}
-            <div style={{ flex: 1, overflowY: "auto", padding: 12, display: "flex", flexDirection: "column", gap: 10 }}>
-              {col.items.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "20px 0", color: T.dim, fontSize: 12, border: `2px dashed ${T.border}`, borderRadius: 8 }}>
-                  No grants
+    return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", gap: 8, background: T.panel, padding: 4, borderRadius: 8 }}>
+                    <Btn size="xs" variant={filter === "all" ? "primary" : "ghost"} onClick={() => setFilter("all")}>All Pursuits</Btn>
+                    {STAGES.map(s => (
+                        <Btn key={s.id} size="xs" variant={filter === s.id ? "primary" : "ghost"} onClick={() => setFilter(s.id)}>
+                            {s.label}
+                        </Btn>
+                    ))}
                 </div>
-              ) : (
-                col.items.map(g => (
-                  <div key={g.id}
-                    draggable
-                    onDragStart={(e) => onDragStart(e, g)}
-                    style={{ opacity: draggedGrant?.id === g.id ? 0.5 : 1 }}>
-                    <Card style={{ padding: 12, cursor: "grab", borderLeft: `3px solid ${getStageColor(g.stage)}` }} onClick={() => setSelected(g)}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 4, lineHeight: 1.4 }}>
-                        {g.title?.slice(0, 50)}...
-                      </div>
-                      <div style={{ fontSize: 11, color: T.mute, marginBottom: 8 }}>{g.agency}</div>
+                <Stat label="Total Pipeline Value" value={fmt(grants.reduce((s, g) => s + (g.amount || 0), 0))} color={T.amber} size="sm" />
+            </div>
 
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: T.green }}>{g.amount > 0 ? fmt(g.amount) : "—"}</div>
-                        {g.deadline && <div style={{ fontSize: 10, color: daysUntil(g.deadline) <= 14 ? T.red : T.sub }}>{fmtDate(g.deadline)}</div>}
-                      </div>
+            {filtered.length === 0 ? (
+                <Empty icon="🚀" title="No grants in this stage" sub="Move grants through the pipeline or discover new ones in the Discovery Hub." />
+            ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
+                    {filtered.map(g => (
+                        <Card key={g.id} style={{ borderLeft: `4px solid ${STAGE_MAP[g.stage]?.color || T.border}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                                <div>
+                                    <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{g.title}</div>
+                                    <div style={{ fontSize: 11, color: T.mute }}>{g.agency}</div>
+                                </div>
+                                <Badge color={STAGE_MAP[g.stage]?.color}>{STAGE_MAP[g.stage]?.label}</Badge>
+                            </div>
 
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 8, borderTop: `1px solid ${T.border}` }}>
-                        <button onClick={(e) => { e.stopPropagation(); moveGrant(g, -1); }} disabled={col.id === STAGES[0].id}
-                          style={{ background: "none", border: "none", cursor: col.id === STAGES[0].id ? "default" : "pointer", opacity: col.id === STAGES[0].id ? 0.2 : 0.6, fontSize: 14 }}>
-                          ◀
-                        </button>
-                        <div style={{ display: "flex", gap: 4 }}>
-                          {g.tags?.slice(0, 2).map(t => <div key={t} style={{ width: 6, height: 6, borderRadius: "50%", background: T.blue }} title={t} />)}
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                                <div style={{ fontSize: 16, fontWeight: 800, color: T.green }}>{fmt(g.amount || 0)}</div>
+                                <div style={{ fontSize: 10, color: T.sub }}>{g.deadline ? `Due: ${fmtDate(g.deadline)}` : "No deadline"}</div>
+                            </div>
+
+                            <div style={{ display: "flex", gap: 4 }}>
+                                <select
+                                    value={g.stage}
+                                    onChange={(e) => handleStageChange(g.id, e.target.value)}
+                                    style={{ flex: 1, background: T.panel, border: `1px solid ${T.border}`, borderRadius: 4, fontSize: 11, color: T.text, padding: "4px 8px" }}
+                                >
+                                    {STAGES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                                </select>
+                                <Btn size="sm" variant="ghost" onClick={() => setSelectedGrant(g)}>Details</Btn>
+                                <Btn size="sm" variant="ghost" onClick={() => deleteGrant(g.id)}>🗑️</Btn>
+                            </div>
+                        </Card>
+                    ))}
+                    </div>
+            )}
+
+            {selectedGrant && (
+                <Modal open={!!selectedGrant} onClose={() => setSelectedGrant(null)} title={selectedGrant.title} width={600}>
+                    <div style={{ display: "grid", gap: 16 }}>
+                        <div>
+                            <div style={{ fontSize: 11, color: T.mute, marginBottom: 4 }}>DESCRIPTION</div>
+                            <div style={{ fontSize: 13, color: T.text, lineHeight: 1.6 }}>{selectedGrant.description || "No description provided."}</div>
                         </div>
-                        <button onClick={(e) => { e.stopPropagation(); moveGrant(g, 1); }} disabled={col.id === STAGES[STAGES.length - 1].id}
-                          style={{ background: "none", border: "none", cursor: col.id === STAGES[STAGES.length - 1].id ? "default" : "pointer", opacity: col.id === STAGES[STAGES.length - 1].id ? 0.2 : 0.6, fontSize: 14 }}>
-                          ▶
-                        </button>
-                      </div>
-                    </Card>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Detail Modal */}
-      <Modal open={!!selected} onClose={() => setSelected(null)} title="Grant Details" width={500}>
-        {selected && (
-          <div>
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 16, fontWeight: 600, color: T.text, marginBottom: 4 }}>{selected.title}</div>
-              <div style={{ fontSize: 12, color: T.mute }}>{selected.agency}</div>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
-              <div>
-                <label style={{ fontSize: 11, color: T.mute, display: "block", marginBottom: 4 }}>Stage</label>
-                <Select value={selected.stage} onChange={v => { updateGrant(selected.id, { stage: v }); setSelected({ ...selected, stage: v }); }}
-                  options={STAGES.map(s => ({ value: s.id, label: `${s.icon} ${s.label}` }))} style={{ width: "100%" }} />
-              </div>
-              <div>
-                <label style={{ fontSize: 11, color: T.mute, display: "block", marginBottom: 4 }}>Amount</label>
-                <Input type="number" value={selected.amount || ""} onChange={v => { updateGrant(selected.id, { amount: Number(v) }); setSelected({ ...selected, amount: Number(v) }); }} placeholder="Award amount" />
-              </div>
-              <div>
-                <label style={{ fontSize: 11, color: T.mute, display: "block", marginBottom: 4 }}>Deadline</label>
-                <Input type="date" value={selected.deadline?.split("T")[0] || ""} onChange={v => { updateGrant(selected.id, { deadline: v }); setSelected({ ...selected, deadline: v }); }} />
-              </div>
-            </div>
-            <label style={{ fontSize: 11, color: T.mute, display: "block", marginBottom: 4 }}>Notes</label>
-            <TextArea value={selected.notes || ""} onChange={v => { updateGrant(selected.id, { notes: v }); setSelected({ ...selected, notes: v }); }} placeholder="Add notes..." rows={4} />
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
-              {selected.stage !== "archived" ? (
-                <Btn variant="ghost" size="sm" onClick={() => { updateGrant(selected.id, { stage: "archived" }); setSelected(null); }}>📁 Archive</Btn>
-              ) : (
-                <Btn variant="ghost" size="sm" onClick={() => { updateGrant(selected.id, { stage: "discovered" }); setSelected(null); }}>📂 Unarchive</Btn>
-              )}
-              <Btn variant="danger" size="sm" onClick={() => { deleteGrant(selected.id); setSelected(null); }}>🗑️ Delete</Btn>
-            </div>
-          </div>
-        )}
-      </Modal>
-    </div>
-  );
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                            <Card style={{ background: T.panel }}>
+                                <Stat label="Amount" value={fmt(selectedGrant.amount || 0)} color={T.green} />
+                            </Card>
+                            <Card style={{ background: T.panel }}>
+                                <Stat label="Days Remaining" value={selectedGrant.deadline ? daysUntil(selectedGrant.deadline) : "N/A"} color={T.amber} />
+                            </Card>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                            <Btn variant="primary" onClick={() => setSelectedGrant(null)}>Close</Btn>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+        </div>
+    );
 };

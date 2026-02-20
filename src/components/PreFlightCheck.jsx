@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { Card, Btn, Badge, Progress, Empty, Select, TextArea } from '../ui';
 import { T, LS, uid, PROFILE } from '../globals';
 import { API } from '../api';
+import { useStore } from '../store';
 
-export const PreFlightCheck = ({ grants, vaultDocs }) => {
+export const PreFlightCheck = () => {
+    const { grants, vaultDocs } = useStore();
     const [selectedGrant, setSelectedGrant] = useState("");
     const [loading, setLoading] = useState(false);
     const [report, setReport] = useState(null);

@@ -1,9 +1,7 @@
-import React, { useState } from 'react';
-import { Card, Btn, TextArea, Badge, Progress, Select } from '../ui';
-import { API } from '../api';
-import { T, fmt, fmtDate, PROFILE } from '../globals';
+import { useStore } from '../store';
 
-export const RFPParser = ({ grants, onUpdate, tasks, setTasks }) => {
+export const RFPParser = () => {
+  const { grants, updateGrant: onUpdate, tasks, setTasks } = useStore();
   const [rawText, setRawText] = useState("");
   const [parsed, setParsed] = useState(null);
   const [loading, setLoading] = useState(false);

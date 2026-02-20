@@ -1,19 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { Card, Btn, Badge } from '../ui';
-import { LS, T, fmt, fmtDate } from '../globals';
+import { useStore } from '../store';
 
-// Simulated hashing logic for "immutable" audit trail
-const hashLog = (log) => {
-  const str = `${log.id}${log.date}${log.title}`;
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) - hash) + str.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash).toString(16).padStart(8, '0').toUpperCase();
-};
-
-export const ActivityLog = ({ grants }) => {
+export const ActivityLog = () => {
+  const { grants } = useStore();
   /* eslint-disable-next-line no-unused-vars */
   const [logs] = useState(() => LS.get("activity_log", []));
 

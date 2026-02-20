@@ -48,8 +48,8 @@ export const UniversalApplication = ({ opportunity, onClose }) => {
     if (!opportunity) return null;
 
     return (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.8)", zIndex: 9999, display: "flex", justifyContent: "center", alignItems: "center", backdropFilter: "blur(4px)" }}>
-            <Card style={{ width: 800, maxHeight: "90vh", overflowY: "auto", position: "relative", border: `1px solid ${T.border}`, boxShadow: `0 20px 50px rgba(0,0,0,0.5)` }}>
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.8)", zIndex: 9999, display: "flex", justifyContent: "center", alignItems: "center", backdropFilter: "blur(4px)", animation: "fadeIn 0.2s" }}>
+            <Card style={{ width: 800, maxHeight: "90vh", overflowY: "auto", position: "relative", border: `1px solid ${T.border}`, boxShadow: `0 20px 50px rgba(0,0,0,0.5)`, background: T.card }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, alignItems: "center" }}>
                     <div>
                         <h2 style={{ margin: 0, fontSize: 20, color: T.text }}>Universal Application Engine ⚡</h2>
@@ -63,8 +63,8 @@ export const UniversalApplication = ({ opportunity, onClose }) => {
                     <div style={{ fontSize: 16, fontWeight: 700, color: T.text }}>{opportunity.title}</div>
                     <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                         <Badge color={T.blue}>{opportunity.agency || "Private Funder"}</Badge>
-                        <Badge color={T.green}>{fmt(opportunity.amount)}</Badge>
-                        <Badge color={T.amber}>{opportunity.type || "Grant"}</Badge>
+                        {opportunity.amount && <Badge color={T.green}>{fmt(opportunity.amount)}</Badge>}
+                        <Badge color={T.amber}>{opportunity.type || (opportunity.category ? opportunity.category : "Grant")}</Badge>
                     </div>
                 </div>
 

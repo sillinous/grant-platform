@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
-import { Card, Input, Btn, Select, TextArea, Stat, Empty, Progress } from '../ui';
-import { T, uid, fmt, fmtDate, daysUntil } from '../globals';
+import { useStore } from '../store';
 
-export const OutcomeTracker = ({ grants, updateGrant }) => {
+export const OutcomeTracker = () => {
+  const { grants, updateGrant } = useStore();
   const awarded = grants.filter(g => ["awarded","active","closeout"].includes(g.stage));
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(false);

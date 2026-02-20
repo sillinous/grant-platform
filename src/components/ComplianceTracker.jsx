@@ -1,8 +1,7 @@
-﻿import React, { useState } from 'react';
-import { Card, Stat, Empty, Badge, Progress } from '../ui';
-import { T, STAGE_MAP, pct } from '../globals';
+﻿import { useStore } from '../store';
 
-export const ComplianceTracker = ({ grants, updateGrant }) => {
+export const ComplianceTracker = () => {
+  const { grants, updateGrant } = useStore();
   const [selectedId, setSelectedId] = useState(null);
 
   const activeGrants = grants.filter(g => ["awarded", "active", "preparing", "drafting", "submitted"].includes(g.stage));

@@ -1,9 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { T, fmt, PROFILE, getProfileState, uid } from '../globals';
-import { API } from '../api';
-import { Card, Badge, Btn, Empty } from '../ui';
+import { useStore } from '../store';
 
-export const RegionalPulse = ({ onAdd }) => {
+export const RegionalPulse = () => {
+    const { addGrant: onAdd } = useStore();
     const [foundations, setFoundations] = useState([]);
     const [incentives, setIncentives] = useState([]);
     const [signals, setSignals] = useState([]);
@@ -76,13 +74,22 @@ export const RegionalPulse = ({ onAdd }) => {
                 {/* 2. EDC Incentives */}
                 <div>
                     <div style={{ fontSize: 13, fontWeight: 800, color: T.mute, letterSpacing: 1.5, marginBottom: 16 }}>🏗️ REGIONAL INCENTIVES</div>
-                    <div style={{ display: "grid", gap: 10 }}>
+                    <div style={{ display: "grid", gap: 12 }}>
+                        {incentives.length === 0 && !loading && <Empty icon="🏢" title="No Incentives" sub="No current EDC incentives." />}
                         {incentives.map(i => (
                             <Card key={i.id} style={{ borderLeft: `3px solid ${T.amber}`, background: `${T.amber}05` }}>
-                                <div style={{ fontSize: 10, color: T.mute, marginBottom: 4 }}>{i.agency}</div>
-                                <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{i.title}</div>
-                                <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>{i.description}</div>
-                                <Btn size="xs" variant="primary" style={{ marginTop: 10, width: "100%" }}>Check Eligibility</Btn>
+                                <div style={{ fontSize: 11, color: T.sub, marginBottom: 6 }}>{i.agency}</div>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 6 }}>{i.title}</div>
+                                <div style={{ fontSize: 12, color: T.sub, lineHeight: 1.4, marginBottom: 12 }}>{i.description}</div>
+                                <div style={{ display: "flex", gap: 8 }}>
+                                    <Btn size="sm" variant="primary" style={{ flex: 1 }}>Check Eligibility</Btn>
+                                    {onAdd && (
+                                        <Btn size="sm" variant="success" onClick={() => onAdd({
+                                            id: uid(), title: i.title, agency: i.agency, stage: "discovered", description: i.description, category: i.type,
+                                            createdAt: new Date().toISOString()
+                                        })}>+ Track</Btn>
+                                    )}
+                                </div>
                             </Card>
                         ))}
                     </div>
@@ -94,16 +101,25 @@ export const RegionalPulse = ({ onAdd }) => {
                 {/* 1. Community Intelligence (Whisper Feed) */}
                 <div>
                     <div style={{ fontSize: 13, fontWeight: 800, color: T.mute, letterSpacing: 1.5, marginBottom: 16 }}>📡 COMMUNITY INTELLIGENCE</div>
-                    <div style={{ display: "grid", gap: 10 }}>
+                    <div style={{ display: "grid", gap: 12 }}>
+                        {signals.length === 0 && !loading && <Empty icon="💬" title="No Signals" sub="No whisper feed signals found locally." />}
                         {signals.map(s => (
                             <Card key={s.id} style={{ borderLeft: `3px solid ${T.blue}`, background: `${T.blue}05` }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                                     <Badge color={T.blue}>{s.type}</Badge>
-                                    <span style={{ fontSize: 10, fontWeight: 700, color: T.green }}>{Math.round(s.probability * 100)}% Confidence</span>
+                                    <span style={{ fontSize: 11, fontWeight: 700, color: T.green }}>{Math.round(s.probability * 100)}% Confidence</span>
                                 </div>
-                                <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{s.title}</div>
-                                <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>{s.description}</div>
-                                <div style={{ fontSize: 10, color: T.mute, marginTop: 8 }}>Timing: <b style={{ color: T.blue }}>{s.timing}</b></div>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 6 }}>{s.title}</div>
+                                <div style={{ fontSize: 12, color: T.sub, lineHeight: 1.4, marginBottom: 8 }}>{s.description}</div>
+                                <div style={{ fontSize: 11, color: T.mute, marginBottom: 12, background: T.panel, padding: "4px 8px", borderRadius: 4, display: "inline-block" }}>
+                                    Timing: <b style={{ color: T.blue }}>{s.timing}</b>
+                                </div>
+                                {onAdd && (
+                                    <Btn size="sm" variant="ghost" style={{ width: "100%", textAlign: "center" }} onClick={() => onAdd({
+                                        id: uid(), title: s.title, agency: s.agency, stage: "discovered", description: `Confidence: ${Math.round(s.probability * 100)}% - ${s.description}`, category: s.type,
+                                        createdAt: new Date().toISOString()
+                                    })}>+ Track Signal</Btn>
+                                )}
                             </Card>
                         ))}
                     </div>
@@ -112,15 +128,22 @@ export const RegionalPulse = ({ onAdd }) => {
                 {/* 2. Charity Consortiums */}
                 <div>
                     <div style={{ fontSize: 13, fontWeight: 800, color: T.mute, letterSpacing: 1.5, marginBottom: 16 }}>💎 NICHE PRIVATE GRANTS</div>
-                    <div style={{ display: "grid", gap: 10 }}>
+                    <div style={{ display: "grid", gap: 12 }}>
+                        {charities.length === 0 && !loading && <Empty icon="🤝" title="No Consortiums" sub="No niche private consortiums found locally." />}
                         {charities.map(c => (
                             <Card key={c.id} style={{ borderLeft: `3px solid ${T.green}`, background: `${T.green}05` }}>
-                                <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{c.title}</div>
-                                <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>{c.description}</div>
-                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
-                                    <span style={{ fontSize: 12, fontWeight: 700, color: T.green }}>{fmt(c.amount)}</span>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 6 }}>{c.title}</div>
+                                <div style={{ fontSize: 12, color: T.sub, lineHeight: 1.4, marginBottom: 12 }}>{c.description}</div>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                                    <span style={{ fontSize: 15, fontWeight: 800, color: T.green }}>{fmt(c.amount)}</span>
                                     <Badge color={T.green}>Private Pool</Badge>
                                 </div>
+                                {onAdd && (
+                                    <Btn size="sm" variant="success" style={{ width: "100%" }} onClick={() => onAdd({
+                                        id: uid(), title: c.title, agency: c.agency, amount: c.amount, stage: "discovered", description: c.description, category: c.type,
+                                        createdAt: new Date().toISOString()
+                                    })}>+ Track Grant</Btn>
+                                )}
                             </Card>
                         ))}
                     </div>

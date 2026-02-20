@@ -17,11 +17,14 @@ export const PolicySentinel = ({ onAdd }) => {
     }, []);
 
     return (
-        <div style={{ padding: 20 }}>
+        <div style={{ padding: 20, animation: "fadeIn 0.4s" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 30 }}>
-                <div>
-                    <h2 style={{ fontSize: 24, fontWeight: 900, color: T.text, margin: 0 }}>Policy Sentinel</h2>
-                    <p style={{ color: T.mute, fontSize: 13, marginTop: 4 }}>Legislative & Regulatory Intelligence Feed</p>
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                    <div style={{ fontSize: 24, padding: "8px", background: `${T.purple}11`, borderRadius: "8px" }}>⚖️</div>
+                    <div>
+                        <h2 style={{ fontSize: 24, fontWeight: 900, color: T.text, margin: 0 }}>Policy Sentinel</h2>
+                        <p style={{ color: T.mute, fontSize: 13, marginTop: 4 }}>Legislative & Regulatory Intelligence Feed</p>
+                    </div>
                 </div>
                 <div style={{ display: "flex", gap: 10 }}>
                     <Stat label="ACTIVE BILLS" value="14" color={T.blue} />
@@ -34,22 +37,22 @@ export const PolicySentinel = ({ onAdd }) => {
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                     {loading ? <div style={{ color: T.mute }}>Scanning legislative records...</div> : 
                         signals.map(s => (
-                            <Card key={s.id} glow style={{ borderLeft: `4px solid ${s.sentiment === 'positive' ? T.green : T.red}` }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                            <Card key={s.id} style={{ borderLeft: `4px solid ${s.sentiment === 'positive' ? T.green : T.red}` }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
                                     <div style={{ display: "flex", gap: 8 }}>
                                         <Badge color={s.sentiment === 'positive' ? T.green : T.red}>
                                             {s.sentiment.toUpperCase()}
                                         </Badge>
                                         <Badge color={T.blue}>{s.agency}</Badge>
                                     </div>
-                                    <span style={{ fontSize: 11, color: T.mute }}>{s.date}</span>
+                                    <span style={{ fontSize: 12, color: T.mute }}>{s.date}</span>
                                 </div>
-                                <h3 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0 }}>{s.title}</h3>
-                                <p style={{ fontSize: 13, color: T.sub, marginTop: 10, lineHeight: 1.5 }}>{s.description}</p>
-                                <div style={{ display: "flex", gap: 6, marginTop: 15 }}>
-                                    {s.tags.map(t => <Badge key={t} size="xs" color={T.shade}>{t}</Badge>)}
+                                <h3 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0, marginBottom: 8 }}>{s.title}</h3>
+                                <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.6, padding: "12px", background: T.panel, borderRadius: "6px" }}>{s.description}</div>
+                                <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
+                                    {s.tags.map(t => <Badge key={t} color={T.shade}>{t}</Badge>)}
                                 </div>
-                                <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 20, paddingTop: 15, borderTop: `1px solid ${T.border}` }}>
+                                <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16, paddingTop: 16, borderTop: `1px solid ${T.border}` }}>
                                     <Btn variant="ghost" size="sm">Regulatory Analysis</Btn>
                                     <Btn variant="primary" size="sm">Draft Rebuttal/Support</Btn>
                                     {onAdd && (

@@ -1,8 +1,11 @@
 ﻿import React, { useState } from 'react';
-import { Card, Badge, Progress, Tab, Input, Select, Btn } from '../ui';
+import { Card, Badge, Progress, Tab, Input, Select, Btn, Stat, Empty } from '../ui';
 import { T, fmt, pct, daysUntil, STAGE_MAP } from '../globals';
+import { API } from '../api';
+import { useStore } from '../store';
 
-export const AwardManagement = ({ grants, updateGrant }) => {
+export const AwardManagement = () => {
+  const { grants, updateGrant, setSectionLibrary: setSections } = useStore();
   const awarded = grants.filter(g => ["awarded", "active", "closeout"].includes(g.stage));
   const [selectedId, setSelectedId] = useState(null);
 

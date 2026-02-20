@@ -1,9 +1,11 @@
-import React from 'react';
-import { Card, Stat, Badge, Progress, MiniBar, Btn, Icon } from '../ui';
+import React, { useState } from 'react';
+import { Card, Stat, Btn, Progress, Badge, MiniBar, Icon } from '../ui';
 import { T, fmt, STAGE_MAP } from '../globals';
+import { useStore } from '../store';
 import { StrategyModeler } from './StrategyModeler';
 
-export const ExecutiveDashboard = ({ grants }) => {
+export const ExecutiveDashboard = () => {
+  const { grants } = useStore();
   const [boardReady, setBoardReady] = React.useState(false);
   const [showForecast, setShowForecast] = React.useState(false);
 

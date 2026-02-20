@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Card, Btn, Badge, Select, Empty, Modal } from '../ui';
 import { T, fmt, fmtDate, LS, uid } from '../globals';
+import { useStore } from '../store';
 
-export const SubmissionAssembler = ({ grants, vaultDocs, sections }) => {
+export const SubmissionAssembler = () => {
+    const { grants, vaultDocs, sectionLibrary: sections } = useStore();
     const [selectedGrantId, setSelectedGrantId] = useState("");
     const [manifest, setManifest] = useState([]);
     const [isExporting, setIsExporting] = useState(false);
@@ -42,10 +44,16 @@ export const SubmissionAssembler = ({ grants, vaultDocs, sections }) => {
     };
 
     return (
-        <div>
-            <Card style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>📦 Submission Assembler</div>
-                <div style={{ fontSize: 11, color: T.sub, marginBottom: 16 }}>Bundle your narratives, budgets, and vault documents into a final submission-ready package.</div>
+        <div style={{ padding: 20, animation: "fadeIn 0.4s" }}>
+            <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 24 }}>
+                <div style={{ fontSize: 24, padding: "8px", background: `${T.blue}11`, borderRadius: "8px" }}>📦</div>
+                <div>
+                    <h2 style={{ fontSize: 24, fontWeight: 900, color: T.text, margin: 0 }}>Submission Assembler</h2>
+                    <p style={{ color: T.mute, fontSize: 13, marginTop: 4 }}>Bundle your narratives, budgets, and vault documents into a final submission-ready package.</p>
+                </div>
+            </div>
+
+            <Card style={{ marginBottom: 16, borderTop: `4px solid ${T.blue}` }}>
                 
                 <Select 
                     value={selectedGrantId} 

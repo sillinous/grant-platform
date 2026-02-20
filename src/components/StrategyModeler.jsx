@@ -1,8 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { Card, Stat, Btn, Progress } from '../ui';
 import { T, fmt } from '../globals';
+import { useStore } from '../store';
 
-export const StrategyModeler = ({ grants }) => {
+export const StrategyModeler = () => {
+    const { grants } = useStore();
     const pipeline = grants.filter(g => !["awarded", "declined"].includes(g.stage));
     
     // Default confidence per stage

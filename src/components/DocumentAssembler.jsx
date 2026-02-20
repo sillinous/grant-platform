@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { Card, Btn, Select, TextArea, Stat, Badge, Empty } from '../ui';
 import { LS, T, uid } from '../globals';
+import { useStore } from '../store';
 
-export const DocumentAssembler = ({ grants, vaultDocs, setVaultDocs }) => {
+export const DocumentAssembler = () => {
+  const { grants, vaultDocs, setVaultDocs } = useStore();
   const [selectedGrant, setSelectedGrant] = useState("");
   const [sections, setSections] = useState([]);
   const [assembled, setAssembled] = useState("");

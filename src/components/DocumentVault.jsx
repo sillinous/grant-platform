@@ -2,8 +2,10 @@
 import { Card, Btn, Stat, Empty, Badge, Input, Select, TextArea, Modal } from '../ui';
 import { T, uid, fmtDate } from '../globals';
 import { API } from '../api';
+import { useStore } from '../store';
 
-export const DocumentVault = ({ vaultDocs, setVaultDocs }) => {
+export const DocumentVault = () => {
+    const { vaultDocs, setVaultDocs } = useStore();
     const [search, setSearch] = useState("");
     const [showAdd, setShowAdd] = useState(false);
     const [selected, setSelected] = useState(null);

@@ -1,9 +1,7 @@
-import React, { useState } from 'react';
-import { Card, Btn } from '../ui';
-import { T, LS, fmt, fmtDate, STAGE_MAP } from '../globals';
-import { API, buildPortfolioContext } from '../api';
+import { useStore } from '../store';
 
-export const StrategicAdvisor = ({ grants, vaultDocs, contacts }) => {
+export const StrategicAdvisor = () => {
+  const { grants, vaultDocs, contacts } = useStore();
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState("portfolio");
@@ -43,34 +41,45 @@ Provide specific, actionable, data-driven advice. Reference the user's actual po
   };
 
   return (
-    <div>
-      <Card style={{ marginBottom:16 }}>
-        <div style={{ fontSize:13, fontWeight:600, color:T.text, marginBottom:8 }}>🧠 AI Strategic Advisor</div>
-        <div style={{ fontSize:11, color:T.sub, marginBottom:12 }}>Deep strategic analysis powered by AI. Select an analysis mode and get specific, actionable recommendations based on your entire portfolio.</div>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(180px, 1fr))", gap:8, marginBottom:12 }}>
+    <div style={{ padding: 20, animation: "fadeIn 0.4s" }}>
+      <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 24 }}>
+        <div style={{ fontSize: 24, padding: "8px", background: `${T.amber}11`, borderRadius: "8px" }}>🧠</div>
+        <div>
+          <h2 style={{ fontSize: 24, fontWeight: 900, color: T.text, margin: 0 }}>Strategic Advisor</h2>
+          <p style={{ color: T.mute, fontSize: 13, marginTop: 4 }}>Deep strategic analysis powered by AI based on your entire portfolio.</p>
+        </div>
+      </div>
+
+      <Card style={{ marginBottom: 24, borderTop: `4px solid ${T.amber}` }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12, marginBottom: 20 }}>
           {MODES.map(m => (
             <div key={m.id} onClick={() => setMode(m.id)} style={{
-              padding:10, borderRadius:6, cursor:"pointer",
-              border:`1px solid ${mode === m.id ? T.amber+"66" : T.border}`,
-              background: mode === m.id ? T.amber+"08" : T.panel,
+              padding: 16, borderRadius: 8, cursor: "pointer",
+              border: `1px solid ${mode === m.id ? T.amber : T.border}`,
+              background: mode === m.id ? `${T.amber}11` : T.panel,
+              transition: "all 0.2s"
             }}>
-              <div style={{ fontSize:12, fontWeight:600, color: mode === m.id ? T.amber : T.text }}>{m.label}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: mode === m.id ? T.amber : T.text }}>{m.label}</div>
             </div>
           ))}
         </div>
-        <Btn variant="primary" onClick={analyze} disabled={loading}>{loading ? "⏳ Analyzing portfolio..." : `🧠 Run ${MODES.find(m=>m.id===mode)?.label}`}</Btn>
+        <Btn variant="primary" size="lg" style={{ width: "100%" }} onClick={analyze} disabled={loading}>
+          {loading ? "⏳ Analyzing portfolio..." : `🧠 Run ${MODES.find(m => m.id === mode)?.label}`}
+        </Btn>
       </Card>
 
       {analysis && (
-        <Card>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
+        <Card style={{ borderLeft: `4px solid ${T.green}`, animation: "fadeIn 0.5s" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div>
-              <div style={{ fontSize:14, fontWeight:600, color:T.text }}>{analysis.mode.label}</div>
-              <div style={{ fontSize:10, color:T.mute }}>Generated {fmtDate(analysis.date)}</div>
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0 }}>{analysis.mode.label} Results</h3>
+              <div style={{ fontSize: 11, color: T.mute, marginTop: 4 }}>Generated {fmtDate(analysis.date)}</div>
             </div>
             <Btn size="sm" variant="ghost" onClick={() => navigator.clipboard?.writeText(analysis.text)}>📋 Copy</Btn>
           </div>
-          <div style={{ fontSize:12, color:T.sub, lineHeight:1.7, whiteSpace:"pre-wrap", padding:12, background:T.panel, borderRadius:6, maxHeight:600, overflow:"auto" }}>{analysis.text}</div>
+          <div style={{ fontSize: 14, color: T.sub, lineHeight: 1.7, whiteSpace: "pre-wrap", padding: 20, background: T.panel, borderRadius: 8, border: `1px solid ${T.border}` }}>
+            {analysis.text}
+          </div>
         </Card>
       )}
     </div>

@@ -15,10 +15,13 @@ export const DAFSignal = ({ onAdd }) => {
     }, []);
 
     return (
-        <div style={{ padding: 20 }}>
-            <div style={{ marginBottom: 24 }}>
-                <h2 style={{ fontSize: 22, fontWeight: 900, color: T.text, margin: 0 }}>DAF Signal 🤫</h2>
-                <p style={{ color: T.mute, fontSize: 13, marginTop: 4 }}>Interception of "Advisor-Led" funding through Donor Advised Funds (anonymous philanthropy).</p>
+        <div style={{ padding: 20, animation: "fadeIn 0.4s" }}>
+            <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 24 }}>
+                <div style={{ fontSize: 24, padding: "8px", background: `${T.gold}11`, borderRadius: "8px" }}>🤫</div>
+                <div>
+                    <h2 style={{ fontSize: 24, fontWeight: 900, color: T.text, margin: 0 }}>DAF Signal</h2>
+                    <p style={{ color: T.mute, fontSize: 13, marginTop: 4 }}>Interception of "Advisor-Led" funding through Donor Advised Funds (anonymous philanthropy).</p>
+                </div>
             </div>
 
             {API.fortuna.isLinked() && (
@@ -33,32 +36,32 @@ export const DAFSignal = ({ onAdd }) => {
                 </Card>
             )}
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                 {loading ? <div style={{ color: T.mute }}>Listening to wealth advisor channels...</div> : 
                     signals.map(s => (
-                        <Card key={s.id} glow style={{ background: `linear-gradient(135deg, ${T.panel}, #1a1a2e)` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+                        <Card key={s.id} style={{ borderTop: `4px solid ${T.gold}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
                                 <Badge color={T.gold}>WEALTH ADVISOR</Badge>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: T.gold }}>{s.grantRange}</div>
+                                <div style={{ fontSize: 14, fontWeight: 800, color: T.gold }}>{s.grantRange}</div>
                             </div>
 
-                            <div style={{ fontSize: 11, color: T.mute, textTransform: "uppercase" }}>INTERMEDIARY</div>
-                            <h3 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: "4px 0" }}>{s.advisorFirm}</h3>
+                            <div style={{ fontSize: 10, color: T.mute, fontWeight: 700, letterSpacing: 0.5, marginBottom: 4 }}>INTERMEDIARY</div>
+                            <h3 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0 }}>{s.advisorFirm}</h3>
                             
-                            <div style={{ marginTop: 15, padding: 12, borderLeft: `2px solid ${T.gold}`, background: `${T.gold}10` }}>
-                                <div style={{ fontSize: 10, color: T.gold, fontWeight: 700 }}>CLIENT MANDATE</div>
-                                <p style={{ fontSize: 13, color: T.text, margin: "6px 0", fontStyle: "italic" }}>"{s.note}"</p>
+                            <div style={{ padding: 12, background: `${T.gold}11`, borderRadius: 8, margin: "16px 0", borderLeft: `3px solid ${T.gold}` }}>
+                                <div style={{ fontSize: 10, color: T.gold, fontWeight: 700, letterSpacing: 0.5, marginBottom: 6 }}>CLIENT MANDATE</div>
+                                <p style={{ fontSize: 13, color: T.text, margin: 0, fontStyle: "italic", lineHeight: 1.5 }}>"{s.note}"</p>
                             </div>
 
-                            <div style={{ marginTop: 15, display: "flex", justifyContent: "space-between", fontSize: 11, color: T.sub }}>
-                                <span>Focus: {s.clientFocus}</span>
-                                <span>Deadline: {s.deadline}</span>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: T.sub, marginBottom: 16 }}>
+                                <div><span style={{ fontWeight: 600, color: T.text }}>Focus:</span> {s.clientFocus}</div>
+                                <div><span style={{ fontWeight: 600, color: T.text }}>Deadline:</span> {s.deadline}</div>
                             </div>
 
-                            <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
-                                <Btn variant="primary" style={{ flex: 1 }}>Generate One-Sheet Pitch</Btn>
+                            <div style={{ display: "flex", gap: 10, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
+                                <Btn variant="primary" style={{ flex: 1 }}>One-Sheet Pitch</Btn>
                                 {onAdd && (
-                                    <Btn variant="success" size="sm" onClick={() => {
+                                    <Btn variant="success" onClick={() => {
                                         onAdd({
                                             id: uid(),
                                             title: s.advisorFirm,
