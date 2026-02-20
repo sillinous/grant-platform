@@ -24,8 +24,9 @@ import { Concierge } from "./Concierge";
 import { PhilanthropyPulse } from "./PhilanthropyPulse";
 import { FoundationScout990 } from "./FoundationScout990";
 import { FamilyOfficeProspector } from "./FamilyOfficeProspector";
-
-
+import { GovContractRadar } from "./GovContractRadar";
+import { TaxCreditNavigator } from "./TaxCreditNavigator";
+import { EarmarkScout } from "./EarmarkScout";
 
 export const Discovery = ({ onAdd, grants }) => {
     const [query, setQuery] = useState("");
@@ -351,37 +352,107 @@ Narratives: ${PROFILE.narratives.founder}`;
                 <div style={{ display: "flex", gap: 8 }}></div>
             </div>
 
-            <Tab tabs={[
-                { id: "search", icon: "🔍", label: "Smart Search" },
-                { id: "recommended", icon: "🧠", label: "AI Recommended" },
-                { id: "saved", icon: "⭐", label: `Saved (${savedResults.length})` },
-                { id: "landscape", icon: "📈", label: "Funding Landscape" },
-                { id: "spending", icon: "💰", label: "Past Awards" },
-                { id: "state", icon: "⚖️", label: "State Portals" },
-                { id: "regs", icon: "⚖️", label: "Regulatory Intel" },
-                { id: "foresight", icon: "🔮", label: "Strategic Foresight" },
-                { id: "regional", icon: "🏘️", label: "Regional Pulse" },
-                { id: "sentinel", icon: "📡", label: "Policy Sentinel" },
-                { id: "subgrants", icon: "🛰️", label: "Sub-Grants" },
-                { id: "synergy", icon: "🧬", label: "Synergy Engine" },
-                { id: "surplus", icon: "⏳", label: "Surplus" },
-                { id: "prospector", icon: "💎", label: "Prospector" },
-                { id: "pri", icon: "🏦", label: "PRI Navigator" },
-                { id: "csr", icon: "🤝", label: "CSR Alliance" },
-                { id: "cypres", icon: "⚖️", label: "Cy Pres" },
-                { id: "dao", icon: "⛓️", label: "DAO Treasury" },
-                { id: "inkind", icon: "💳", label: "In-Kind Vault" },
-                { id: "daf", icon: "🤫", label: "DAF Signal" },
-                { id: "circles", icon: "⭕", label: "Giving Circles" },
-                { id: "chamber", icon: "🏛️", label: "Chamber Pulse" },
-                { id: "cba", icon: "🏗️", label: "CBA Ledger" },
-                { id: "faith", icon: "🕌", label: "Faith Funder" },
-                { id: "pulse", icon: "📡", label: "Philanthropy Pulse" },
-                { id: "scout990", icon: "🧐", label: "990 Scout" },
-                { id: "familyoffice", icon: "💎", label: "Family Office" },
-            ]} active={tab} onChange={setTab} />
+            <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
+                {/* ━━━ SIDEBAR NAVIGATION ━━━ */}
+                <div style={{ width: 230, flexShrink: 0, display: "flex", flexDirection: "column", gap: 16 }}>
 
-            {tab === "regional" && <RegionalPulse onAdd={onAdd} />}
+                    {/* Category: Federal & Core */}
+                    <div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: T.mute, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8, paddingLeft: 8 }}>Federal & Core</div>
+                        {[
+                            { id: "search", icon: "🔍", label: "Smart Search" },
+                            { id: "saved", icon: "⭐", label: `Saved (${savedResults.length})` },
+                            { id: "contracts", icon: "🏛️", label: "Gov Contract Radar" },
+                            { id: "taxcredits", icon: "💸", label: "Tax Credits" },
+                            { id: "earmarks", icon: "🇺🇸", label: "Earmark Scout" },
+                        ].map(t => (
+                            <button key={t.id} onClick={() => setTab(t.id)} style={{
+                                width: "100%", textAlign: "left", padding: "8px 12px", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 500, fontFamily: "inherit",
+                                background: tab === t.id ? T.card : "transparent", color: tab === t.id ? T.amber : T.mute, transition: "all 0.2s", marginBottom: 2
+                            }}>{t.icon} {t.label}</button>
+                        ))}
+                    </div>
+
+                    {/* Category: State & Local */}
+                    <div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: T.mute, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8, paddingLeft: 8 }}>State & Local</div>
+                        {[
+                            { id: "state", icon: "⚖️", label: "State Portals" },
+                            { id: "regional", icon: "🏘️", label: "Regional Pulse" },
+                            { id: "chamber", icon: "🏛️", label: "Chamber Pulse" },
+                        ].map(t => (
+                            <button key={t.id} onClick={() => setTab(t.id)} style={{
+                                width: "100%", textAlign: "left", padding: "8px 12px", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 500, fontFamily: "inherit",
+                                background: tab === t.id ? T.card : "transparent", color: tab === t.id ? T.amber : T.mute, transition: "all 0.2s", marginBottom: 2
+                            }}>{t.icon} {t.label}</button>
+                        ))}
+                    </div>
+
+                    {/* Category: Private & Philanthropy */}
+                    <div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: T.mute, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8, paddingLeft: 8 }}>Private & Philanthropy</div>
+                        {[
+                            { id: "pulse", icon: "📡", label: "Philanthropy Pulse" },
+                            { id: "scout990", icon: "🧐", label: "990 Scout" },
+                            { id: "familyoffice", icon: "💎", label: "Family Office" },
+                            { id: "circles", icon: "⭕", label: "Giving Circles" },
+                            { id: "csr", icon: "🤝", label: "CSR Alliance" },
+                            { id: "faith", icon: "🕌", label: "Faith Funder" },
+                        ].map(t => (
+                            <button key={t.id} onClick={() => setTab(t.id)} style={{
+                                width: "100%", textAlign: "left", padding: "8px 12px", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 500, fontFamily: "inherit",
+                                background: tab === t.id ? T.card : "transparent", color: tab === t.id ? T.amber : T.mute, transition: "all 0.2s", marginBottom: 2
+                            }}>{t.icon} {t.label}</button>
+                        ))}
+                    </div>
+
+                    {/* Category: Alternative & Niche */}
+                    <div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: T.mute, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8, paddingLeft: 8 }}>Alternative/Niche</div>
+                        {[
+                            { id: "cypres", icon: "⚖️", label: "Cy Pres" },
+                            { id: "inkind", icon: "💳", label: "In-Kind Vault" },
+                            { id: "surplus", icon: "⏳", label: "Surplus" },
+                            { id: "daf", icon: "🤫", label: "DAF Signal" },
+                            { id: "dao", icon: "⛓️", label: "DAO Treasury" },
+                            { id: "cba", icon: "🏗️", label: "CBA Ledger" },
+                            { id: "pri", icon: "🏦", label: "PRI Navigator" },
+                        ].map(t => (
+                            <button key={t.id} onClick={() => setTab(t.id)} style={{
+                                width: "100%", textAlign: "left", padding: "8px 12px", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 500, fontFamily: "inherit",
+                                background: tab === t.id ? T.card : "transparent", color: tab === t.id ? T.amber : T.mute, transition: "all 0.2s", marginBottom: 2
+                            }}>{t.icon} {t.label}</button>
+                        ))}
+                    </div>
+
+                    {/* Category: Intelligence */}
+                    <div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: T.mute, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8, paddingLeft: 8 }}>Intelligence & Data</div>
+                        {[
+                            { id: "landscape", icon: "📈", label: "Funding Landscape" },
+                            { id: "spending", icon: "💰", label: "Past Awards" },
+                            { id: "regs", icon: "⚖️", label: "Regulatory Intel" },
+                            { id: "foresight", icon: "🔮", label: "Strategic Foresight" },
+                            { id: "sentinel", icon: "📡", label: "Policy Sentinel" },
+                            { id: "subgrants", icon: "🛰️", label: "Sub-Grants" },
+                            { id: "synergy", icon: "🧬", label: "Synergy Engine" },
+                            { id: "prospector", icon: "💎", label: "Prospector" },
+                        ].map(t => (
+                            <button key={t.id} onClick={() => setTab(t.id)} style={{
+                                width: "100%", textAlign: "left", padding: "8px 12px", border: "none", borderRadius: 6, cursor: "pointer", fontSize: 12, fontWeight: 500, fontFamily: "inherit",
+                                background: tab === t.id ? T.card : "transparent", color: tab === t.id ? T.amber : T.mute, transition: "all 0.2s", marginBottom: 2
+                            }}>{t.icon} {t.label}</button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* ━━━ MAIN CONTENT AREA ━━━ */}
+                <div style={{ flex: 1, minWidth: 0, paddingBottom: 64 }}>
+                    {tab === "contracts" && <GovContractRadar onAdd={onAdd} />}
+                    {tab === "taxcredits" && <TaxCreditNavigator onAdd={onAdd} />}
+                    {tab === "earmarks" && <EarmarkScout onAdd={onAdd} />}
+
+                    {tab === "regional" && <RegionalPulse onAdd={onAdd} />}
             {tab === "sentinel" && <PolicySentinel onAdd={onAdd} />}
             {tab === "subgrants" && <SubGrantRadar onAdd={onAdd} />}
             {tab === "synergy" && <SynergyEngine onAdd={onAdd} />}
@@ -1221,6 +1292,8 @@ Narratives: ${PROFILE.narratives.founder}`;
                     <RegionalPulse />
                 </div>
             )}
+                </div> {/* End Main Content Area */}
+            </div> {/* End Flex Layout */}
         </div>
     );
 };
