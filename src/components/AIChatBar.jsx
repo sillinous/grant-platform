@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { T, LS } from '../globals';
-import { Btn } from '../ui';
+import { Btn, Badge } from '../ui';
 import { API, buildPortfolioContext } from '../api';
 import { getActiveProvider } from '../ai-config';
 

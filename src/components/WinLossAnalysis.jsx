@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Stat } from '../ui';
+import { Card, Stat, Btn } from '../ui';
 import { T, fmt, pct } from '../globals';
 
 export const WinLossAnalysis = ({ grants }) => {

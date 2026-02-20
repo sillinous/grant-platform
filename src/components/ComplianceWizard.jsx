@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { T, uid } from "../globals";
-import { Card, Btn, Badge, Progress, Input } from "../ui";
+import { Tab, Input, Select, Card, Badge, Btn, Progress } from "../ui";
 import { API } from "../api";
 
 const ComplianceGauge = ({ value, label, color }) => (

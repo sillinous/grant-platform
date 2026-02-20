@@ -1,7 +1,7 @@
 import React from 'react';
 import { useOrganization } from '../context/OrganizationContext.jsx';
 import { T } from '../globals';
-import { Card, Btn, Input, Badge } from '../ui';
+import { Card, Btn, Input, Badge, Progress } from '../ui';
 
 export const OrgProfile = () => {
     const { activeContext, isPersonal } = useOrganization();
