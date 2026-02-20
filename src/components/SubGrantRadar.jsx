@@ -1,7 +1,12 @@
+import React, { useState, useEffect } from 'react';
+import { Card, Badge, Btn, TrackBtn } from '../ui';
+import { T, uid } from '../globals';
+import { API } from '../api';
 import { useStore } from '../store';
 
-export const SubGrantRadar = () => {
-    const { addGrant: onAdd } = useStore();
+export const SubGrantRadar = ({ onAdd: propOnAdd }) => {
+    const { addGrant: storeOnAdd } = useStore();
+    const onAdd = propOnAdd || storeOnAdd;
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -54,7 +59,7 @@ export const SubGrantRadar = () => {
                             <div style={{ display: "flex", gap: 10, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
                                 <Btn variant="primary" style={{ flex: 1 }}>Contact Prime</Btn>
                                 {onAdd && (
-                                    <Btn variant="success" onClick={() => {
+                                    <TrackBtn onTrack={() => {
                                         onAdd({
                                             id: uid(),
                                             title: item.title,
@@ -66,7 +71,7 @@ export const SubGrantRadar = () => {
                                             category: "Sub-Grant",
                                             createdAt: new Date().toISOString()
                                         });
-                                    }}>+ Track</Btn>
+                                    }} defaultLabel="+ Track" />
                                 )}
                             </div>
                         </Card>

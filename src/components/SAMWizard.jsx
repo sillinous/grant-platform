@@ -133,22 +133,36 @@ export const SAMWizard = () => {
           <div style={{ fontSize:13, fontWeight:600, color:T.text, marginBottom:12 }}>📋 Registration Status</div>
           {entity ? (
             <div>
-              <div style={{ padding:12, background:T.panel, borderRadius:6, marginBottom:12 }}>
-                <div style={{ fontSize:14, fontWeight:600, color:T.text }}>{entity.name}</div>
-                <div style={{ marginTop:8 }}>
-                  <div style={{ fontSize:12 }}><strong style={{ color:T.sub }}>UEI:</strong> <span style={{ color:T.text }}>{entity.uei}</span></div>
-                  <div style={{ fontSize:12 }}><strong style={{ color:T.sub }}>CAGE:</strong> <span style={{ color:T.text }}>{entity.cage || "Not assigned"}</span></div>
-                  <div style={{ fontSize:12 }}><strong style={{ color:T.sub }}>Status:</strong> <Badge color={entity.status === "Active" ? T.green : T.red}>{entity.status}</Badge></div>
-                  <div style={{ fontSize:12 }}><strong style={{ color:T.sub }}>Expires:</strong> <span style={{ color:T.text }}>{entity.expiration || "Unknown"}</span></div>
+              <div style={{ padding: 16, background: T.panel, borderRadius: 8, marginBottom: 16 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                  <div>
+                    <h4 style={{ fontSize: 16, fontWeight: 800, color: T.text, margin: 0 }}>{entity.name}</h4>
+                    <div style={{ fontSize: 12, color: T.mute, marginTop: 4 }}>UEI: <span style={{ color: T.text, fontWeight: 600 }}>{entity.uei}</span> • CAGE: <span style={{ color: T.text, fontWeight: 600 }}>{entity.cage || "PENDING"}</span></div>
+                  </div>
+                  <Badge color={entity.status === "Active" ? T.green : T.red}>{entity.status.toUpperCase()}</Badge>
                 </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, padding: "16px 0", borderTop: `1px solid ${T.border}`, borderBottom: `1px solid ${T.border}` }}>
+                  <div>
+                    <div style={{ fontSize: 10, color: T.mute, fontWeight: 800, letterSpacing: 0.5, marginBottom: 4 }}>EXPIRATION</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: entity.status === "Active" ? T.text : T.red }}>{entity.expiration || "N/A"}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, color: T.mute, fontWeight: 800, letterSpacing: 0.5, marginBottom: 4 }}>ADDRESS</div>
+                    <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.4 }}>{entity.address.addressLine1}<br />{entity.address.city}, {entity.address.stateCode}</div>
+                  </div>
+                </div>
+
                 {entity.naics.length > 0 && (
-                  <div style={{ marginTop:8 }}>
-                    <div style={{ fontSize:11, fontWeight:600, color:T.sub }}>NAICS Codes:</div>
-                    {entity.naics.slice(0,5).map((n,i) => <div key={i} style={{ fontSize:10, color:T.mute }}>{n}</div>)}
+                  <div style={{ marginTop: 12 }}>
+                    <div style={{ fontSize: 10, color: T.mute, fontWeight: 800, letterSpacing: 0.5, marginBottom: 8 }}>CORE NAICS CODES</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {entity.naics.slice(0, 4).map((n, i) => <Badge key={i} color={T.shade} size="xs">{n}</Badge>)}
+                    </div>
                   </div>
                 )}
               </div>
-              <Btn size="sm" variant="primary" onClick={() => setStep(3)}>Continue to Checklist →</Btn>
+              <Btn variant="primary" style={{ width: "100%" }} onClick={() => setStep(3)}>Initialize Requirements Checklist →</Btn>
             </div>
           ) : <div style={{ color:T.mute, fontSize:12 }}>Search for your entity first in Step 1</div>}
         </Card>

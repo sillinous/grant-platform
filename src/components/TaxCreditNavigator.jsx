@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { T, PROFILE, uid } from "../globals";
-import { Card, Btn, Badge, Empty, Stat } from "../ui";
+import { Card, Btn, Badge, Empty, Stat, Progress, TrackBtn } from "../ui";
 
 export const TaxCreditNavigator = ({ onAdd }) => {
     const [loading, setLoading] = useState(false);
@@ -39,8 +39,21 @@ export const TaxCreditNavigator = ({ onAdd }) => {
         }
     ];
 
+    const [scanProgress, setScanProgress] = useState(0);
+    const [scanText, setScanText] = useState("");
+
     const calculateEligibility = () => {
         setLoading(true);
+        setScanProgress(10);
+        setScanText("Parsing NAICS codes...");
+        setTimeout(() => {
+            setScanProgress(45);
+            setScanText("Querying Federal Database...");
+        }, 500);
+        setTimeout(() => {
+            setScanProgress(80);
+            setScanText("Checking State Incentives...");
+        }, 1000);
         setTimeout(() => {
             setHasCalculated(true);
             setLoading(false);
@@ -60,17 +73,29 @@ export const TaxCreditNavigator = ({ onAdd }) => {
 
                 {!hasCalculated ? (
                     <div style={{ textAlign: "center", padding: "24px 0" }}>
-                        <Btn variant="primary" size="lg" onClick={calculateEligibility} disabled={loading}>
-                            {loading ? "⏳ Analyzing Profile & Payload..." : "🔍 Scan Profile for Tax Credit Eligibility"}
-                        </Btn>
-                        <div style={{ fontSize: 11, color: T.mute, marginTop: 12 }}>
-                            We will analyze your NAICS code ({PROFILE.naics || "Not set"}), location, and business focus to identify missing tax credits.
-                        </div>
+                        {!loading ? (
+                            <>
+                                <Btn variant="primary" size="lg" onClick={calculateEligibility}>
+                                    🔍 Scan Profile for Tax Credit Eligibility
+                                </Btn>
+                                <div style={{ fontSize: 11, color: T.mute, marginTop: 12 }}>
+                                    We will analyze your NAICS code ({PROFILE.naics || "Not set"}), location, and business focus to identify missing tax credits.
+                                </div>
+                            </>
+                        ) : (
+                            <div style={{ maxWidth: 400, margin: "0 auto" }}>
+                                <div style={{ fontSize: 13, color: T.amber, fontWeight: 700, marginBottom: 8 }}>{scanText}</div>
+                                <Progress value={scanProgress} max={100} color={T.amber} height={8} />
+                            </div>
+                        )}
                     </div>
                 ) : (
-                    <div style={{ display: "flex", gap: 16, marginTop: 16, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
-                        <Stat label="Eligible Credits Found" value="3" color={T.green} />
-                        <Stat label="Est. Total Claim Value" value="~$350,000" color={T.amber} />
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginTop: 16, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
+                            <div style={{ display: "flex", gap: 16 }}>
+                                <Stat label="Eligible Credits Found" value="3" color={T.green} />
+                                <Stat label="Est. Total Claim Value" value="~$350,000" color={T.amber} />
+                            </div>
+                            <Btn variant="ghost" size="sm" onClick={() => { setHasCalculated(false); setScanProgress(0); }}>⚙️ Recalculate</Btn>
                     </div>
                 )}
             </Card>
@@ -103,9 +128,9 @@ export const TaxCreditNavigator = ({ onAdd }) => {
 
                             <div style={{ display: "flex", gap: 10, borderTop: `1px solid ${T.border}`, paddingTop: 12 }}>
                                 {onAdd && (
-                                    <Btn size="sm" variant="success" onClick={() => onAdd({
+                                    <TrackBtn onTrack={() => onAdd({
                                         id: uid(), title: c.title, agency: c.agency, stage: "discovered", description: c.description, category: "Tax Credit", tags: ["tax-credit", c.isState ? "state" : "federal"]
-                                    })}>📋 Track Credit</Btn>
+                                    })} defaultLabel="📋 Track Credit" />
                                 )}
                                 <Btn size="sm" variant="ghost">📄 IRS Form / Guidelines</Btn>
                             </div>

@@ -64,6 +64,20 @@ export const Btn = ({ children, onClick, variant = "default", size = "md", icon,
   return <button onClick={disabled ? undefined : onClick} style={{ ...variants[variant], ...sizes[size], ...style }}>{icon}{children}</button>;
 };
 
+export const TrackBtn = ({ onTrack, defaultLabel = "+ Track", style = {}, size = "sm" }) => {
+  const [tracked, setTracked] = useState(false);
+  return (
+    <Btn variant={tracked ? "ghost" : "success"} size={size} style={{ ...style, color: tracked ? T.green : T.green }} disabled={tracked} onClick={() => {
+      onTrack();
+      setTracked(true);
+      setTimeout(() => setTracked(false), 2000);
+    }}>
+      {tracked ? "✓ Tracked" : defaultLabel}
+    </Btn>
+  );
+};
+
+
 export const Card = ({ children, style, onClick, glow }) => (
   <div onClick={onClick} style={{
     background: T.card, border: `1px solid ${glow ? T.amber+"44" : T.border}`,

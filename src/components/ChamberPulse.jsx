@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Badge, Btn } from '../ui';
-import { T, fmt, uid } from '../globals';
+import { T, fmt, uid, PROFILE } from '../globals';
 import { API } from '../api';
+import { Card, Badge, Btn, TrackBtn, SkeletonCard } from '../ui';
 
 export const ChamberPulse = ({ onAdd }) => {
     const [grants, setGrants] = useState([]);
@@ -25,7 +25,19 @@ export const ChamberPulse = ({ onAdd }) => {
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
-                {loading ? <div style={{ color: T.mute }}>Contacting local chambers...</div> : 
+                <div style={{ padding: 12, background: `${T.orange}11`, borderRadius: 8, border: `1px solid ${T.orange}33`, display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 18 }}>📍</span>
+                    <div style={{ fontSize: 12, color: T.sub }}>
+                        <b>Local Target:</b> Scanning Chambers of Commerce and Business Improvement Districts near <b>{PROFILE.zip || "your location"}</b>.
+                    </div>
+                </div>
+
+                {loading ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                        <SkeletonCard lines={2} style={{ borderLeft: `4px solid ${T.orange}` }} />
+                        <SkeletonCard lines={2} style={{ borderLeft: `4px solid ${T.orange}` }} />
+                    </div>
+                ) : 
                     grants.map(g => (
                         <Card key={g.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderLeft: `4px solid ${T.orange}` }}>
                             <div style={{ flex: 1, paddingRight: 24 }}>
@@ -42,7 +54,7 @@ export const ChamberPulse = ({ onAdd }) => {
                                 <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                                     <Btn size="sm" variant="primary">Apply</Btn>
                                     {onAdd && (
-                                        <Btn size="sm" variant="success" onClick={() => {
+                                        <TrackBtn onTrack={() => {
                                             onAdd({
                                                 id: uid(),
                                                 title: g.title,
@@ -54,7 +66,7 @@ export const ChamberPulse = ({ onAdd }) => {
                                                 category: "Chamber Pulse",
                                                 createdAt: new Date().toISOString()
                                             });
-                                        }}>+ Track</Btn>
+                                        }} defaultLabel="+ Track" />
                                     )}
                                 </div>
                             </div>

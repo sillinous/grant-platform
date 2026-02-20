@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { T, PROFILE, uid, fmt } from "../globals";
-import { Card, Btn, Badge, Input, Select, Empty } from "../ui";
+import { Card, Btn, Badge, Input, Select, Empty, TrackBtn, SkeletonCard } from "../ui";
 
 export const GovContractRadar = ({ onAdd }) => {
     const [query, setQuery] = useState("");
@@ -71,45 +71,62 @@ export const GovContractRadar = ({ onAdd }) => {
             </Card>
 
             {PROFILE.naics && results.length === 0 && !loading && (
-                <div style={{ padding: 12, background: T.amber + "11", borderRadius: 8, border: `1px solid ${T.amber}33`, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 18 }}>🛡️</span>
-                    <div style={{ fontSize: 12, color: T.sub }}>
-                        <b style={{ color: T.amber }}>Profile Intelligence</b>: Your NAICS code <b>{PROFILE.naics}</b> indicates you provide <b>Custom Computer Programming Services</b>. We can automatically monitor for these contracts.
+                <div style={{ padding: 16, background: `linear-gradient(90deg, ${T.amber}11, transparent)`, borderRadius: 8, border: `1px solid ${T.amber}33`, borderLeft: `4px solid ${T.amber}`, marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ fontSize: 24 }}>🛡️</div>
+                    <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.5 }}>
+                        <b style={{ color: T.amber, display: "block", marginBottom: 2 }}>Profile Intelligence active</b>
+                        Your NAICS code <b>{PROFILE.naics}</b> indicates you provide <b>Custom Computer Programming Services</b>. We can automatically monitor for these contracts.
                     </div>
                 </div>
             )}
 
+            {loading && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    <SkeletonCard lines={3} />
+                    <SkeletonCard lines={3} />
+                    <SkeletonCard lines={3} />
+                </div>
+            )}
+
             {results.length > 0 && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                     {results.map(r => (
-                        <Card key={r.id} style={{ borderLeft: `3px solid ${T.blue}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                                <div>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                                        <Badge color={T.blue}>{r.type}</Badge>
-                                        {r.setAside && <Badge color={T.amber}>{r.setAside}</Badge>}
-                                    </div>
-                                    <div style={{ fontSize: 15, fontWeight: 700, color: T.text, marginBottom: 4 }}>{r.title}</div>
-                                    <div style={{ fontSize: 12, color: T.sub }}>{r.agency} • NAICS: <span style={{ fontFamily: "monospace", color: T.text }}>{r.naics}</span></div>
+                        <Card key={r.id} style={{ borderLeft: `4px solid ${T.blue}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
+                                <div style={{ display: "flex", gap: 8 }}>
+                                    <Badge color={T.blue}>{r.type.toUpperCase()}</Badge>
+                                    {r.setAside && <Badge color={T.amber}>{r.setAside}</Badge>}
                                 </div>
-                                <div style={{ textAlign: "right" }}>
-                                    <div style={{ fontSize: 12, color: T.red, fontWeight: 700, background: `${T.red}11`, padding: "4px 8px", borderRadius: "12px" }}>
-                                        Due: {new Date(r.deadline).toLocaleDateString()}
-                                    </div>
-                                </div>
+                                <span style={{ fontSize: 12, color: T.red, fontWeight: 700 }}>
+                                    DUE: {new Date(r.deadline).toLocaleDateString()}
+                                </span>
                             </div>
 
-                            <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.6, marginBottom: 16, padding: "12px", background: T.panel, borderRadius: "6px" }}>
+                            <h3 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0, marginBottom: 8 }}>{r.title}</h3>
+                            <div style={{ fontSize: 13, color: T.sub, marginBottom: 12 }}>
+                                <span style={{ fontWeight: 600, color: T.text }}>{r.agency}</span> • NAICS: <span style={{ fontFamily: "monospace", color: T.text }}>{r.naics}</span>
+                            </div>
+
+                            <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.6, padding: "12px", background: T.panel, borderRadius: "6px" }}>
                                 {r.description}
                             </div>
 
-                            <div style={{ display: "flex", gap: 10, borderTop: `1px solid ${T.border}`, paddingTop: 12 }}>
+                            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16, paddingTop: 16, borderTop: `1px solid ${T.border}` }}>
+                                <Btn variant="ghost" size="sm">🔗 SAM.gov</Btn>
                                 {onAdd && (
-                                    <Btn size="sm" variant="success" onClick={() => onAdd({
-                                        id: uid(), title: r.title, agency: r.agency, stage: "discovered", description: r.description, category: "Contract", tags: ["federal-contract", r.naics]
-                                    })}>📋 Track Opportunity</Btn>
+                                    <TrackBtn onTrack={() => onAdd({
+                                        id: uid(),
+                                        title: r.title,
+                                        agency: r.agency,
+                                        amount: 0,
+                                        deadline: r.deadline,
+                                        stage: "discovered",
+                                        description: `Type: ${r.type}. ${r.description}`,
+                                        category: "Federal Contract",
+                                        tags: ["federal-contract", r.naics],
+                                        createdAt: new Date().toISOString()
+                                    })} defaultLabel="+ Track Contract" />
                                 )}
-                                <Btn size="sm" variant="ghost">🔗 View on SAM.gov</Btn>
                             </div>
                         </Card>
                     ))}

@@ -1,7 +1,12 @@
+import React, { useState, useEffect } from 'react';
+import { Card, Badge, Btn, Empty, TrackBtn, SkeletonCard } from '../ui';
+import { T, PROFILE, getProfileState } from '../globals';
+import { API } from '../api';
 import { useStore } from '../store';
 
-export const RegionalPulse = () => {
-    const { addGrant: onAdd } = useStore();
+export const RegionalPulse = ({ onAdd: propOnAdd }) => {
+    const { addGrant: storeOnAdd } = useStore();
+    const onAdd = propOnAdd || storeOnAdd;
     const [foundations, setFoundations] = useState([]);
     const [incentives, setIncentives] = useState([]);
     const [signals, setSignals] = useState([]);
@@ -37,7 +42,12 @@ export const RegionalPulse = () => {
                 <div>
                     <div style={{ fontSize: 13, fontWeight: 800, color: T.mute, letterSpacing: 1.5, marginBottom: 16 }}>🤝 PHILANTHROPIC RADAR</div>
                     <div style={{ display: "grid", gap: 10 }}>
-                        {loading ? <div style={{ color: T.mute, fontSize: 11 }}>Scanning 990-PF fillings...</div> :
+                        {loading ? (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                                <SkeletonCard lines={2} style={{ borderLeft: `3px solid ${T.purple}` }} />
+                                <SkeletonCard lines={2} style={{ borderLeft: `3px solid ${T.purple}` }} />
+                            </div>
+                        ) :
                             foundations.slice(0, 3).map(f => (
                                 <Card key={f.id} glow style={{ borderLeft: `3px solid ${T.purple}`, background: `linear-gradient(90deg, ${T.purple}08, transparent)` }}>
                                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
@@ -50,7 +60,7 @@ export const RegionalPulse = () => {
                                         <div style={{ fontSize: 12, fontWeight: 700, color: T.green }}>{fmt(f.amount)}</div>
                                         <Btn size="xs" variant="ghost">View 990-PF</Btn>
                                         {onAdd && (
-                                            <Btn size="xs" variant="success" onClick={() => {
+                                            <TrackBtn onTrack={() => {
                                                 onAdd({
                                                     id: uid(),
                                                     title: f.agency,
@@ -62,7 +72,7 @@ export const RegionalPulse = () => {
                                                     category: f.type,
                                                     createdAt: new Date().toISOString()
                                                 });
-                                            }}>+ Track</Btn>
+                                            }} defaultLabel="+ Track" size="xs" />
                                         )}
                                     </div>
                                 </Card>
@@ -84,10 +94,10 @@ export const RegionalPulse = () => {
                                 <div style={{ display: "flex", gap: 8 }}>
                                     <Btn size="sm" variant="primary" style={{ flex: 1 }}>Check Eligibility</Btn>
                                     {onAdd && (
-                                        <Btn size="sm" variant="success" onClick={() => onAdd({
+                                        <TrackBtn onTrack={() => onAdd({
                                             id: uid(), title: i.title, agency: i.agency, stage: "discovered", description: i.description, category: i.type,
                                             createdAt: new Date().toISOString()
-                                        })}>+ Track</Btn>
+                                        })} defaultLabel="+ Track" />
                                     )}
                                 </div>
                             </Card>
@@ -115,10 +125,10 @@ export const RegionalPulse = () => {
                                     Timing: <b style={{ color: T.blue }}>{s.timing}</b>
                                 </div>
                                 {onAdd && (
-                                    <Btn size="sm" variant="ghost" style={{ width: "100%", textAlign: "center" }} onClick={() => onAdd({
+                                    <TrackBtn onTrack={() => onAdd({
                                         id: uid(), title: s.title, agency: s.agency, stage: "discovered", description: `Confidence: ${Math.round(s.probability * 100)}% - ${s.description}`, category: s.type,
                                         createdAt: new Date().toISOString()
-                                    })}>+ Track Signal</Btn>
+                                    })} style={{ width: "100%", justifyContent: "center" }} defaultLabel="+ Track Signal" />
                                 )}
                             </Card>
                         ))}
@@ -139,10 +149,10 @@ export const RegionalPulse = () => {
                                     <Badge color={T.green}>Private Pool</Badge>
                                 </div>
                                 {onAdd && (
-                                    <Btn size="sm" variant="success" style={{ width: "100%" }} onClick={() => onAdd({
+                                    <TrackBtn onTrack={() => onAdd({
                                         id: uid(), title: c.title, agency: c.agency, amount: c.amount, stage: "discovered", description: c.description, category: c.type,
                                         createdAt: new Date().toISOString()
-                                    })}>+ Track Grant</Btn>
+                                    })} style={{ width: "100%", justifyContent: "center" }} defaultLabel="+ Track Grant" />
                                 )}
                             </Card>
                         ))}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Badge, Btn, Stat } from '../ui';
+import { Card, Badge, Btn, Stat, TrackBtn } from '../ui';
 import { T, fmt, uid } from '../globals';
 import { API } from '../api';
 
@@ -51,7 +51,7 @@ export const CSRAllianceMapper = ({ onAdd }) => {
                                 <div style={{ display: "flex", gap: 8 }}>
                                     <Btn variant="primary" size="sm">Alliance Deck</Btn>
                                     {onAdd && (
-                                        <Btn variant="success" size="sm" onClick={() => {
+                                        <TrackBtn onTrack={() => {
                                             onAdd({
                                                 id: uid(),
                                                 title: r.goal,
@@ -63,7 +63,7 @@ export const CSRAllianceMapper = ({ onAdd }) => {
                                                 category: "CSR Partnership",
                                                 createdAt: new Date().toISOString()
                                             });
-                                        }}>+ Track CSR</Btn>
+                                        }} defaultLabel="+ Track CSR" size="sm" />
                                     )}
                                 </div>
                             </div>

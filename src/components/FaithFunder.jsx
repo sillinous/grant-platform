@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Badge, Btn } from '../ui';
+import { Card, Badge, Btn, TrackBtn } from '../ui';
 import { T, fmt, uid } from '../globals';
 import { API } from '../api';
 
@@ -48,7 +48,7 @@ export const FaithFunder = ({ onAdd }) => {
                             <div style={{ display: "flex", gap: 10, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
                                 <Btn size="sm" variant="primary" style={{ flex: 1 }}>Review Guidelines</Btn>
                                 {onAdd && (
-                                    <Btn variant="success" onClick={() => {
+                                    <TrackBtn onTrack={() => {
                                         onAdd({
                                             id: uid(),
                                             title: g.grant,
@@ -60,7 +60,7 @@ export const FaithFunder = ({ onAdd }) => {
                                             category: "Faith-Based Grant",
                                             createdAt: new Date().toISOString()
                                         });
-                                    }}>+ Track</Btn>
+                                    }} defaultLabel="+ Track" />
                                 )}
                             </div>
                         </Card>

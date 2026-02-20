@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { T, PROFILE, uid, fmt } from "../globals";
-import { Card, Btn, Badge, Input, Select, Empty } from "../ui";
+import { Card, Btn, Badge, Input, Select, Empty, TrackBtn, SkeletonCard } from "../ui";
 
 export const EarmarkScout = ({ onAdd }) => {
     const [query, setQuery] = useState("");
@@ -71,12 +71,21 @@ export const EarmarkScout = ({ onAdd }) => {
                 </div>
             </Card>
 
-            <div style={{ padding: 12, background: T.panel, borderRadius: 8, border: `1px solid ${T.border}`, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 18 }}>📅</span>
-                <div style={{ fontSize: 12, color: T.sub }}>
-                    <b>Current Cycle:</b> FY2027 Requests. The window for submitting Community Project Funding requests to your local Representative typically opens in <b>March</b>. Start preparing your 1-pager now.
+            <div style={{ padding: 16, background: `linear-gradient(90deg, ${T.purple}11, transparent)`, borderRadius: 8, border: `1px solid ${T.purple}33`, borderLeft: `4px solid ${T.purple}`, marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ fontSize: 24 }}>📅</div>
+                <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.5 }}>
+                    <b style={{ color: T.purple, display: "block", marginBottom: 2 }}>Current Cycle: FY2027 Requests</b>
+                    The window for submitting Community Project Funding requests to your local Representative typically opens in <b>March</b>. Start preparing your 1-pager now.
                 </div>
             </div>
+
+            {loading && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                    <SkeletonCard lines={3} />
+                    <SkeletonCard lines={3} />
+                    <SkeletonCard lines={3} />
+                </div>
+            )}
 
             {results.length > 0 && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -100,9 +109,9 @@ export const EarmarkScout = ({ onAdd }) => {
 
                             <div style={{ display: "flex", gap: 10, borderTop: `1px solid ${T.border}`, paddingTop: 12 }}>
                                 {onAdd && (
-                                    <Btn size="sm" variant="success" onClick={() => onAdd({
+                                    <TrackBtn onTrack={() => onAdd({
                                         id: uid(), title: r.title, agency: r.agency, stage: "discovered", description: r.description, category: "Earmark", tags: ["earmark", "cds"]
-                                    })}>📋 Track Project</Btn>
+                                    })} defaultLabel="📋 Track Project" />
                                 )}
                                 <Btn size="sm" variant="ghost">🔗 Rep. Office Guidelines</Btn>
                             </div>

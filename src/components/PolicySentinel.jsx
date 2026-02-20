@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Badge, Btn, Stat } from '../ui';
+import { Card, Badge, Btn, Stat, TrackBtn } from '../ui';
 import { T, uid } from '../globals';
 import { API } from '../api';
 
@@ -56,7 +56,7 @@ export const PolicySentinel = ({ onAdd }) => {
                                     <Btn variant="ghost" size="sm">Regulatory Analysis</Btn>
                                     <Btn variant="primary" size="sm">Draft Rebuttal/Support</Btn>
                                     {onAdd && (
-                                        <Btn variant="success" size="sm" onClick={() => {
+                                        <TrackBtn onTrack={() => {
                                             onAdd({
                                                 id: uid(),
                                                 title: s.title,
@@ -68,7 +68,7 @@ export const PolicySentinel = ({ onAdd }) => {
                                                 category: "Policy Signal",
                                                 createdAt: new Date().toISOString()
                                             });
-                                        }}>+ Track Signal</Btn>
+                                        }} defaultLabel="+ Track Signal" size="sm" />
                                     )}
                                 </div>
                             </Card>

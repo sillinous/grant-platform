@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Badge, Btn, Stat } from '../ui';
+import { Card, Badge, Btn, Stat, TrackBtn } from '../ui';
 import { T, fmt, uid } from '../globals';
 import { API } from '../api';
 
@@ -51,7 +51,7 @@ export const InKindVault = ({ onAdd }) => {
                             <div style={{ display: "flex", gap: 10, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
                                 <Btn size="sm" variant="primary" style={{ flex: 1 }}>Claim Credits</Btn>
                                 {onAdd && (
-                                    <Btn variant="success" onClick={() => {
+                                    <TrackBtn onTrack={() => {
                                         onAdd({
                                             id: uid(),
                                             title: `${c.provider} - ${c.type}`,
@@ -63,7 +63,7 @@ export const InKindVault = ({ onAdd }) => {
                                             category: "In-Kind Subsidy",
                                             createdAt: new Date().toISOString()
                                         });
-                                    }}>+ Track Value</Btn>
+                                    }} defaultLabel="+ Track Value" />
                                 )}
                             </div>
                         </Card>

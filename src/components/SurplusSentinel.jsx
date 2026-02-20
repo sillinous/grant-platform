@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Badge, Btn, Progress } from '../ui';
+import { Card, Badge, Btn, Progress, TrackBtn } from '../ui';
 import { T, fmt, daysUntil, uid } from '../globals';
 import { API } from '../api';
 
@@ -60,7 +60,7 @@ export const SurplusSentinel = ({ onAdd }) => {
                                 <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
                                     <Btn variant="primary" style={{ flex: 1 }}>Initialize Rapid Inquiry</Btn>
                                     {onAdd && (
-                                        <Btn variant="success" onClick={() => {
+                                        <TrackBtn onTrack={() => {
                                             onAdd({
                                                 id: uid(),
                                                 title: `${s.jurisdiction} - ${s.budgetPool} Surplus`,
@@ -72,7 +72,7 @@ export const SurplusSentinel = ({ onAdd }) => {
                                                 category: "Surplus Fund",
                                                 createdAt: new Date().toISOString()
                                             });
-                                        }}>+ Track Pool</Btn>
+                                        }} defaultLabel="+ Track Pool" />
                                     )}
                                 </div>
                             </Card>

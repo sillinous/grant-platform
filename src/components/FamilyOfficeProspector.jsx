@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Badge, Btn, Stat } from '../ui';
+import { Card, Badge, Btn, Stat, TrackBtn } from '../ui';
 import { T, uid } from '../globals';
-import { PhilanthropyAPI } from '../philanthropy';
+import { API } from '../api';
 
 export const FamilyOfficeProspector = ({ onAdd }) => {
     const [signals, setSignals] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        PhilanthropyAPI.getUHNWSignals().then(data => {
+        API.philanthropy.getUHNWSignals().then(data => {
             setSignals(data);
             setLoading(false);
         });
@@ -46,7 +46,7 @@ export const FamilyOfficeProspector = ({ onAdd }) => {
                             <div style={{ display: "flex", gap: 10, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
                                 <Btn variant="primary" style={{ flex: 1 }}>Request Warm Intro</Btn>
                                 {onAdd && (
-                                    <Btn variant="success" onClick={() => {
+                                    <TrackBtn onTrack={() => {
                                         onAdd({
                                             id: uid(),
                                             title: s.name,
@@ -58,7 +58,7 @@ export const FamilyOfficeProspector = ({ onAdd }) => {
                                             category: "Family Office",
                                             createdAt: new Date().toISOString()
                                         });
-                                    }}>+ Track</Btn>
+                                    }} defaultLabel="+ Track" />
                                 )}
                             </div>
                         </Card>

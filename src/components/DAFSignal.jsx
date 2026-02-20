@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Badge, Btn } from '../ui';
+import { Card, Badge, Btn, TrackBtn } from '../ui';
 import { T, uid } from '../globals';
 import { API } from '../api';
 
@@ -25,13 +25,18 @@ export const DAFSignal = ({ onAdd }) => {
             </div>
 
             {API.fortuna.isLinked() && (
-                <Card style={{ marginBottom: 24, background: T.green + "08", border: `1px solid ${T.green}33` }}>
+                <Card style={{ marginBottom: 24, padding: 20, background: `linear-gradient(90deg, ${T.green}15, transparent)`, border: `1px solid ${T.green}33`, borderLeft: `6px solid ${T.green}` }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: T.green }}>Fortuna Auto-Philanthropy Active ⚡</div>
-                            <div style={{ fontSize: 12, color: T.text, marginTop: 4 }}>Profit Milestone reached: **$10,000 surplus** detected.</div>
+                        <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+                            <div style={{ fontSize: 32 }}>⚡</div>
+                            <div>
+                                <div style={{ fontSize: 16, fontWeight: 900, color: T.text }}>Fortuna Auto-Philanthropy Active</div>
+                                <div style={{ fontSize: 13, color: T.sub, marginTop: 4 }}>Surplus detected: <b style={{ color: T.green }}>$10,000</b>. AI-driven DAF matching enabled.</div>
+                            </div>
                         </div>
-                        <Btn variant="primary" size="sm">Execute DAF Transfer</Btn>
+                        <Btn variant="success" onClick={() => {
+                            API.fortuna.syncToLedger().then(() => alert("DAF Transfer Initialized via Fortuna Engine."));
+                        }}>Execute DAF Transfer</Btn>
                     </div>
                 </Card>
             )}
@@ -61,7 +66,7 @@ export const DAFSignal = ({ onAdd }) => {
                             <div style={{ display: "flex", gap: 10, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
                                 <Btn variant="primary" style={{ flex: 1 }}>One-Sheet Pitch</Btn>
                                 {onAdd && (
-                                    <Btn variant="success" onClick={() => {
+                                    <TrackBtn onTrack={() => {
                                         onAdd({
                                             id: uid(),
                                             title: s.advisorFirm,
@@ -73,7 +78,7 @@ export const DAFSignal = ({ onAdd }) => {
                                             category: "DAF",
                                             createdAt: new Date().toISOString()
                                         });
-                                    }}>+ Track Lead</Btn>
+                                    }} defaultLabel="+ Track Lead" />
                                 )}
                             </div>
                         </Card>

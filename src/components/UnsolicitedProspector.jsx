@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Badge, Btn, Stat } from '../ui';
+import { Card, Badge, Btn, Stat, TrackBtn } from '../ui';
 import { T, fmt, uid } from '../globals';
 import { API } from '../api';
 
@@ -47,7 +47,7 @@ export const UnsolicitedProspector = ({ onAdd }) => {
                             <div style={{ display: "flex", gap: 10, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
                                 <Btn variant="primary" style={{ flex: 1 }}>Pitch Builder</Btn>
                                 {onAdd && (
-                                    <Btn variant="success" onClick={() => {
+                                    <TrackBtn onTrack={() => {
                                         onAdd({
                                             id: uid(),
                                             title: f.name,
@@ -59,7 +59,7 @@ export const UnsolicitedProspector = ({ onAdd }) => {
                                             category: "Unsolicited Foundation",
                                             createdAt: new Date().toISOString()
                                         });
-                                    }}>+ Track</Btn>
+                                    }} defaultLabel="+ Track" />
                                 )}
                             </div>
                         </Card>

@@ -1,7 +1,12 @@
+import React, { useState, useEffect } from 'react';
+import { Card, Badge, Btn, TrackBtn } from '../ui';
+import { T, PROFILE, uid } from '../globals';
+import { API } from '../api';
 import { useStore } from '../store';
 
-export const SynergyEngine = () => {
-    const { addGrant: onAdd } = useStore();
+export const SynergyEngine = ({ onAdd: propOnAdd }) => {
+    const { addGrant: storeOnAdd } = useStore();
+    const onAdd = propOnAdd || storeOnAdd;
     const [synergies, setSynergies] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -48,7 +53,7 @@ export const SynergyEngine = () => {
                                 <div style={{ display: "flex", gap: 8 }}>
                                     <Btn size="sm" variant="primary">Match Logic</Btn>
                                     {onAdd && (
-                                        <Btn size="sm" variant="success" onClick={() => {
+                                        <TrackBtn onTrack={() => {
                                             onAdd({
                                                 id: uid(),
                                                 title: s.title,
@@ -60,7 +65,7 @@ export const SynergyEngine = () => {
                                                 category: "Cross-Sector Synergy",
                                                 createdAt: new Date().toISOString()
                                             });
-                                        }}>+ Track</Btn>
+                                        }} defaultLabel="+ Track" />
                                     )}
                                 </div>
                             </div>

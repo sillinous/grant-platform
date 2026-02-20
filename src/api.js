@@ -2,6 +2,7 @@
 import { LS, T, getProfileState, STAGES, fmt, fmtDate, daysUntil, PROFILE, uid } from "./globals";
 import { AI_PROVIDERS, getActiveProvider } from "./ai-config";
 import { FortunaAPI } from "./fortuna";
+import { PhilanthropyAPI } from "./philanthropy";
 
 // ─── SIMPLE CACHE ───
 const SimpleCache = {
@@ -88,6 +89,9 @@ export function buildGrantContext(grantId) {
 
 // ─── API SERVICES ──────────────────────────────────────────────────────
 export const API = {
+    fortuna: FortunaAPI,
+    philanthropy: PhilanthropyAPI,
+
     async searchGrants(query, params = {}) {
         const body = { keyword: query, oppStatuses: "forecasted|posted", rows: params.rows || 25, startRecord: params.startRecord || 0, ...params };
         try {

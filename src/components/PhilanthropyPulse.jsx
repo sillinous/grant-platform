@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Badge, Btn, Progress } from '../ui';
+import { Card, Badge, Btn, Progress, TrackBtn } from '../ui';
 import { T, LS, uid } from '../globals';
-import { PhilanthropyAPI } from '../philanthropy';
+import { API } from '../api';
 
 export const PhilanthropyPulse = ({ onAdd }) => {
     const [news, setNews] = useState([]);
@@ -9,7 +9,7 @@ export const PhilanthropyPulse = ({ onAdd }) => {
 
     useEffect(() => {
         const profile = LS.get("profile", { tags: ["AI", "Rural", "STEM"] });
-        PhilanthropyAPI.getNewsPulse(profile.tags).then(data => {
+        API.philanthropy.getNewsPulse(profile.tags).then(data => {
             setNews(data);
             setLoading(false);
         });
@@ -49,7 +49,7 @@ export const PhilanthropyPulse = ({ onAdd }) => {
 
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
                                 {item.tags.map(tag => (
-                                    <span key={tag} style={{ fontSize: 11, background: `${T.blue}11`, color: T.blue, padding: "4px 8px", borderRadius: 4, fontWeight: 600 }}>
+                                    <span key={tag} style={{ fontSize: 11, background: T.blue, color: "#fff", padding: "4px 8px", borderRadius: 4, fontWeight: 700, letterSpacing: 0.5 }}>
                                         #{tag}
                                     </span>
                                 ))}
@@ -57,11 +57,9 @@ export const PhilanthropyPulse = ({ onAdd }) => {
 
                             <div style={{ display: "flex", gap: 10, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
                                 <Btn variant="primary" style={{ flex: 1 }}>Analyze Alignment</Btn>
-                                <Btn variant="ghost" onClick={() => {
-                                    alert("Saved Lead locally (PhilanthropyPulse -> Saved array)");
-                                }}>💾 Save</Btn>
+                                <TrackBtn onTrack={() => console.log("Saved Lead locally")} defaultLabel="💾 Save" />
                                 {onAdd && (
-                                    <Btn variant="success" onClick={() => {
+                                    <TrackBtn onTrack={() => {
                                         onAdd({
                                             id: uid(),
                                             title: item.title,
@@ -73,7 +71,7 @@ export const PhilanthropyPulse = ({ onAdd }) => {
                                             category: "News Signal",
                                             createdAt: new Date().toISOString()
                                         });
-                                    }}>+ Track</Btn>
+                                    }} defaultLabel="+ Track" />
                                 )}
                             </div>
                         </Card>

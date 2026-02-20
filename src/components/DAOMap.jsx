@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Badge, Btn } from '../ui';
+import { Card, Badge, Btn, TrackBtn } from '../ui';
 import { T, uid } from '../globals';
 import { API } from '../api';
 
@@ -51,7 +51,7 @@ export const DAOMap = ({ onAdd }) => {
                             <div style={{ display: "flex", gap: 10, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
                                 <Btn variant="primary" style={{ flex: 1 }}>Draft Proposal</Btn>
                                 {onAdd && (
-                                    <Btn variant="success" onClick={() => {
+                                    <TrackBtn onTrack={() => {
                                         onAdd({
                                             id: uid(),
                                             title: dao.name,
@@ -63,7 +63,7 @@ export const DAOMap = ({ onAdd }) => {
                                             category: "Web3/DAO",
                                             createdAt: new Date().toISOString()
                                         });
-                                    }}>+ Track</Btn>
+                                    }} defaultLabel="+ Track" />
                                 )}
                             </div>
                         </Card>

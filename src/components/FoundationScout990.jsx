@@ -1,17 +1,28 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Badge, Btn, Input, Progress } from '../ui';
+import { Card, Badge, Btn, Input, Progress, TrackBtn } from '../ui';
 import { T, uid } from '../globals';
-import { PhilanthropyAPI } from '../philanthropy';
+import { API } from '../api';
 
 export const FoundationScout990 = ({ onAdd }) => {
     const [search, setSearch] = useState("");
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
 
+    const [animateDist, setAnimateDist] = useState(false);
+
     const runAnalysis = async () => {
+        if (!search) return;
         setLoading(true);
-        const res = await PhilanthropyAPI.analyzeFoundation990(search);
-        setData(res);
+        setData(null);
+        setAnimateDist(false);
+        try {
+            const res = await API.philanthropy.analyzeFoundation990(search);
+            if (!res || res.error) throw new Error("Not Found");
+            setData(res);
+            setTimeout(() => setAnimateDist(true), 100);
+        } catch (e) {
+            setData({ error: "No 990-PF records found for a foundation with that name or EIN." });
+        }
         setLoading(false);
     };
 
@@ -32,7 +43,13 @@ export const FoundationScout990 = ({ onAdd }) => {
                 </div>
             </Card>
 
-            {data && (
+            {data && data.error && (
+                <div style={{ padding: 16, background: `${T.red}11`, color: T.red, borderRadius: 8, border: `1px solid ${T.red}33`, fontSize: 13, marginBottom: 16 }}>
+                    {data.error}
+                </div>
+            )}
+
+            {data && !data.error && (
                 <div style={{ animation: "fadeIn 0.4s" }}>
                     <Card style={{ marginBottom: 15 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 15 }}>
@@ -50,7 +67,7 @@ export const FoundationScout990 = ({ onAdd }) => {
                                     <span style={{ color: T.text }}>{h.category}</span>
                                     <span style={{ fontWeight: 600, color: T.green }}>{h.amount} ({h.percentage}%)</span>
                                 </div>
-                                <Progress value={h.percentage} max={100} color={T.green} height={6} />
+                                <Progress value={animateDist ? h.percentage : 0} max={100} color={T.green} height={6} />
                             </div>
                         ))}
                     </Card>
@@ -69,7 +86,7 @@ export const FoundationScout990 = ({ onAdd }) => {
                         <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
                             <Btn variant="primary" style={{ flex: 1 }}>Connection Strategy</Btn>
                             {onAdd && (
-                                <Btn variant="success" onClick={() => {
+                                <TrackBtn onTrack={() => {
                                     onAdd({
                                         id: uid(),
                                         title: search || "Foundation Target",
@@ -81,7 +98,7 @@ export const FoundationScout990 = ({ onAdd }) => {
                                         category: "Foundation",
                                         createdAt: new Date().toISOString()
                                     });
-                                }}>+ Track Foundation</Btn>
+                                }} defaultLabel="+ Track Foundation" />
                             )}
                         </div>
                     </Card>

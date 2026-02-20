@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Badge, Btn, Progress } from '../ui';
+import { Card, Badge, Btn, Progress, TrackBtn } from '../ui';
 import { T, fmt, uid } from '../globals';
 import { API } from '../api';
 
@@ -54,13 +54,12 @@ export const CBALedger = ({ onAdd }) => {
 
                                 <div style={{ display: "flex", gap: 10, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
                                     <Btn variant="primary" style={{ flex: 1 }}>Contact {p.contact}</Btn>
-                                    <Btn variant="ghost" onClick={() => {
-                                        API.fortuna.syncToLedger().then(res => {
-                                            alert(`Synced ${res.synced} Fortuna transactions to ${p.project} ledger.`);
-                                        });
+                                    <Btn variant="ghost" onClick={async () => {
+                                        const res = await API.fortuna.syncToLedger();
+                                        alert(`CBA LEDGER SYNC: ${res.synced} transactions processed for ${p.project}.`);
                                     }}>🔄 Sync</Btn>
                                     {onAdd && (
-                                        <Btn variant="success" onClick={() => {
+                                        <TrackBtn onTrack={() => {
                                             onAdd({
                                                 id: uid(),
                                                 title: `${p.project} - CBA Fund`,
@@ -68,11 +67,11 @@ export const CBALedger = ({ onAdd }) => {
                                                 amount: p.remaining,
                                                 deadline: "Rolling",
                                                 stage: "discovered",
-                                                description: `CBA fund for ${p.project} focused on ${p.focus}. Contact: ${p.contact}`,
-                                                category: "CBA",
+                                                description: `Developer: ${p.developer}. Focus: ${p.focus}. Contact: ${p.contact}`,
+                                                category: "CBA Fund",
                                                 createdAt: new Date().toISOString()
                                             });
-                                        }}>+ Track Focus</Btn>
+                                        }} defaultLabel="+ Track Fund" />
                                     )}
                                 </div>
                             </Card>
