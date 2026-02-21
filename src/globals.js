@@ -99,6 +99,22 @@ export const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 export const pct = (v) => `${Math.round(v)}%`;
 
 // ─── STATE FIPS LOOKUP ─────────────────────────────────────────────────
+export const ALL_STATES = [
+    { id: "AL", label: "Alabama" }, { id: "AK", label: "Alaska" }, { id: "AZ", label: "Arizona" }, { id: "AR", label: "Arkansas" },
+    { id: "CA", label: "California" }, { id: "CO", label: "Colorado" }, { id: "CT", label: "Connecticut" }, { id: "DE", label: "Delaware" },
+    { id: "FL", label: "Florida" }, { id: "GA", label: "Georgia" }, { id: "HI", label: "Hawaii" }, { id: "ID", label: "Idaho" },
+    { id: "IL", label: "Illinois" }, { id: "IN", label: "Indiana" }, { id: "IA", label: "Iowa" }, { id: "KS", label: "Kansas" },
+    { id: "KY", label: "Kentucky" }, { id: "LA", label: "Louisiana" }, { id: "ME", label: "Maine" }, { id: "MD", label: "Maryland" },
+    { id: "MA", label: "Massachusetts" }, { id: "MI", label: "Michigan" }, { id: "MN", label: "Minnesota" }, { id: "MS", label: "Mississippi" },
+    { id: "MO", label: "Missouri" }, { id: "MT", label: "Montana" }, { id: "NE", label: "Nebraska" }, { id: "NV", label: "Nevada" },
+    { id: "NH", label: "New Hampshire" }, { id: "NJ", label: "New Jersey" }, { id: "NM", label: "New Mexico" }, { id: "NY", label: "New York" },
+    { id: "NC", label: "North Carolina" }, { id: "ND", label: "North Dakota" }, { id: "OH", label: "Ohio" }, { id: "OK", label: "Oklahoma" },
+    { id: "OR", label: "Oregon" }, { id: "PA", label: "Pennsylvania" }, { id: "RI", label: "Rhode Island" }, { id: "SC", label: "South Carolina" },
+    { id: "SD", label: "South Dakota" }, { id: "TN", label: "Tennessee" }, { id: "TX", label: "Texas" }, { id: "UT", label: "Utah" },
+    { id: "VT", label: "Vermont" }, { id: "VA", label: "Virginia" }, { id: "WA", label: "Washington" }, { id: "WV", label: "West Virginia" },
+    { id: "WI", label: "Wisconsin" }, { id: "WY", label: "Wyoming" }
+];
+
 export const STATE_FIPS = { "alabama": "01", "alaska": "02", "arizona": "04", "arkansas": "05", "california": "06", "colorado": "08", "connecticut": "09", "delaware": "10", "florida": "12", "georgia": "13", "hawaii": "15", "idaho": "16", "illinois": "17", "indiana": "18", "iowa": "19", "kansas": "20", "kentucky": "21", "louisiana": "22", "maine": "23", "maryland": "24", "massachusetts": "25", "michigan": "26", "minnesota": "27", "mississippi": "28", "missouri": "29", "montana": "30", "nebraska": "31", "nevada": "32", "new hampshire": "33", "new jersey": "34", "new mexico": "35", "new york": "36", "north carolina": "37", "north dakota": "38", "ohio": "39", "oklahoma": "40", "oregon": "41", "pennsylvania": "42", "rhode island": "44", "south carolina": "45", "south dakota": "46", "tennessee": "47", "texas": "48", "utah": "49", "vermont": "50", "virginia": "51", "washington": "53", "west virginia": "54", "wisconsin": "55", "wyoming": "56", "al": "01", "ak": "02", "az": "04", "ar": "05", "ca": "06", "co": "08", "ct": "09", "de": "10", "fl": "12", "ga": "13", "hi": "15", "id": "16", "il": "17", "in": "18", "ia": "19", "ks": "20", "ky": "21", "la": "22", "me": "23", "md": "24", "ma": "25", "mi": "26", "mn": "27", "ms": "28", "mo": "29", "mt": "30", "ne": "31", "nv": "32", "nh": "33", "nj": "34", "nm": "35", "ny": "36", "nc": "37", "nd": "38", "oh": "39", "ok": "40", "or": "41", "pa": "42", "ri": "44", "sc": "45", "sd": "46", "tn": "47", "tx": "48", "ut": "49", "vt": "50", "va": "51", "wa": "53", "wv": "54", "wi": "55", "wy": "56" };
 export const STATE_ABBR = { "01": "AL", "02": "AK", "04": "AZ", "05": "AR", "06": "CA", "08": "CO", "09": "CT", "10": "DE", "12": "FL", "13": "GA", "15": "HI", "16": "ID", "17": "IL", "18": "IN", "19": "IA", "20": "KS", "21": "KY", "22": "LA", "23": "ME", "24": "MD", "25": "MA", "26": "MI", "27": "MN", "28": "MS", "29": "MO", "30": "MT", "31": "NE", "32": "NV", "33": "NH", "34": "NJ", "35": "NM", "36": "NY", "37": "NC", "38": "ND", "39": "OH", "40": "OK", "41": "OR", "42": "PA", "44": "RI", "45": "SC", "46": "SD", "47": "TN", "48": "TX", "49": "UT", "50": "VT", "51": "VA", "53": "WA", "54": "WV", "55": "WI", "56": "WY" };
 

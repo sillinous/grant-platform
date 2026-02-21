@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { T, PROFILE, LS, uid, fmt, fmtDate, daysUntil } from "../globals";
+import { T, PROFILE, LS, uid, fmt, fmtDate, daysUntil, ALL_STATES } from "../globals";
 import { Tab, Card, Input, Btn, Select, Badge, Empty, Progress, Icon } from "../ui";
 import { API } from "../api";
 
@@ -1114,10 +1114,11 @@ Narratives: ${PROFILE.narratives.founder}`;
                 <div>
                     <Btn variant="primary" onClick={async () => {
                         setLoading(true);
-                        const [spending, recipients] = await Promise.all([API.getSpendingByState("IL"), API.getTopRecipients("IL")]);
-                        setLandscape({ spending: spending.results || [], recipients: recipients.results || [] });
+                                const st = getProfileState().abbr;
+                                const [spending, recipients] = await Promise.all([API.getSpendingByState(st), API.getTopRecipients(st)]);
+                                setLandscape({ spending: spending.results || [], recipients: recipients.results || [], stateName: st });
                         setLoading(false);
-                    }} disabled={loading} style={{ marginBottom: 16 }}>{loading ? "⏳ Loading..." : `📊 Load ${PROFILE.loc ? PROFILE.loc.split(",").pop()?.trim() : "IL"} Funding Data`}</Btn>
+                            }} disabled={loading} style={{ marginBottom: 16 }}>{loading ? "⏳ Loading..." : `📊 Load ${getProfileState().abbr} Funding Data`}</Btn>
 
                     {landscape && (
                         <div>
@@ -1186,8 +1187,8 @@ Narratives: ${PROFILE.narratives.founder}`;
                             <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>🏛️ Multi-Tier Discovery</div>
                             <div style={{ display: "flex", gap: 8 }}>
                                 <Select value={geoFilter.state} onChange={s => setGeoFilter({ ...geoFilter, state: s })}
-                                    options={[{ id: "CA", label: "California" }, { id: "IL", label: "Illinois" }, { id: "NY", label: "New York" }, { id: "TX", label: "Texas" }]}
-                                    style={{ width: 120, height: 32, fontSize: 11 }} />
+                                            options={ALL_STATES}
+                                            style={{ width: 140, height: 32, fontSize: 11 }} />
                                 <Input value={geoFilter.county} onChange={c => setGeoFilter({ ...geoFilter, county: c })} placeholder="County"
                                     style={{ width: 100, height: 32, fontSize: 11 }} />
                             </div>
@@ -1237,8 +1238,8 @@ Narratives: ${PROFILE.narratives.founder}`;
             {tab === "regs" && (
                 <div>
                     <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-                        <Input value={query} onChange={setQuery} placeholder="Search federal regulations..." style={{ flex: 1 }} onKeyDown={e => { if (e.key === "Enter") { setLoading(true); API.searchRegulations(query).then(d => { setRegs(d.data || []); setLoading(false); }); } }} />
-                        <Btn variant="primary" onClick={async () => { setLoading(true); const d = await API.searchRegulations(query); setRegs(d.data || []); setLoading(false); }} disabled={loading}>⚖️ Search</Btn>
+                                <Input value={query} onChange={setQuery} placeholder="Search federal regulations..." style={{ flex: 1 }} onKeyDown={e => { if (e.key === "Enter") { setLoading(true); API.searchRegulations(query).then(d => { if (d._error) { setRegs([]); alert(d._error); } else { setRegs(d.data || []); } setLoading(false); }); } }} />
+                                <Btn variant="primary" onClick={async () => { setLoading(true); const d = await API.searchRegulations(query); if (d._error) { setRegs([]); alert(d._error); } else { setRegs(d.data || []); } setLoading(false); }} disabled={loading}>⚖️ Search</Btn>
                     </div>
                     {regs.length > 0 && (
                         <div>
@@ -1275,6 +1276,67 @@ Narratives: ${PROFILE.narratives.founder}`;
                             Identify funding opportunities <i>before</i> they are officially posted. We track Congressional bills (Legislative Foresight) and real-time FEMA disaster declarations (Emergency Response Pulse) to predict upcoming shifts in the grant environment.
                         </div>
                     </Card>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                                <Card>
+                                    <div style={{ fontSize: 13, fontWeight: 700, color: T.amber, marginBottom: 12 }}>🏛️ Legislative Foresight (Bills)</div>
+                                    <div style={{ fontSize: 11, color: T.sub, marginBottom: 16 }}>Tracking pending legislation that includes grant appropriations.</div>
+                                    <Btn variant="primary" size="sm" onClick={async () => {
+                                        setLoading(true);
+                                        const data = await API.searchBills("technology");
+                                        setMultiTierResults(data.bills.map(b => ({
+                                            ...b,
+                                            id: b.billNumber || uid(),
+                                            title: b.title,
+                                            agency: b.policyArea?.name || "Congress",
+                                            type: "Bill",
+                                            source: "Congress.gov",
+                                            description: `Status: ${b.latestAction?.text || "Unknown"}. Cosponsors: ${b.cosponsorsCount || 0}.`
+                                        })));
+                                        setLoading(false);
+                                    }}>Scan Congressional Pipeline</Btn>
+                                </Card>
+
+                                <Card>
+                                    <div style={{ fontSize: 13, fontWeight: 700, color: T.red, marginBottom: 12 }}>📡 Emergency Response Pulse (FEMA)</div>
+                                    <div style={{ fontSize: 11, color: T.sub, marginBottom: 16 }}>Real-time disaster declarations often trigger immediate grant openings.</div>
+                                    <Btn variant="primary" size="sm" onClick={async () => {
+                                        setLoading(true);
+                                        const data = await API.getFEMAActiveDeclarations();
+                                        setMultiTierResults(data.map(d => ({
+                                            ...d,
+                                            id: d.disasterNumber || uid(),
+                                            title: d.declarationTitle,
+                                            agency: `FEMA (${d.state})`,
+                                            type: "Emergency",
+                                            source: "OpenFEMA",
+                                            amount: 0,
+                                            description: `Incident: ${d.incidentType}. Declared: ${fmtDate(d.declarationDate)}.`
+                                        })));
+                                        setLoading(false);
+                                    }}>Monitor Disaster Signals</Btn>
+                                </Card>
+                            </div>
+
+                            {multiTierResults.length > 0 && (
+                                <div style={{ marginTop: 16 }}>
+                                    <div style={{ fontSize: 12, fontWeight: 600, color: T.text, marginBottom: 12 }}>{multiTierResults.length} Foresight Signals Detected</div>
+                                    {multiTierResults.map((r, i) => (
+                                        <Card key={i} style={{ marginBottom: 8, borderLeft: `4px solid ${r.type === "Bill" ? T.amber : T.red}` }}>
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                                                        <Badge color={r.type === "Bill" ? T.amber : T.red}>{r.type}</Badge>
+                                                        <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{r.title}</div>
+                                                    </div>
+                                                    <div style={{ fontSize: 11, color: T.mute }}>{r.agency} · {r.source}</div>
+                                                </div>
+                                            </div>
+                                            <div style={{ fontSize: 11, color: T.sub, marginTop: 8 }}>{r.description}</div>
+                                        </Card>
+                                    ))}
+                                </div>
+                            )}
 
                 </div>
             )}

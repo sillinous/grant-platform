@@ -340,6 +340,7 @@ export const API = {
                 const data = await r.json();
                 const results = (data.result?.records || []).map(r => ({
                     ...r,
+                    id: r.id || r._id || uid(),
                     title: r.Grant_Title || r.title,
                     agency: r.Agency_Department_Name || r.agency,
                     amount: r.Estimated_Total_Funding || 0,
@@ -348,15 +349,17 @@ export const API = {
                 }));
                 SimpleCache.set(cacheKey, results);
                 return results;
-            } else if (state === "IL") {
-                // IL GATA Mock
+            } else {
+                // Dynamic Mock for all other states
                 const results = [
-                    { id: uid(), title: `IL-${query}-GATA-2026`, agency: "IL Dept of Commerce", amount: 500000, source: "Illinois GATA", type: "State", description: "Economic development pass-through via GATA framework." },
-                    { id: uid(), title: `Chicago Regional Innovation Fund`, agency: "IL Innovation Bureau", amount: 250000, source: "Illinois GATA", type: "State", description: "Localized tech advancement funding." }
-                ].filter(r => r.title.toLowerCase().includes(query.toLowerCase()));
+                    { id: uid(), title: `${state} Community Development Block Grant`, agency: `${state} Dept of Commerce`, amount: 750000, source: `${state} Grants Portal`, type: "State", description: "State-level funding for community infrastructure and housing." },
+                    { id: uid(), title: `${state} Workforce Innovation Fund`, agency: `${state} Labor Dept`, amount: 300000, source: `${state} State Portal`, type: "State", description: `Supporting vocational training and workforce development in ${state}.` },
+                    { id: uid(), title: `${state} Small Business Recovery`, agency: `${state} Economic Development`, amount: 150000, source: `${state} Portal`, type: "State", description: "Grant programs for SMEs and startups." }
+                ].filter(r => r.title.toLowerCase().includes(query.toLowerCase()) || query === "");
+
+                SimpleCache.set(cacheKey, results);
                 return results;
             }
-            return [];
         } catch (e) {
             console.warn(`State API (${state}) failed:`, e);
             return { results: [], _error: `${state}: ${e.message}` };
@@ -381,9 +384,9 @@ export const API = {
         };
 
         const results = (mocks[county] || [
-            { id: uid(), title: `${county} Community Reinvestment`, agency: `${county} Commissioners`, amount: 50000, source: "County Portal", type: "Local", description: `Specialized ${county} funding for local infrastructure.` },
-            { id: uid(), title: `Municipal Workforce Bridge`, agency: "Local City Council", amount: 15000, source: "City Clerk", type: "Local", description: "Small-scale workforce grants for city residents." }
-        ]).filter(r => r.title.toLowerCase().includes(query.toLowerCase()) || r.description.toLowerCase().includes(query.toLowerCase()));
+            { id: uid(), title: `${county} County Community Reinvestment`, agency: `${county} County Commissioners`, amount: 50000, source: "County Portal", type: "Local", description: `Specialized ${county} funding for local infrastructure and social programs.` },
+            { id: uid(), title: `${county} Municipal Innovation Grant`, agency: "Local City Council", amount: 15000, source: "City Clerk", type: "Local", description: `Small-scale tech and innovation grants for residents of ${county}.` }
+        ]).filter(r => r.title.toLowerCase().includes(query.toLowerCase()) || r.description?.toLowerCase().includes(query.toLowerCase()) || query === "");
 
         SimpleCache.set(cacheKey, results);
         return results;
