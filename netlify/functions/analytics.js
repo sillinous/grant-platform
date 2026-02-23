@@ -1,37 +1,36 @@
-import { getStore } from "@netlify/blobs";
+const { getStore } = require("@netlify/blobs");
 
-export default async (req, context) => {
+exports.handler = async (event, context) => {
   const cors = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type",
     "Content-Type": "application/json",
   };
 
-  if (req.method === "OPTIONS") return new Response("OK", { headers: cors });
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 200, headers: cors, body: "" };
+  }
 
   const store = getStore("analytics");
 
   // POST: Receive event batch
-  if (req.method === "POST") {
+  if (event.httpMethod === "POST") {
     try {
-      const { events } = await req.json();
+      const { events } = JSON.parse(event.body || '{"events":[]}');
       if (!Array.isArray(events) || events.length === 0) {
-        return new Response(JSON.stringify({ ok: true, stored: 0 }), { headers: cors });
+        return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true, stored: 0 }) };
       }
 
-      // Aggregate into daily buckets
-      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      const today = new Date().toISOString().slice(0, 10);
       const key = `day_${today}`;
-      
+
       let dayData;
-      try {
-        dayData = await store.get(key, { type: "json" });
-      } catch { dayData = null; }
-      
+      try { dayData = await store.get(key, { type: "json" }); } catch { dayData = null; }
+
       if (!dayData) {
         dayData = {
           date: today,
-          sessions: new Set(),
+          sessions: [],
           pageViews: {},
           gateHits: {},
           aiCalls: { total: 0, success: 0, fail: 0, totalMs: 0 },
@@ -40,60 +39,59 @@ export default async (req, context) => {
           actions: {},
           feedbackOpens: 0,
         };
-      } else {
-        dayData.sessions = new Set(dayData.sessions || []);
       }
 
+      const sessionSet = new Set(dayData.sessions || []);
+
       for (const ev of events) {
-        if (ev.session) dayData.sessions.add(ev.session);
-        
+        if (ev.session) sessionSet.add(ev.session);
+
         switch (ev.type) {
-          case 'page_view':
+          case "page_view":
             dayData.pageViews[ev.module] = (dayData.pageViews[ev.module] || 0) + 1;
             break;
-          case 'gate_hit':
+          case "gate_hit":
             dayData.gateHits[ev.feature] = (dayData.gateHits[ev.feature] || 0) + 1;
             break;
-          case 'ai_call':
+          case "ai_call":
             dayData.aiCalls.total++;
             if (ev.success) dayData.aiCalls.success++;
             else dayData.aiCalls.fail++;
             dayData.aiCalls.totalMs += (ev.durationMs || 0);
             break;
-          case 'api_call':
+          case "api_call":
             dayData.apiCalls.total++;
             if (ev.success) dayData.apiCalls.success++;
             else dayData.apiCalls.fail++;
             break;
-          case 'error':
-            const eKey = `${ev.component}:${(ev.message || '').slice(0, 50)}`;
+          case "error":
+            const eKey = `${ev.component}:${(ev.message || "").slice(0, 50)}`;
             dayData.errors[eKey] = (dayData.errors[eKey] || 0) + 1;
             break;
-          case 'action':
+          case "action":
             dayData.actions[ev.name] = (dayData.actions[ev.name] || 0) + 1;
             break;
-          case 'feedback_open':
+          case "feedback_open":
             dayData.feedbackOpens = (dayData.feedbackOpens || 0) + 1;
             break;
         }
       }
 
-      // Convert Set to array for storage
-      const toStore = { ...dayData, sessions: [...dayData.sessions] };
-      await store.setJSON(key, toStore);
+      dayData.sessions = [...sessionSet];
+      await store.setJSON(key, dayData);
 
-      return new Response(JSON.stringify({ ok: true, stored: events.length, date: today }), { headers: cors });
+      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true, stored: events.length, date: today }) };
     } catch (err) {
-      return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
+      return { statusCode: 500, headers: cors, body: JSON.stringify({ error: err.message }) };
     }
   }
 
   // GET: Retrieve analytics (for autonomous monitoring)
-  if (req.method === "GET") {
+  if (event.httpMethod === "GET") {
     try {
-      const url = new URL(req.url);
-      const days = parseInt(url.searchParams.get("days") || "7");
-      
+      const params = event.queryStringParameters || {};
+      const days = parseInt(params.days || "7");
+
       const results = [];
       for (let i = 0; i < days; i++) {
         const d = new Date();
@@ -104,14 +102,12 @@ export default async (req, context) => {
           if (data) results.push(data);
         } catch { /* day not found */ }
       }
-      
-      return new Response(JSON.stringify({ days: results.length, data: results }), { headers: cors });
+
+      return { statusCode: 200, headers: cors, body: JSON.stringify({ days: results.length, data: results }) };
     } catch (err) {
-      return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
+      return { statusCode: 500, headers: cors, body: JSON.stringify({ error: err.message }) };
     }
   }
 
-  return new Response(JSON.stringify({ error: "method not allowed" }), { status: 405, headers: cors });
+  return { statusCode: 405, headers: cors, body: JSON.stringify({ error: "method not allowed" }) };
 };
-
-export const config = { path: "/api/analytics" };
