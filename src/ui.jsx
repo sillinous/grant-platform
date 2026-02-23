@@ -3,19 +3,38 @@ import { T, clamp } from "./globals";
 
 // ─── ERROR BOUNDARY ────────────────────────────────────────────────────
 export class ErrorBoundary extends Component {
-  constructor(props) { super(props); this.state = { error: null }; }
+  constructor(props) { super(props); this.state = { error: null, reported: false }; }
   static getDerivedStateFromError(error) { return { error }; }
-  componentDidCatch(error, info) { console.error(`ErrorBoundary [${this.props.name || "unknown"}]:`, error, info); }
+  componentDidCatch(error, info) {
+    console.error(`ErrorBoundary [${this.props.name || "unknown"}]:`, error, info);
+    // Auto-report crash to feedback system
+    try {
+      fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category: 'bug',
+          severity: 'high',
+          description: `CRASH in ${this.props.name || 'unknown'}: ${error.message}\n${info?.componentStack?.slice(0, 500) || ''}`,
+          module: this.props.name || 'unknown',
+          timestamp: new Date().toISOString(),
+        }),
+      }).then(() => this.setState({ reported: true })).catch(() => {});
+    } catch (e) { /* silent */ }
+  }
   render() {
     if (this.state.error) return (
       <div style={{ padding: 24, textAlign: "center" }}>
         <div style={{ fontSize: 32, marginBottom: 8 }}>⚠️</div>
         <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 8 }}>Something went wrong in {this.props.name || "this module"}</div>
         <div style={{ fontSize: 12, color: T.mute, marginBottom: 16 }}>{this.state.error.message}</div>
-        <button onClick={() => this.setState({ error: null })} style={{
-          padding: "8px 16px", background: T.amber, border: "none", borderRadius: 6, cursor: "pointer",
-          color: "#0a0e14", fontWeight: 600, fontSize: 12
-        }}>🔄 Try Again</button>
+        <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+          <button onClick={() => this.setState({ error: null, reported: false })} style={{
+            padding: "8px 16px", background: T.amber, border: "none", borderRadius: 6, cursor: "pointer",
+            color: "#0a0e14", fontWeight: 600, fontSize: 12
+          }}>🔄 Try Again</button>
+        </div>
+        {this.state.reported && <div style={{ fontSize: 11, color: T.dim, marginTop: 12 }}>✓ Crash report sent automatically</div>}
       </div>
     );
     return this.props.children;
