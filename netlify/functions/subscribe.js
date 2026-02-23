@@ -90,6 +90,16 @@ exports.handler = async (event) => {
       const tier = sub?.items?.data?.[0]?.price?.id === PRICES.team ? 'team' : 'pro'
       const email = session.customer_details?.email || session.customer_email || ''
       const expiresAt = (sub?.current_period_end || Math.floor(Date.now()/1000) + 2592000) * 1000
+
+      // Fire ecosystem cross-sell in background (non-blocking)
+      if (email) {
+        fetch(`${BASE_URL}/.netlify/functions/cross-sell`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, tier }),
+        }).catch(() => {}) // fire-and-forget
+      }
+
       return {
         statusCode: 200,
         headers: { ...cors, 'Content-Type': 'application/json' },
