@@ -5,6 +5,10 @@
 [functions]
   directory = "netlify/functions"
 
+[[redirects]]
+  from = "/api/ai/*"
+  to = "/.netlify/functions/ai"
+  status = 200
 
 [[redirects]]
   from = "/*"
@@ -14,7 +18,7 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://identity.netlify.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https://api.anthropic.com https://apply07.grants.gov https://api.usaspending.gov https://api.regulations.gov https://api.census.gov https://api.sam.gov https://*.netlify.app;"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://identity.netlify.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https://api.anthropic.com https://openrouter.ai https://apply07.grants.gov https://api.usaspending.gov https://api.regulations.gov https://api.census.gov https://api.sam.gov https://api.stlouisfed.org https://openfema.fema.gov https://projects.propublica.org https://api.congress.gov https://www.huduser.gov https://api.sba.gov https://data.ca.gov https://*.netlify.app https://*.netlify.com;"
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"

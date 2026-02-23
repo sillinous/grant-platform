@@ -125,12 +125,12 @@ export const Progress = ({ value, max = 100, color = T.amber, height = 6 }) => (
   </div>
 );
 
-export const Empty = ({ icon = "📭", title, sub: subtitle, action }) => (
+export const Empty = ({ icon = "📭", title, label, sub: subtitle, action, children }) => (
   <div style={{ textAlign:"center", padding:48, color:T.mute }}>
     <div style={{ fontSize:40, marginBottom:12 }}>{icon}</div>
-    <div style={{ fontSize:15, color:T.sub, marginBottom:4 }}>{title}</div>
+    <div style={{ fontSize:15, color:T.sub, marginBottom:4 }}>{title || label}</div>
     {subtitle && <div style={{ fontSize:12, marginBottom:16 }}>{subtitle}</div>}
-    {action}
+    {action || children}
   </div>
 );
 

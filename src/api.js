@@ -89,6 +89,7 @@ export function buildGrantContext(grantId) {
 
 // ─── API SERVICES ──────────────────────────────────────────────────────
 export const API = {
+    _cache: {},
     fortuna: FortunaAPI,
     philanthropy: PhilanthropyAPI,
 
@@ -856,6 +857,4 @@ export const API = {
         };
     },
 
-    // ─── FORTUNA FINTECH EXTENSION ─────────────────────────────────────────
-    fortuna: FortunaAPI
 };

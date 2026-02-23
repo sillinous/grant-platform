@@ -201,7 +201,7 @@ const AppContent = () => {
     { id: "network", icon: "🕸️", label: "Relationship Map", group: "intelligence" },
     { id: "funder_research", icon: "🔍", label: "Funder Research", group: "intelligence" },
     { id: "optimizer", icon: "⚡", label: "Portfolio Optimizer", group: "intelligence" },
-    { id: "portfolio_optimizer", icon: "📊", label: "Optimizer", group: "intelligence" },
+
     { id: "executive_summary", icon: "📄", label: "Board Report", group: "intelligence" },
     { id: "winloss", icon: "📉", label: "Win/Loss Analysis", group: "intelligence" },
     { id: "impact", icon: "📈", label: "Impact Portfolio", group: "intelligence" },
@@ -218,7 +218,7 @@ const AppContent = () => {
 
   const renderPage = () => {
     switch (page) {
-      case "dashboard": return <Dashboard />;
+      case "dashboard": return <Dashboard navigate={setPage} />;
       case "exec_dash": return <ExecutiveDashboard />;
       case "discovery": return <Discovery />;
       case "pipeline": return <Pipeline />;
@@ -240,7 +240,7 @@ const AppContent = () => {
       case "outcomes": return <OutcomeTracker />;
       case "closeout": return <CloseoutWizard />;
       case "projector": return <FinancialProjector />;
-      case "forecast": return <LegislativeTracker />;
+      case "forecast": return <FundingForecast />;
       case "sentinel": return <GrantSentinel />;
       case "advisor": return <StrategicAdvisor />;
       case "network": return <RelationshipMap />;
@@ -261,7 +261,7 @@ const AppContent = () => {
 
       // Org Specific
       case "org_profile": return <OrgProfile />;
-      default: return <Dashboard grants={grants} docs={vaultDocs} contacts={contacts} vaultDocs={vaultDocs} events={events} navigate={setPage} />;
+      default: return <Dashboard navigate={setPage} />;
     }
   };
 
