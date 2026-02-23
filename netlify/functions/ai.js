@@ -68,7 +68,7 @@ exports.handler = async (event) => {
     return { statusCode: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type' } }
   }
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' }
-  if (!ANTHROPIC_KEY) return { statusCode: 500, body: JSON.stringify({ error: 'API key not set' }) }
+  if (!ANTHROPIC_KEY && !OPENROUTER_KEY) return { statusCode: 500, body: JSON.stringify({ error: 'API key not set' }) }
 
   const action = event.path.replace('/.netlify/functions/ai/', '').replace('/api/ai/', '')
   let body
