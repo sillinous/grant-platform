@@ -7,6 +7,9 @@ import { cloud } from "./cloud";
 import { OrganizationProvider, useOrganization } from "./context/OrganizationContext.jsx";
 import { ContextSwitcher } from "./components/ContextSwitcher";
 import { OrgProfile } from "./components/OrgProfile";
+import { UpgradeModal, ProBadge } from './components/UpgradeModal';
+import { PricingPage } from './components/PricingPage';
+import { canAccess, getTier, setSub, GATES } from './subscription';
 
 
 // ═══════════════════════════════════════════════════════════════════
@@ -81,16 +84,48 @@ import { useStore } from './store';
 const AppContent = () => {
     const { activeContext, isPersonal } = useOrganization();
     
-    // Derived state for filtered grants based on context
-    // In a real app, we'd filter grants by orgId. For now, we'll simulare it.
-    // const contextGrants = isPersonal ? grants.filter(g => !g.orgId) : grants.filter(g => g.orgId === activeContext.id);
-    
-    // For prototype, we will just share grants but change the sidebar
   const [page, setPage] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [toast, setToast] = useState(null);
   const [user, setUser] = useState(null);
   const [syncStatus, setSyncStatus] = useState("local");
+
+  // ── Subscription state ─────────────────────────────────────────
+  const [subTier, setSubTier] = useState(() => getTier());
+  const [upgradeModal, setUpgradeModal] = useState(null); // { featureName, requiredTier }
+
+  // Verify Stripe session on return from checkout
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sessionId = params.get('session_id');
+    const plan = params.get('plan');
+    if (sessionId) {
+      fetch('/api/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: sessionId }),
+      }).then(r => r.json()).then(data => {
+        if (data.ok) {
+          setSub(data.tier, data.email, data.expiresAt);
+          setSubTier(data.tier);
+          // Clean URL
+          window.history.replaceState({}, '', '/');
+          setToast({ msg: `🎉 Welcome to ${data.tier.charAt(0).toUpperCase() + data.tier.slice(1)}! Full access unlocked.`, type: 'success' });
+        }
+      }).catch(() => {});
+    }
+  }, []);
+
+  // Gate navigation: intercept before switching page
+  const navigate = (pageId) => {
+    if (!canAccess(pageId)) {
+      const tier = GATES[pageId] || 'pro';
+      const navLabel = currentNavItems?.find?.(n => n.id === pageId)?.label || pageId;
+      setUpgradeModal({ featureName: navLabel, requiredTier: tier });
+      return;
+    }
+    setPage(pageId);
+  };
 
   const {
     grants,
@@ -213,12 +248,14 @@ const AppContent = () => {
     { id: "impact_mapper", icon: "🗺️", label: "Impact Mapper", group: "local" },
     { id: "compliance_wizard", icon: "🧙", label: "Compliance Wizard", group: "local" },
     { id: "policy_modeler", icon: "🏛️", label: "Policy Modeler", group: "intelligence" },
+    { id: "pricing", icon: "⚡", label: "Upgrade to Pro", group: "system" },
     { id: "settings", icon: "⚙️", label: t("settings"), group: "system" },
   ];
 
   const renderPage = () => {
     switch (page) {
-      case "dashboard": return <Dashboard navigate={setPage} />;
+      case "dashboard": return <Dashboard navigate={navigate} />;
+      case "pricing": return <PricingPage />;
       case "exec_dash": return <ExecutiveDashboard />;
       case "discovery": return <Discovery />;
       case "pipeline": return <Pipeline />;
@@ -261,7 +298,7 @@ const AppContent = () => {
 
       // Org Specific
       case "org_profile": return <OrgProfile />;
-      default: return <Dashboard navigate={setPage} />;
+      default: return <Dashboard navigate={navigate} />;
     }
   };
 
@@ -322,17 +359,45 @@ const AppContent = () => {
                     <span>{isCollapsed ? "▶" : "▼"}</span>
                   </div>
                 )}
-                {(!isCollapsed || !sidebarOpen) && items.map(n => (
-                  <button key={n.id} onClick={() => setPage(n.id)} style={{ width: "100%", padding: sidebarOpen ? "8px 12px" : "8px", border: "none", borderRadius: 6, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, background: page === n.id ? T.amber + "15" : "transparent", color: page === n.id ? T.amber : T.sub, marginBottom: 1, textAlign: "left" }}>
-                    <span style={{ fontSize:14 }}>{n.icon}</span>
-                    {sidebarOpen && <span>{n.label}</span>}
-                  </button>
-                ))}
+                {(!isCollapsed || !sidebarOpen) && items.map(n => {
+                  const locked = !canAccess(n.id);
+                  const reqTier = GATES[n.id];
+                  return (
+                    <button key={n.id} onClick={() => navigate(n.id)} style={{ width: "100%", padding: sidebarOpen ? "8px 12px" : "8px", border: "none", borderRadius: 6, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, background: page === n.id ? T.amber + "15" : "transparent", color: page === n.id ? T.amber : locked ? T.dim : T.sub, marginBottom: 1, textAlign: "left" }}>
+                      <span style={{ fontSize:14, opacity: locked ? 0.5 : 1 }}>{locked ? "🔒" : n.icon}</span>
+                      {sidebarOpen && <span style={{ flex: 1 }}>{n.label}</span>}
+                      {sidebarOpen && locked && reqTier && <ProBadge tier={reqTier} />}
+                    </button>
+                  );
+                })}
               </div>
             );
           })}
         </div>
         
+        {/* Upgrade CTA — shown to free users */}
+        {sidebarOpen && subTier === 'free' && (
+          <div
+            onClick={() => setPage('pricing')}
+            style={{
+              margin: '0 10px 8px', padding: '10px 12px',
+              background: 'linear-gradient(135deg, #6366f120, #8b5cf615)',
+              border: '1px solid #6366f140', borderRadius: 10,
+              cursor: 'pointer',
+            }}
+          >
+            <div style={{ fontSize: 11, fontWeight: 800, color: '#818cf8', marginBottom: 2 }}>⚡ Upgrade to Pro</div>
+            <div style={{ fontSize: 10, color: '#475569', lineHeight: 1.4 }}>Unlock AI Drafter, Intelligence Suite + more. From $49/mo</div>
+          </div>
+        )}
+        {sidebarOpen && subTier !== 'free' && (
+          <div style={{ margin: '0 10px 8px', padding: '6px 12px', background: '#052e16', border: '1px solid #166534', borderRadius: 8 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#86efac' }}>
+              ✓ {subTier.charAt(0).toUpperCase() + subTier.slice(1)} — Full Access
+            </div>
+          </div>
+        )}
+
         {/* User Profile Footer */}
         {sidebarOpen && (
           <div style={{ padding: 12, borderTop: `1px solid ${T.border}`, fontSize: 10, color: T.dim }}>
@@ -450,6 +515,13 @@ const AppContent = () => {
       {!onboardingComplete && <OnboardingWizard onComplete={(profile) => { LS.set("profile", profile); setOnboardingComplete(true); }} />}
       <AIChatBar grants={grants} vaultDocs={vaultDocs} contacts={contacts} />
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
+      {upgradeModal && (
+        <UpgradeModal
+          featureName={upgradeModal.featureName}
+          requiredTier={upgradeModal.requiredTier}
+          onClose={() => setUpgradeModal(null)}
+        />
+      )}
     </div>
   );
 };

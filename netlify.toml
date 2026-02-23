@@ -9,6 +9,11 @@
   timeout = 26
 
 [[redirects]]
+  from = "/api/subscribe"
+  to = "/.netlify/functions/subscribe"
+  status = 200
+
+[[redirects]]
   from = "/api/ai/*"
   to = "/.netlify/functions/ai"
   status = 200
