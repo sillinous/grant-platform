@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { T, PROFILE, saveProfile, LS, uid, fmt, fmtDate, daysUntil, clamp, pct, getProfileState, STAGES, STAGE_MAP, getStorageUsage, logActivity, t, setLocale, LOCALE, LANGS, CURRENCIES } from "./globals";
 import { Icon, Btn, Card, Badge, Input, TextArea, Select, Tab, Progress, Empty, Modal, Stat, MiniBar, ErrorBoundary } from "./ui";
 import { API } from "./api";
@@ -191,7 +191,7 @@ const AppContent = () => {
     { id: "tasks", icon: "📑", label: "Action Plan", group: "management" },
     { id: "awards", icon: "🏆", label: "Award Mgmt", group: "management" },
     { id: "closeout", icon: "📑", label: "Closeout Engine", group: "management" },
-    { id: "action_plan", icon: "📋", label: t("plan"), group: "execution" },
+
     { id: "submission_assembler", icon: "📦", label: "Packager", group: "docs" },
     { id: "outcomes", icon: "📈", label: "Outcome Tracker", group: "management" },
     { id: "projector", icon: "💰", label: "Financial Projector", group: "intelligence" },
@@ -210,8 +210,8 @@ const AppContent = () => {
     { id: "scenario_modeler", icon: "🎲", label: "Scenario Modeler", group: "intelligence" },
     { id: "advisory", icon: "🤝", label: "War Room", group: "intelligence" },
     { id: "funding_stacker", icon: "📊", label: "Funding Stacker", group: "intelligence" },
-    { id: "impact_mapper", icon: "🗺️", label: "Impact Mapper", group: "hyper_local" },
-    { id: "compliance_wizard", icon: "🧙", label: "Compliance Wizard", group: "hyper_local" },
+    { id: "impact_mapper", icon: "🗺️", label: "Impact Mapper", group: "local" },
+    { id: "compliance_wizard", icon: "🧙", label: "Compliance Wizard", group: "local" },
     { id: "policy_modeler", icon: "🏛️", label: "Policy Modeler", group: "intelligence" },
     { id: "settings", icon: "⚙️", label: t("settings"), group: "system" },
   ];
@@ -309,7 +309,7 @@ const AppContent = () => {
 
         {/* Sidebar Navigation */}
         <div style={{ flex:1, padding:"8px 4px", overflow:"auto" }}>
-          {["core", "hyper_local", "analysis", "writing", "docs", "management", "intelligence", "system"].map(group => {
+          {["core", "analysis", "writing", "docs", "management", "intelligence", "local", "system"].map(group => {
             const items = currentNavItems.filter(n => n.group === group);
             if (items.length === 0) return null;
             const label = group === "core" ? "" : group.toUpperCase();

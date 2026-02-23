@@ -41,7 +41,7 @@ export const TRANSLATIONS = {
     en: {
         dashboard: "Dashboard", discovery: "Discovery", pipeline: "Pipeline",
         settings: "Settings", budget: "Budget Builder", vault: "Document Vault",
-        active_grants: "Active Grants", awarded: "Awarded",
+        active_grants: "Active Grants", awarded: "Awarded", plan: "Action Plan",
     },
     es: {
         dashboard: "Tablero", discovery: "Descubrimiento", pipeline: "Línea de Vida",
