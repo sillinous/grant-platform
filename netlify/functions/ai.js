@@ -93,7 +93,7 @@ exports.handler = async (event) => {
       const { profile } = body
       const text = await callClaude(
         `You are a grant research expert. Return ONLY valid JSON, no markdown.`,
-        `Find 6 grant opportunities for this organization:
+        `Find 4 grant opportunities for this organization:
 Name: ${profile.name}
 Type: ${profile.profileType}
 Industry: ${profile.industry}
@@ -101,8 +101,8 @@ Stage: ${profile.stage}
 Description: ${profile.description}
 Funding needs: ${profile.fundingNeeds}
 
-Return JSON: { "opportunities": [ { "name": string, "description": string, "fundingAmount": string, "url": string, "industry": string, "deadline": string, "funder": string, "matchScore": number (60-98), "tier": "a"|"b"|"c" } ] }`,
-        1200
+Return JSON: {"opportunities":[{"title":string,"description":string,"amount":string,"funder":string,"matchScore":number}]}`,
+        500
       )
       const parsed = parseJSON(text)
       return respond(parsed || { opportunities: [] })
