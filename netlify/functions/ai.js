@@ -70,7 +70,14 @@ exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' }
   if (!ANTHROPIC_KEY && !OPENROUTER_KEY) return { statusCode: 500, body: JSON.stringify({ error: 'API key not set' }) }
 
-  const action = event.path.replace('/.netlify/functions/ai/', '').replace('/api/ai/', '')
+  // Extract action from path OR request body
+  let action = event.path
+    .replace(/^\/.netlify\/functions\/ai\/?/, '')
+    .replace(/^\/api\/ai\//, '')
+  if (!action || action.startsWith('/')) {
+    // Fallback: read action from body
+    action = JSON.parse(event.body || '{}').action || ''
+  }
   let body
   try { body = JSON.parse(event.body) } catch { return { statusCode: 400, body: JSON.stringify({ error: 'Invalid JSON' }) } }
 
