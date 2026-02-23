@@ -79,16 +79,27 @@ import { PolicyModeler } from './components/PolicyModeler';
 import { ImpactMapper } from './components/ImpactMapper';
 import { ComplianceWizard } from './components/ComplianceWizard';
 import { useStore } from './store';
+import { FeedbackWidget } from './components/FeedbackWidget';
+import { AlphaLanding } from './components/AlphaLanding';
+import { analytics } from './analytics';
+import { isAlphaUser, enrollAlpha } from './flags';
 
 
 const AppContent = () => {
     const { activeContext, isPersonal } = useOrganization();
     
-  const [page, setPage] = useState("dashboard");
+  const [page, setPage] = useState(() => {
+    // Show alpha landing if user hasn't enrolled and URL has #alpha or first visit
+    if (window.location.hash === '#alpha' || (!localStorage.getItem('gp_alpha') && !localStorage.getItem('gp_returning'))) {
+      return 'alpha';
+    }
+    return 'dashboard';
+  });
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [toast, setToast] = useState(null);
   const [user, setUser] = useState(null);
   const [syncStatus, setSyncStatus] = useState("local");
+  const [showAlpha, setShowAlpha] = useState(() => !localStorage.getItem('gp_returning'));
 
   // ── Subscription state ─────────────────────────────────────────
   const [subTier, setSubTier] = useState(() => getTier());
@@ -118,12 +129,23 @@ const AppContent = () => {
 
   // Gate navigation: intercept before switching page
   const navigate = (pageId) => {
-    if (!canAccess(pageId)) {
+    // Alpha testers get Pro access
+    const effectiveTier = isAlphaUser() ? 'team' : subTier;
+    const effectiveCanAccess = (id) => {
+      if (isAlphaUser()) return true; // Alpha testers bypass all gates
+      return canAccess(id);
+    };
+    
+    if (!effectiveCanAccess(pageId)) {
       const tier = GATES[pageId] || 'pro';
       const navLabel = currentNavItems?.find?.(n => n.id === pageId)?.label || pageId;
       setUpgradeModal({ featureName: navLabel, requiredTier: tier });
+      analytics.gateHit(pageId, subTier);
       return;
     }
+    // Track page navigation
+    const navLabel = currentNavItems?.find?.(n => n.id === pageId)?.label || pageId;
+    analytics.pageView(pageId, navLabel);
     setPage(pageId);
   };
 
@@ -255,6 +277,7 @@ const AppContent = () => {
   const renderPage = () => {
     switch (page) {
       case "dashboard": return <Dashboard navigate={navigate} />;
+      case "alpha": return <AlphaLanding onEnroll={(form) => { enrollAlpha(); localStorage.setItem('gp_returning', '1'); setPage('dashboard'); setToast({ msg: `🧪 Welcome to the Alpha, ${form.name.split(' ')[0]}! All features unlocked.`, type: 'success' }); }} />;
       case "pricing": return <PricingPage />;
       case "exec_dash": return <ExecutiveDashboard />;
       case "discovery": return <Discovery />;
@@ -360,7 +383,7 @@ const AppContent = () => {
                   </div>
                 )}
                 {(!isCollapsed || !sidebarOpen) && items.map(n => {
-                  const locked = !canAccess(n.id);
+                  const locked = isAlphaUser() ? false : !canAccess(n.id);
                   const reqTier = GATES[n.id];
                   return (
                     <button key={n.id} onClick={() => navigate(n.id)} style={{ width: "100%", padding: sidebarOpen ? "8px 12px" : "8px", border: "none", borderRadius: 6, cursor: "pointer", display: "flex", alignItems: "center", gap: 8, background: page === n.id ? T.amber + "15" : "transparent", color: page === n.id ? T.amber : locked ? T.dim : T.sub, marginBottom: 1, textAlign: "left" }}>
@@ -514,6 +537,7 @@ const AppContent = () => {
 
       {!onboardingComplete && <OnboardingWizard onComplete={(profile) => { LS.set("profile", profile); setOnboardingComplete(true); }} />}
       <AIChatBar grants={grants} vaultDocs={vaultDocs} contacts={contacts} />
+      <FeedbackWidget currentModule={currentNavItems?.find?.(n => n.id === page)?.label || page} userTier={isAlphaUser() ? 'alpha' : subTier} userEmail={user?.email} />
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {upgradeModal && (
         <UpgradeModal

@@ -19,6 +19,16 @@
   status = 200
 
 [[redirects]]
+  from = "/api/feedback"
+  to = "/.netlify/functions/feedback"
+  status = 200
+
+[[redirects]]
+  from = "/api/analytics"
+  to = "/.netlify/functions/analytics"
+  status = 200
+
+[[redirects]]
   from = "/api/ai/*"
   to = "/.netlify/functions/ai"
   status = 200

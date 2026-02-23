@@ -26,3 +26,4 @@ dist-ssr
 .env
 refactor_app.js
 temp_app_old.jsx
+.netlify/
