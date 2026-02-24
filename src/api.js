@@ -175,7 +175,7 @@ export const API = {
         } catch (e) { return { data: [], _error: `Regulations.gov: ${e.message}` }; }
     },
 
-    async getCensusData(state, fields = "NAME,S1701_C03_001E,S2301_C04_001E,DP02_0066E,DP03_0062E") {
+    async getCensusData(state, fields = "NAME,DP03_0062E,DP05_0001E,DP03_0005E,DP02_0068PE,DP03_0119PE") {
         const fips = state || getProfileState().fips;
         const cacheKey = `census_${fips}_${fields}`;
         const cached = SimpleCache.get(cacheKey);
@@ -210,13 +210,28 @@ export const API = {
         const cacheKey = `sba_size_${naicsCode}`;
         const cached = SimpleCache.get(cacheKey);
         if (cached) return cached;
+        // SBA API often unavailable — provide common defaults
+        const KNOWN = {
+            "541511": { naics: "541511", description: "Custom Computer Programming Services", sizeStandard: "$34M revenue", employees: 150 },
+            "541512": { naics: "541512", description: "Computer Systems Design Services", sizeStandard: "$34M revenue", employees: 150 },
+            "541519": { naics: "541519", description: "Other Computer Related Services", sizeStandard: "$34M revenue", employees: 150 },
+            "541611": { naics: "541611", description: "Administrative Management Consulting", sizeStandard: "$24.5M revenue", employees: 150 },
+            "541715": { naics: "541715", description: "R&D in Physical Engineering and Life Sciences", sizeStandard: "1,000 employees", employees: 1000 },
+            "813110": { naics: "813110", description: "Religious Organizations", sizeStandard: "$8.0M revenue", employees: 50 },
+            "813211": { naics: "813211", description: "Grantmaking Foundations", sizeStandard: "$16.5M revenue", employees: 100 },
+        };
         try {
             const r = await fetch(`https://api.sba.gov/size-standards/v1/naics/${naicsCode}`);
-            if (!r.ok) return { results: [], _error: `SBA: ${r.status}` };
-            const data = await r.json();
-            SimpleCache.set(cacheKey, data);
-            return data;
-        } catch (e) { return { results: [], _error: `SBA: ${e.message}` }; }
+            if (r.ok) {
+                const data = await r.json();
+                SimpleCache.set(cacheKey, data);
+                return data;
+            }
+        } catch (e) { /* fallback below */ }
+        // Return known data or generic fallback
+        const fallback = KNOWN[naicsCode] || { naics: naicsCode, description: "Unknown", sizeStandard: "See SBA.gov", _fallback: true };
+        SimpleCache.set(cacheKey, fallback);
+        return fallback;
     },
 
     async searchSAMEntities(query) {
@@ -557,14 +572,40 @@ export const API = {
         if (!providerConfig) return { error: `Unknown AI provider: ${provider.id}` };
 
         const apiKey = import.meta.env[providerConfig.envKey] || LS.get(providerConfig.lsKey);
-        if (!apiKey) return { error: `No ${providerConfig.name} API key configured. Add one in Settings → AI Config.` };
-
-        const model = LS.get("ai_model") || providerConfig.models[0].id;
-
+        
+        // If user has their own key, use it directly
+        if (apiKey) {
+            const model = LS.get("ai_model") || providerConfig.models[0].id;
+            try {
+                return await providerConfig.call(apiKey, model, messages, systemPrompt);
+            } catch (e) { return { error: e.message }; }
+        }
+        
+        // No user key — fall back to server-side AI proxy
         try {
-            return await providerConfig.call(apiKey, model, messages, systemPrompt);
-        } catch (e) { return { error: e.message }; }
+            const tier = LS.get("gp_alpha") === "1" ? "alpha" : (LS.get("gp_sub") ? JSON.parse(LS.get("gp_sub")).tier : "free");
+            const r = await fetch("/api/ai-proxy", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    messages,
+                    systemPrompt,
+                    tier,
+                    sessionId: sessionStorage.getItem("gp_session") || "anon",
+                }),
+            });
+            if (!r.ok) {
+                const err = await r.json().catch(() => ({}));
+                if (err.rateLimited) return { error: `Daily AI limit reached (${err.limit} calls). Add your own API key in Settings for unlimited use.` };
+                return { error: err.error || `Server AI error: ${r.status}` };
+            }
+            const data = await r.json();
+            return { text: data.text, provider: "server-proxy", model: data.model };
+        } catch (e) {
+            return { error: `AI unavailable. Add an API key in Settings → AI Config, or try again later.` };
+        }
     },
+
 
     async testAIConnection() {
         return await this.callAI([{ role: "user", content: "Hello! Reply with just 'Connected.'" }], "Reply with exactly one word: Connected.");

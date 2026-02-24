@@ -18,7 +18,7 @@ export const CensusNarrative = () => {
   const loadCensusData = async () => {
     setLoading(true);
     try {
-      const fields = "NAME,S1701_C03_001E,S2301_C04_001E,S2801_C01_001E,S1501_C02_019E";
+      const fields = "NAME,DP03_0119PE,DP03_0009PE,DP02_0153PE,DP02_0068PE";
       const result = await API.getCensusData(customArea, fields);
       if (result.length >= 2) {
         const headers = result[0];
@@ -34,10 +34,10 @@ export const CensusNarrative = () => {
 
   const generateNarrative = (censusData) => {
     const state = censusData.NAME || "the target area";
-    const poverty = parseFloat(censusData.S1701_C03_001E) || 0;
-    const unemployment = parseFloat(censusData.S2301_C04_001E) || 0;
-    const broadband = parseFloat(censusData.S2801_C01_001E) || 0;
-    const bachelors = parseFloat(censusData.S1501_C02_019E) || 0;
+    const poverty = parseFloat(censusData.DP03_0119PE) || 0;
+    const unemployment = parseFloat(censusData.DP03_0009PE) || 0;
+    const broadband = parseFloat(censusData.DP02_0153PE) || 0;
+    const bachelors = parseFloat(censusData.DP02_0068PE) || 0;
 
     const povertyStatus = poverty > 15 ? "significantly above" : poverty > 12 ? "above" : "near";
     const unempStatus = unemployment > 6 ? "elevated" : unemployment > 4 ? "moderate" : "relatively stable";
@@ -74,19 +74,19 @@ These intersecting challenges — poverty, unemployment, digital exclusion, and 
           <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 8 }}>📈 Census Data — {data.NAME}</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
             <div style={{ textAlign: "center", padding: 8, background: T.panel, borderRadius: 6 }}>
-              <div style={{ fontSize: 20, fontWeight: 700, color: parseFloat(data.S1701_C03_001E) > 15 ? T.red : T.yellow }}>{data.S1701_C03_001E}%</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: parseFloat(data.DP03_0119PE) > 15 ? T.red : T.yellow }}>{data.DP03_0119PE}%</div>
               <div style={{ fontSize: 10, color: T.mute }}>Poverty Rate</div>
             </div>
             <div style={{ textAlign: "center", padding: 8, background: T.panel, borderRadius: 6 }}>
-              <div style={{ fontSize: 20, fontWeight: 700, color: parseFloat(data.S2301_C04_001E) > 6 ? T.red : T.yellow }}>{data.S2301_C04_001E}%</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: parseFloat(data.DP03_0009PE) > 6 ? T.red : T.yellow }}>{data.DP03_0009PE}%</div>
               <div style={{ fontSize: 10, color: T.mute }}>Unemployment</div>
             </div>
             <div style={{ textAlign: "center", padding: 8, background: T.panel, borderRadius: 6 }}>
-              <div style={{ fontSize: 20, fontWeight: 700, color: parseFloat(data.S2801_C01_001E) < 85 ? T.red : T.green }}>{data.S2801_C01_001E}%</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: parseFloat(data.DP02_0153PE) < 85 ? T.red : T.green }}>{data.DP02_0153PE}%</div>
               <div style={{ fontSize: 10, color: T.mute }}>Broadband Access</div>
             </div>
             <div style={{ textAlign: "center", padding: 8, background: T.panel, borderRadius: 6 }}>
-              <div style={{ fontSize: 20, fontWeight: 700, color: T.blue }}>{data.S1501_C02_019E}%</div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: T.blue }}>{data.DP02_0068PE}%</div>
               <div style={{ fontSize: 10, color: T.mute }}>Bachelor's+</div>
             </div>
           </div>

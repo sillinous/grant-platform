@@ -15,7 +15,7 @@ const callClaude = async (system, userContent, maxTokens = 1024) => {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${key}`,
-        'HTTP-Referer': 'https://grant-os-platform.netlify.app'
+        'HTTP-Referer': 'https://unless-fortuna-grants.netlify.app'
       },
       body: JSON.stringify({
         model: 'arcee-ai/trinity-large-preview:free',
