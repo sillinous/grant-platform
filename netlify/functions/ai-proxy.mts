@@ -37,7 +37,7 @@ export default async (req: Request, context: Context) => {
     const model = userTier === "team" ? MODELS.premium : (userTier === "pro" || userTier === "alpha") ? MODELS.standard : MODELS.free;
     const aiRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENROUTER_KEY}`, "HTTP-Referer": "https://grant-platform-unless.netlify.app" },
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${OPENROUTER_KEY}`, "HTTP-Referer": "https://unless-fortuna-grants.netlify.app" },
       body: JSON.stringify({ model, messages: [...(system ? [{ role: "system", content: system }] : []), { role: "user", content: prompt }], max_tokens: maxTokens || 1024 }),
     });
     const data = await aiRes.json();

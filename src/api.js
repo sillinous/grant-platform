@@ -584,19 +584,21 @@ export const API = {
         // No user key — fall back to server-side AI proxy
         try {
             const tier = LS.get("gp_alpha") === "1" ? "alpha" : (LS.get("gp_sub") ? JSON.parse(LS.get("gp_sub")).tier : "free");
+            // Server expects { prompt, system, tier, identifier }
+            const lastUserMsg = Array.isArray(messages) ? messages.filter(m => m.role === "user").pop()?.content || "" : String(messages);
             const r = await fetch("/api/ai-proxy", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    messages,
-                    systemPrompt,
+                    prompt: lastUserMsg,
+                    system: systemPrompt || "",
                     tier,
-                    sessionId: sessionStorage.getItem("gp_session") || "anon",
+                    identifier: sessionStorage.getItem("gp_session") || "anon",
                 }),
             });
             if (!r.ok) {
                 const err = await r.json().catch(() => ({}));
-                if (err.rateLimited) return { error: `Daily AI limit reached (${err.limit} calls). Add your own API key in Settings for unlimited use.` };
+                if (r.status === 429) return { error: `Daily AI limit reached (${err.limit || '?'} calls). Add your own API key in Settings for unlimited use.` };
                 return { error: err.error || `Server AI error: ${r.status}` };
             }
             const data = await r.json();
