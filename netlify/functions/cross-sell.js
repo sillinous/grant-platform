@@ -72,7 +72,7 @@ async function sendCrossSellEmail(email, tier) {
 
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({
-      from: 'UNLESS Grants <grants@updates.oracleintelligence.net>',
+      from: 'UNLESS Grants <grants@brandpulse.cloud>',
       to: [email],
       subject: `Your Grant Platform ${tierName} is active — here's what pairs with it`,
       html,

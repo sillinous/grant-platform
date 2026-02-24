@@ -9,7 +9,7 @@ import { getStore } from "@netlify/blobs";
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
 
 const MODELS = {
-  free:  "meta-llama/llama-3.1-8b-instruct:free",
+  free:  "meta-llama/llama-3.3-70b-instruct:free",
   standard: "anthropic/claude-3.5-haiku",
   premium: "anthropic/claude-sonnet-4-20250514",
 };
