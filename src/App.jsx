@@ -535,7 +535,7 @@ const AppContent = () => {
         </div>
       </div>
 
-      {!onboardingComplete && <OnboardingWizard onComplete={(profile) => { LS.set("profile", profile); setOnboardingComplete(true); }} />}
+      {!onboardingComplete && <OnboardingWizard onComplete={(profile) => { if (profile) { try { localStorage.setItem('gp_profile', JSON.stringify(profile)); } catch(e) {} } setOnboardingComplete(true); }} />}
       <AIChatBar grants={grants} vaultDocs={vaultDocs} contacts={contacts} />
       <FeedbackWidget currentModule={currentNavItems?.find?.(n => n.id === page)?.label || page} userTier={isAlphaUser() ? 'alpha' : subTier} userEmail={user?.email} />
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}

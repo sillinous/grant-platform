@@ -1,7 +1,7 @@
 const https = require('https')
 
 const STRIPE_KEY = process.env.STRIPE_SECRET_KEY
-const BASE_URL = process.env.URL || 'https://grant-platform-unless.netlify.app'
+const BASE_URL = process.env.URL || 'https://unless-fortuna-grants.netlify.app'
 
 const PRICES = {
   pro:  'price_1T40hc6XLHH1oci1NXMMr4Hu',
