@@ -2,7 +2,7 @@
 import { auth } from "./auth.js";
 import { LS, saveProfile, PROFILE } from "./globals.js";
 
-const SYNC_ENDPOINT = "/.netlify/functions/sync";
+const SYNC_ENDPOINT = "/api/sync";
 
 export const cloud = {
   // Pull data from Cloud -> Local

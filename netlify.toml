@@ -8,29 +8,10 @@
 [functions."ai"]
   timeout = 26
 
+# v1 functions still need redirect rules
 [[redirects]]
   from = "/api/subscribe"
   to = "/.netlify/functions/subscribe"
-  status = 200
-
-[[redirects]]
-  from = "/api/cross-sell"
-  to = "/.netlify/functions/cross-sell"
-  status = 200
-
-[[redirects]]
-  from = "/api/feedback"
-  to = "/.netlify/functions/feedback"
-  status = 200
-
-[[redirects]]
-  from = "/api/analytics"
-  to = "/.netlify/functions/analytics"
-  status = 200
-
-[[redirects]]
-  from = "/api/ai-proxy"
-  to = "/.netlify/functions/ai-proxy"
   status = 200
 
 [[redirects]]
@@ -38,6 +19,7 @@
   to = "/.netlify/functions/ai"
   status = 200
 
+# SPA catch-all (must be LAST)
 [[redirects]]
   from = "/*"
   to = "/index.html"
@@ -46,7 +28,7 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://identity.netlify.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https://api.anthropic.com https://openrouter.ai https://api.openai.com https://generativelanguage.googleapis.com https://integrate.api.nvidia.com https://apply07.grants.gov https://api.usaspending.gov https://api.regulations.gov https://api.census.gov https://api.sam.gov https://api.stlouisfed.org https://openfema.fema.gov https://projects.propublica.org https://api.congress.gov https://www.huduser.gov https://api.sba.gov https://data.ca.gov https://*.netlify.app https://*.netlify.com https://www.ncei.noaa.gov;"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://identity.netlify.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data: https:; connect-src 'self' https://api.anthropic.com https://openrouter.ai https://api.openai.com https://generativelanguage.googleapis.com https://integrate.api.nvidia.com https://apply07.grants.gov https://api.usaspending.gov https://api.regulations.gov https://api.census.gov https://api.sam.gov https://api.stlouisfed.org https://openfema.fema.gov https://projects.propublica.org https://api.congress.gov https://www.huduser.gov https://api.sba.gov https://data.ca.gov https://*.netlify.app https://*.netlify.com https://www.ncei.noaa.gov https://api.resend.com;"
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
