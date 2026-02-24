@@ -4,13 +4,96 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="UNLESS Grant Lifecycle Platform — Discover, apply, and manage federal grants with AI-powered intelligence" />
-    <title>UNLESS — Grant Lifecycle Platform</title>
+    <title>UNLESS — AI Grant Writing & Discovery Platform | Find Federal Grants</title>
+    <meta name="description" content="AI-powered grant writing platform with 23+ live APIs. Discover federal grants, draft applications with AI, track compliance, and manage your entire grant lifecycle. Free to start." />
+    <meta name="keywords" content="grant writing software, federal grant finder, AI grant writing, grant management, grants.gov, SBIR STTR, nonprofit grants, grant application, grant budget builder" />
+    <link rel="canonical" href="https://unless-fortuna-grants.netlify.app/" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="UNLESS — AI Grant Writing & Discovery Platform" />
+    <meta property="og:description" content="Discover federal grants, draft AI-powered applications, and manage your grant lifecycle. 48+ modules, 23 live APIs, 5 AI providers." />
+    <meta property="og:url" content="https://unless-fortuna-grants.netlify.app/" />
+    <meta property="og:site_name" content="UNLESS Grant Platform" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="UNLESS — AI Grant Writing & Discovery Platform" />
+    <meta name="twitter:description" content="AI-powered grant writing with 23+ federal APIs. Free to start." />
+
+    <!-- Schema.org Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "UNLESS Grant Lifecycle Platform",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "description": "AI-powered grant writing and discovery platform with 48+ modules, 23 live federal APIs, and 5 AI providers. Discover Grants.gov opportunities, draft applications with AI, build compliant budgets, and manage your entire grant lifecycle.",
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Free",
+          "price": "0",
+          "priceCurrency": "USD",
+          "description": "Grant discovery, basic AI features, pipeline tracking"
+        },
+        {
+          "@type": "Offer",
+          "name": "Pro",
+          "price": "49",
+          "priceCurrency": "USD",
+          "priceSpecification": {
+            "@type": "UnitPriceSpecification",
+            "billingDuration": "P1M"
+          },
+          "description": "Full AI suite, budget builder, compliance tools, strategic advisor"
+        },
+        {
+          "@type": "Offer",
+          "name": "Team",
+          "price": "149",
+          "priceCurrency": "USD",
+          "priceSpecification": {
+            "@type": "UnitPriceSpecification",
+            "billingDuration": "P1M"
+          },
+          "description": "Executive dashboards, multi-user collaboration, priority AI"
+        }
+      ],
+      "featureList": [
+        "Grants.gov live search with 23+ federal APIs",
+        "AI-powered grant writing and narrative scoring",
+        "RFP parsing and match scoring",
+        "Budget builder with OMB compliance",
+        "Census-powered statements of need",
+        "Grant pipeline and deadline tracking",
+        "Compliance matrix and pre-flight audits",
+        "Strategic AI advisor for grant strategy"
+      ],
+      "url": "https://unless-fortuna-grants.netlify.app/"
+    }
+    </script>
+
     <script>window.global = window;</script>
     <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   </head>
   <body>
     <div id="root"></div>
+    <!-- SEO fallback content for crawlers (hidden when JS loads) -->
+    <noscript>
+      <div style="max-width:800px;margin:40px auto;padding:20px;font-family:system-ui,sans-serif;color:#e2e8f0;background:#0d1117;">
+        <h1>UNLESS — AI Grant Writing & Discovery Platform</h1>
+        <p>The complete grant lifecycle platform powered by artificial intelligence. Discover federal grants from Grants.gov, USASpending, and 23+ live APIs. Draft winning applications with AI assistance. Build compliant budgets. Track your pipeline from discovery to closeout.</p>
+        <h2>Features</h2>
+        <p>Grant Discovery with live Grants.gov search, USASpending analytics, and state/local grant databases. AI-powered grant writing with narrative scoring, RFP parsing, and match scoring. Budget Builder with OMB compliance validation. Census-powered Statements of Need using live ACS data. Pipeline management with deadline tracking and compliance monitoring.</p>
+        <h2>48+ Modules Including:</h2>
+        <p>Dashboard, Grant Discovery, AI Drafter, RFP Parser, Budget Builder, Narrative Scorer, Match Scorer, Pre-Flight Audit, Compliance Matrix, Pipeline Tracker, Award Management, Closeout Wizard, Census Narrative, Strategic Advisor, Funding Forecast, Impact Mapper, and more.</p>
+        <h2>Pricing</h2>
+        <p>Free: Grant discovery, basic AI features, pipeline tracking. Pro ($49/mo): Full AI suite, budget builder, compliance tools, 30+ premium modules. Team ($149/mo): Executive dashboards, multi-user collaboration, priority AI processing.</p>
+        <p><a href="/api/subscribe?plan=pro">Start Pro — $49/month</a> | <a href="/api/subscribe?plan=team">Start Team — $149/month</a></p>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
