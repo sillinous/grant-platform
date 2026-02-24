@@ -3,6 +3,7 @@ import { Card, Btn, Empty } from '../ui';
 import { T, fmt, fmtDate, daysUntil, STAGE_MAP, PROFILE } from '../globals';
 import { useStore } from '../store';
 import { API } from '../api';
+import { getTier } from '../subscription';
 
 const Sparkline = ({ data = [], color = T.amber, height = 32 }) => {
   if (!data.length) return null;
@@ -280,6 +281,33 @@ export const Dashboard = ({ navigate }) => {
           </Card>
         </div>
       </div>
+
+      {/* Upgrade CTA — only shown to free users */}
+      {getTier() === 'free' && !localStorage.getItem('gp_alpha') && (
+        <div style={{
+          marginTop: 20, padding: '20px 24px', borderRadius: 14,
+          background: 'linear-gradient(135deg, #6366f110, #8b5cf610)',
+          border: '1px solid #6366f130',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
+        }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>
+              🚀 Unlock AI Grant Writing, Compliance, & Intelligence
+            </div>
+            <div style={{ fontSize: 12, color: T.sub, marginTop: 4 }}>
+              Pro users write proposals 10x faster with AI Drafter, score narratives before submission, and track compliance automatically.
+            </div>
+          </div>
+          <button onClick={() => navigate?.('pricing')} style={{
+            padding: '10px 24px', borderRadius: 10, border: 'none',
+            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+            color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            whiteSpace: 'nowrap', flexShrink: 0,
+          }}>
+            View Plans — from $49/mo →
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { T, PROFILE, LS, uid, fmt, fmtDate, daysUntil, ALL_STATES } from "../globals";
 import { Tab, Card, Input, Btn, Select, Badge, Empty, Progress, Icon } from "../ui";
 import { API } from "../api";
+import { getTier } from "../subscription";
 
 import { RegionalPulse } from "./RegionalPulse";
 import { PolicySentinel } from "./PolicySentinel";
@@ -1006,6 +1007,24 @@ Narratives: ${PROFILE.narratives.founder}`;
                             {!hasMore && results.length > 0 && totalCount > 0 && (
                                 <div style={{ textAlign: "center", padding: 12, fontSize: 11, color: T.mute }}>
                                     All {totalCount.toLocaleString()} results loaded
+                                </div>
+                            )}
+
+                            {/* Pro nudge after results */}
+                            {results.length > 0 && getTier() === 'free' && !localStorage.getItem('gp_alpha') && (
+                                <div style={{
+                                    margin: '12px 0', padding: '14px 18px', borderRadius: 10,
+                                    background: '#6366f108', border: '1px solid #6366f120',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                                }}>
+                                    <div style={{ fontSize: 12, color: T.sub }}>
+                                        💡 <strong style={{ color: T.text }}>Found grants you like?</strong> Pro users draft applications 10x faster with AI Drafter &amp; score narratives before submission.
+                                    </div>
+                                    <button onClick={() => window.location.href = '/api/subscribe?plan=pro'} style={{
+                                        padding: '6px 14px', borderRadius: 8, border: '1px solid #6366f140',
+                                        background: 'transparent', color: '#818cf8', fontSize: 11, fontWeight: 700,
+                                        cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+                                    }}>Try Pro →</button>
                                 </div>
                             )}
                         </div>
