@@ -1,6 +1,6 @@
-const { getStore } = require("@netlify/blobs");
+import { getStore } from "@netlify/blobs";
 
-exports.handler = async (event, context) => {
+export default async (req, context) => {
   const cors = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type",
@@ -8,29 +8,30 @@ exports.handler = async (event, context) => {
     "Content-Type": "application/json",
   };
 
-  if (event.httpMethod === "OPTIONS") {
-    return { statusCode: 200, headers: cors, body: "" };
-  }
+  if (req.method === "OPTIONS") return new Response("OK", { headers: cors });
 
   const store = getStore("feedback");
 
   // GET: List feedback (for autonomous processing)
-  if (event.httpMethod === "GET") {
+  if (req.method === "GET") {
     try {
-      const params = event.queryStringParameters || {};
-      const status = params.status || "open";
-      const limit = parseInt(params.limit || "50");
+      const url = new URL(req.url);
+      const status = url.searchParams.get("status") || "open";
+      const limit = parseInt(url.searchParams.get("limit") || "50");
 
       const { blobs } = await store.list({ prefix: "fb_" });
       const items = [];
 
       for (const blob of blobs.slice(0, Math.min(limit, blobs.length))) {
         try {
-          const data = await store.get(blob.key, { type: "json" });
-          if (data && (status === "all" || data.status === status)) {
-            items.push({ key: blob.key, ...data });
+          const raw = await store.get(blob.key);
+          if (raw) {
+            const data = JSON.parse(raw);
+            if (status === "all" || data.status === status) {
+              items.push({ key: blob.key, ...data });
+            }
           }
-        } catch (e) { /* skip corrupted entries */ }
+        } catch (e) { /* skip corrupted */ }
       }
 
       items.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
@@ -42,20 +43,20 @@ exports.handler = async (event, context) => {
         stats.byModule[i.module] = (stats.byModule[i.module] || 0) + 1;
       });
 
-      return { statusCode: 200, headers: cors, body: JSON.stringify({ stats, items }) };
+      return new Response(JSON.stringify({ stats, items }), { headers: cors });
     } catch (err) {
-      return { statusCode: 500, headers: cors, body: JSON.stringify({ error: err.message }) };
+      return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
     }
   }
 
   // POST: Submit new feedback
-  if (event.httpMethod === "POST") {
+  if (req.method === "POST") {
     try {
-      const body = JSON.parse(event.body || "{}");
+      const body = await req.json();
       const { category, severity, description, module, tier, email, url, viewport, userAgent, sessionId } = body;
 
       if (!description || !category) {
-        return { statusCode: 400, headers: cors, body: JSON.stringify({ error: "category and description required" }) };
+        return new Response(JSON.stringify({ error: "category and description required" }), { status: 400, headers: cors });
       }
 
       const id = `fb_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -78,25 +79,28 @@ exports.handler = async (event, context) => {
         timestamp: new Date().toISOString(),
       };
 
-      await store.setJSON(id, feedback);
+      await store.set(id, JSON.stringify(feedback));
 
-      return { statusCode: 201, headers: cors, body: JSON.stringify({ ok: true, id }) };
+      return new Response(JSON.stringify({ ok: true, id }), { status: 201, headers: cors });
     } catch (err) {
-      return { statusCode: 500, headers: cors, body: JSON.stringify({ error: err.message }) };
+      return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
     }
   }
 
   // PATCH: Update feedback status (for autonomous resolution)
-  if (event.httpMethod === "PATCH") {
+  if (req.method === "PATCH") {
     try {
-      const body = JSON.parse(event.body || "{}");
+      const body = await req.json();
       const { id, status, resolution } = body;
 
-      if (!id) return { statusCode: 400, headers: cors, body: JSON.stringify({ error: "id required" }) };
+      if (!id) return new Response(JSON.stringify({ error: "id required" }), { status: 400, headers: cors });
 
       let existing;
-      try { existing = await store.get(id, { type: "json" }); } catch { existing = null; }
-      if (!existing) return { statusCode: 404, headers: cors, body: JSON.stringify({ error: "not found" }) };
+      try {
+        const raw = await store.get(id);
+        existing = raw ? JSON.parse(raw) : null;
+      } catch { existing = null; }
+      if (!existing) return new Response(JSON.stringify({ error: "not found" }), { status: 404, headers: cors });
 
       const updated = {
         ...existing,
@@ -105,13 +109,13 @@ exports.handler = async (event, context) => {
         resolvedAt: status === "resolved" ? new Date().toISOString() : existing.resolvedAt,
       };
 
-      await store.setJSON(id, updated);
+      await store.set(id, JSON.stringify(updated));
 
-      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true, updated }) };
+      return new Response(JSON.stringify({ ok: true, updated }), { headers: cors });
     } catch (err) {
-      return { statusCode: 500, headers: cors, body: JSON.stringify({ error: err.message }) };
+      return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
     }
   }
 
-  return { statusCode: 405, headers: cors, body: JSON.stringify({ error: "method not allowed" }) };
+  return new Response(JSON.stringify({ error: "method not allowed" }), { status: 405, headers: cors });
 };

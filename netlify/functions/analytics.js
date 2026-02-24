@@ -1,31 +1,32 @@
-const { getStore } = require("@netlify/blobs");
+import { getStore } from "@netlify/blobs";
 
-exports.handler = async (event, context) => {
+export default async (req, context) => {
   const cors = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type",
     "Content-Type": "application/json",
   };
 
-  if (event.httpMethod === "OPTIONS") {
-    return { statusCode: 200, headers: cors, body: "" };
-  }
+  if (req.method === "OPTIONS") return new Response("OK", { headers: cors });
 
   const store = getStore("analytics");
 
   // POST: Receive event batch
-  if (event.httpMethod === "POST") {
+  if (req.method === "POST") {
     try {
-      const { events } = JSON.parse(event.body || '{"events":[]}');
+      const { events } = await req.json();
       if (!Array.isArray(events) || events.length === 0) {
-        return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true, stored: 0 }) };
+        return new Response(JSON.stringify({ ok: true, stored: 0 }), { headers: cors });
       }
 
       const today = new Date().toISOString().slice(0, 10);
       const key = `day_${today}`;
 
       let dayData;
-      try { dayData = await store.get(key, { type: "json" }); } catch { dayData = null; }
+      try {
+        const raw = await store.get(key);
+        dayData = raw ? JSON.parse(raw) : null;
+      } catch { dayData = null; }
 
       if (!dayData) {
         dayData = {
@@ -78,19 +79,19 @@ exports.handler = async (event, context) => {
       }
 
       dayData.sessions = [...sessionSet];
-      await store.setJSON(key, dayData);
+      await store.set(key, JSON.stringify(dayData));
 
-      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true, stored: events.length, date: today }) };
+      return new Response(JSON.stringify({ ok: true, stored: events.length, date: today }), { headers: cors });
     } catch (err) {
-      return { statusCode: 500, headers: cors, body: JSON.stringify({ error: err.message }) };
+      return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
     }
   }
 
   // GET: Retrieve analytics (for autonomous monitoring)
-  if (event.httpMethod === "GET") {
+  if (req.method === "GET") {
     try {
-      const params = event.queryStringParameters || {};
-      const days = parseInt(params.days || "7");
+      const url = new URL(req.url);
+      const days = parseInt(url.searchParams.get("days") || "7");
 
       const results = [];
       for (let i = 0; i < days; i++) {
@@ -98,16 +99,16 @@ exports.handler = async (event, context) => {
         d.setDate(d.getDate() - i);
         const key = `day_${d.toISOString().slice(0, 10)}`;
         try {
-          const data = await store.get(key, { type: "json" });
-          if (data) results.push(data);
+          const raw = await store.get(key);
+          if (raw) results.push(JSON.parse(raw));
         } catch { /* day not found */ }
       }
 
-      return { statusCode: 200, headers: cors, body: JSON.stringify({ days: results.length, data: results }) };
+      return new Response(JSON.stringify({ days: results.length, data: results }), { headers: cors });
     } catch (err) {
-      return { statusCode: 500, headers: cors, body: JSON.stringify({ error: err.message }) };
+      return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
     }
   }
 
-  return { statusCode: 405, headers: cors, body: JSON.stringify({ error: "method not allowed" }) };
+  return new Response(JSON.stringify({ error: "method not allowed" }), { status: 405, headers: cors });
 };
