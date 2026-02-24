@@ -1,45 +1,47 @@
+const { getStore } = require("@netlify/blobs");
 
-import { getStore } from "@netlify/blobs";
+exports.handler = async (event) => {
+  const cors = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Content-Type": "application/json",
+  };
 
-export default async (req, context) => {
-  // 1. Auth Check: Netlify Identity automatically populates `context.clientContext.user`
-  // if the request has the right JWT.
-  const user = context.clientContext && context.clientContext.user;
+  if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers: cors, body: "" };
+
+  // Extract user from Netlify Identity JWT
+  const user = event.headers.authorization
+    ? JSON.parse(Buffer.from(event.headers.authorization.split(".")[1], "base64").toString()).sub
+    : null;
 
   if (!user) {
-    return new Response("Unauthorized", { status: 401 });
+    return { statusCode: 401, headers: cors, body: JSON.stringify({ error: "Not authenticated" }) };
   }
 
-  // 2. Initialize Blob Store (scoped to this site)
-  // We use the user's ID as the key for their data blob.
-  const store = getStore("userData");
-  const blobKey = `user_${user.sub}`; 
+  const store = getStore("user-data");
+  const key = `user_${user}`;
 
-  // 3. Handle GET (Read Data)
-  if (req.method === "GET") {
+  // GET: Pull user data
+  if (event.httpMethod === "GET") {
     try {
-      const data = await store.get(blobKey);
-      return new Response(data || JSON.stringify({}), {
-        headers: { "Content-Type": "application/json" },
-      });
-    } catch (e) {
-      return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+      const raw = await store.get(key);
+      if (!raw) return { statusCode: 200, headers: cors, body: JSON.stringify(null) };
+      return { statusCode: 200, headers: cors, body: raw };
+    } catch (err) {
+      return { statusCode: 500, headers: cors, body: JSON.stringify({ error: err.message }) };
     }
   }
 
-  // 4. Handle POST (Write Data)
-  if (req.method === "POST") {
+  // POST: Push user data
+  if (event.httpMethod === "POST") {
     try {
-      const body = await req.json();
-      // Basic validation: ensure it's an object/string
-      await store.set(blobKey, JSON.stringify(body));
-      return new Response(JSON.stringify({ success: true }), {
-        headers: { "Content-Type": "application/json" },
-      });
-    } catch (e) {
-      return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+      const data = event.body;
+      await store.set(key, data);
+      return { statusCode: 200, headers: cors, body: JSON.stringify({ ok: true, synced: new Date().toISOString() }) };
+    } catch (err) {
+      return { statusCode: 500, headers: cors, body: JSON.stringify({ error: err.message }) };
     }
   }
 
-  return new Response("Method not allowed", { status: 405 });
+  return { statusCode: 405, headers: cors, body: JSON.stringify({ error: "method not allowed" }) };
 };

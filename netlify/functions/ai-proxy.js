@@ -1,15 +1,13 @@
-import { getStore } from "@netlify/blobs";
+const { getStore } = require("@netlify/blobs");
 
-// ── Server-Side AI Proxy ──────────────────────────────────────────
-// Allows client AI features (AIDrafter, NarrativeScorer, etc.) to work
-// without requiring users to provide their own API keys.
+// Server-Side AI Proxy
 // Free tier: 30 calls/day via free models
 // Alpha/Pro: 200 calls/day via better models
 
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
 
 const MODELS = {
-  free:  "meta-llama/llama-3.3-70b-instruct:free",
+  free:  "meta-llama/llama-3.1-8b-instruct:free",
   standard: "anthropic/claude-3.5-haiku",
   premium: "anthropic/claude-sonnet-4-20250514",
 };
@@ -29,112 +27,85 @@ async function getRateLimit(store, identifier, tier) {
     const raw = await store.get(key);
     count = raw ? parseInt(raw) : 0;
   } catch { count = 0; }
-  
   const limit = LIMITS[tier] || LIMITS.free;
-  return { count, limit, remaining: Math.max(0, limit - count), allowed: count < limit, key };
+  return { count, limit, remaining: Math.max(0, limit - count), key };
 }
 
-async function incrementRate(store, key) {
-  let count = 0;
-  try {
-    const raw = await store.get(key);
-    count = raw ? parseInt(raw) : 0;
-  } catch { count = 0; }
+async function incrementRate(store, key, count) {
   await store.set(key, String(count + 1));
 }
 
-export default async (req, context) => {
+exports.handler = async (event) => {
   const cors = {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Content-Type": "application/json",
   };
 
-  if (req.method === "OPTIONS") return new Response("OK", { headers: cors });
-  if (req.method !== "POST") return new Response(JSON.stringify({ error: "POST only" }), { status: 405, headers: cors });
-  if (!OPENROUTER_KEY) return new Response(JSON.stringify({ error: "Server AI not configured" }), { status: 503, headers: cors });
+  if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers: cors, body: "" };
+  if (event.httpMethod !== "POST") return { statusCode: 405, headers: cors, body: JSON.stringify({ error: "POST only" }) };
+
+  if (!OPENROUTER_KEY) {
+    return { statusCode: 500, headers: cors, body: JSON.stringify({ error: "AI service not configured" }) };
+  }
 
   try {
-    const body = await req.json();
-    const { messages, systemPrompt, tier, sessionId } = body;
+    const body = JSON.parse(event.body || "{}");
+    const { system, prompt, tier, identifier, maxTokens } = body;
 
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return new Response(JSON.stringify({ error: "messages array required" }), { status: 400, headers: cors });
+    if (!prompt) {
+      return { statusCode: 400, headers: cors, body: JSON.stringify({ error: "prompt required" }) };
     }
 
-    // Rate limiting
-    const store = getStore("ai-proxy");
-    const identifier = sessionId || req.headers.get("x-forwarded-for") || "anon";
-    const effectiveTier = tier || "free";
-    const rate = await getRateLimit(store, identifier, effectiveTier);
+    const store = getStore("ai-rate-limits");
+    const userTier = tier || "free";
+    const userId = identifier || event.headers["x-forwarded-for"] || "anonymous";
+    const rate = await getRateLimit(store, userId, userTier);
 
-    if (!rate.allowed) {
-      return new Response(JSON.stringify({ 
-        error: `Daily AI limit reached (${rate.limit} calls). Upgrade or add your own API key in Settings.`,
-        rateLimited: true,
-        limit: rate.limit,
-        used: rate.count,
-      }), { status: 429, headers: cors });
+    if (rate.remaining <= 0) {
+      return {
+        statusCode: 429, headers: cors,
+        body: JSON.stringify({
+          error: "Rate limit exceeded",
+          limit: rate.limit, used: rate.count,
+          upgrade: userTier === "free" ? "Upgrade to Pro for 200 calls/day" : null,
+        }),
+      };
     }
 
-    // Select model based on tier
-    const model = effectiveTier === "free" ? MODELS.free : MODELS.standard;
+    const model = userTier === "team" ? MODELS.premium : userTier === "pro" || userTier === "alpha" ? MODELS.standard : MODELS.free;
 
-    // Build messages array
-    const msgs = [];
-    if (systemPrompt) {
-      msgs.push({ role: "system", content: systemPrompt.slice(0, 4000) });
-    }
-    for (const m of messages.slice(0, 10)) {
-      msgs.push({
-        role: m.role === "assistant" ? "assistant" : "user",
-        content: (m.content || "").slice(0, 8000),
-      });
-    }
-
-    // Call OpenRouter
-    const startTime = Date.now();
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const aiRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${OPENROUTER_KEY}`,
-        "HTTP-Referer": "https://unless-fortuna-grants.netlify.app",
-        "X-Title": "UNLESS Grant Platform",
+        "HTTP-Referer": "https://grant-platform-unless.netlify.app",
       },
       body: JSON.stringify({
         model,
-        max_tokens: 2048,
-        messages: msgs,
+        messages: [
+          ...(system ? [{ role: "system", content: system }] : []),
+          { role: "user", content: prompt },
+        ],
+        max_tokens: maxTokens || 1024,
       }),
     });
 
-    const durationMs = Date.now() - startTime;
+    const data = await aiRes.json();
+    await incrementRate(store, rate.key, rate.count);
 
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      return new Response(JSON.stringify({ 
-        error: `AI service error: ${res.status}`,
-        detail: errText.slice(0, 200),
-      }), { status: 502, headers: cors });
-    }
-
-    const data = await res.json();
     const text = data.choices?.[0]?.message?.content || "";
 
-    // Track usage
-    await incrementRate(store, rate.key);
-
-    return new Response(JSON.stringify({
-      text,
-      provider: "server-proxy",
-      model,
-      durationMs,
-      remaining: rate.remaining - 1,
-    }), { headers: cors });
-
+    return {
+      statusCode: 200, headers: cors,
+      body: JSON.stringify({
+        text, model, remaining: rate.remaining - 1,
+        tier: userTier,
+      }),
+    };
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: cors });
+    return { statusCode: 500, headers: cors, body: JSON.stringify({ error: err.message }) };
   }
 };
