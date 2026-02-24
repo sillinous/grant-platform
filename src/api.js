@@ -860,41 +860,40 @@ export const API = {
     },
 
     async getCuratedBriefing(profile) {
-        // Simulate AI curation logic
-        await new Promise(r => setTimeout(r, 1500)); // Simulate thinking
+        const sys = `You are an expert grant strategist. Based on the user's organization profile, generate a curated briefing with:
+1. Three top grant picks (with realistic sector, title, estimated amount, matchScore 0-100, reasoning, and agency)
+2. Three strategic insights (with emoji icon, short label, and actionable text)
+
+Respond ONLY with valid JSON matching this exact structure:
+{"topPicks":[{"sector":"string","title":"string","amount":number,"matchScore":number,"reasoning":"string","agency":"string"}],"insights":[{"icon":"emoji","label":"string","text":"string"}]}`;
+
+        const profileCtx = `Organization: ${profile?.name || 'Unknown'}
+Type: ${profile?.type || 'Nonprofit'}
+Focus: ${profile?.focus || 'General'}
+NAICS: ${profile?.naics || 'N/A'}
+Location: ${profile?.state || 'US'}
+Size: ${profile?.employees || 'Small'}`;
+
+        try {
+            const result = await this.callAI([{ role: "user", content: profileCtx }], sys);
+            if (result.error) throw new Error(result.error);
+            const text = (result.text || "").replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+            const parsed = JSON.parse(text);
+            if (parsed.topPicks && parsed.insights) return parsed;
+        } catch (e) { console.warn("AI briefing failed, using defaults:", e.message); }
+
+        // Fallback defaults
         return {
             topPicks: [
-                {
-                    sector: "Smart Search (Gov)",
-                    title: "Regional Innovation Engines - Type II",
-                    amount: 15000000,
-                    matchScore: 98,
-                    reasoning: "Perfect alignment with your recent circular economy pilot and rural manufacturing capacity.",
-                    agency: "NSF"
-                },
-                {
-                    sector: "DAF Signal",
-                    title: "Sustainable Manufacturing Leadership Grant",
-                    amount: 500000,
-                    matchScore: 94,
-                    info: "Advisor signal from Goldman Sachs DAF pool.",
-                    reasoning: "Matches your focus on ESG-driven industrial automation. Highly responsive funder.",
-                    agency: "GS Philanthropy"
-                },
-                {
-                    sector: "Synergy Engine",
-                    title: "Digital Twin Integration for Rural Hubs",
-                    amount: 2500000,
-                    matchScore: 91,
-                    reasoning: "Leverages your existing IoT assets to qualify for infrastructure modernization funds.",
-                    agency: "USDA / DoE"
-                }
+                { sector: "Federal", title: "SBIR/STTR Phase I", amount: 275000, matchScore: 85, reasoning: "Standard small business innovation research — open across agencies.", agency: "NSF / NIH / DoD" },
+                { sector: "State", title: "Economic Development Grant", amount: 50000, matchScore: 78, reasoning: "State-level workforce and business development funding.", agency: "State EDA" },
+                { sector: "Foundation", title: "Community Innovation Fund", amount: 100000, matchScore: 72, reasoning: "Foundation support for community-impact projects.", agency: "Various" },
             ],
             insights: [
-                { icon: "📉", label: "Market Shift", text: "Federal interest is pivoting from pure R&D to deployment-ready infrastructure. Your 'Ready-to-Scale' assets are gaining value." },
-                { icon: "🛡️", label: "Compliance Watch", text: "New Build America Buy America (BABA) requirements are hitting the manufacturing sector. Review your supply chain docs." },
-                { icon: "🤝", label: "Network Opportunity", text: "Two prime contractors reached out to the platform seeking sub-awardees in your NAICS code. Check Sub-Grant Radar." }
-            ]
+                { icon: "📅", label: "Deadlines", text: "Several SBIR/STTR deadlines are coming up in the next 60 days. Start applications early." },
+                { icon: "📊", label: "Trend", text: "Federal agencies are prioritizing AI/ML and climate tech in FY2026 solicitations." },
+                { icon: "🤝", label: "Network", text: "Consider partnering with a university for SBIR Phase II — it strengthens applications significantly." },
+            ],
         };
     },
 

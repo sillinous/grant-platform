@@ -288,25 +288,12 @@ Return JSON: { "innovativeAngles": [string], "alternativeMetrics": [string], "pa
 
     // ── CHAT ───────────────────────────────────────────────────────────────────
     if (action === 'chat') {
-      const { profile, grant, messages, newMessage } = body
-      const history = messages?.slice(-10).map(m => ({
-        role: m.sender === 'user' ? 'user' : 'assistant',
-        content: m.text
-      })) || []
-      history.push({ role: 'user', content: newMessage })
-
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5',
-          max_tokens: 800,
-          system: `You are an expert grant writing assistant helping ${profile?.name || 'an organization'} apply for "${grant?.name}" (${grant?.fundingAmount}). Give specific, actionable advice. You know this grant's requirements and the organization's profile.`,
-          messages: history
-        })
-      })
-      const d = await res.json()
-      return respond({ reply: d.content?.[0]?.text || 'Unable to respond.' })
+      const { profile, grant, messages, newMessage, message, context } = body
+      // Support both old format (message/context) and new format (messages/newMessage)
+      const userMsg = newMessage || message || ''
+      const sys = `You are an expert grant writing assistant helping ${profile?.name || 'an organization'}${grant?.name ? ` apply for "${grant.name}" (${grant.fundingAmount})` : ''}. Give specific, actionable advice.${context ? ` Context: ${context}` : ''}`
+      const text = await callClaude(sys, userMsg, 800)
+      return respond({ reply: text || 'Unable to respond.' })
     }
 
     // ── IMPACT STORY ───────────────────────────────────────────────────────────
