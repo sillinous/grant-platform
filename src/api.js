@@ -1,6 +1,7 @@
 
 import { LS, T, getProfileState, STAGES, fmt, fmtDate, daysUntil, PROFILE, uid } from "./globals";
 import { AI_PROVIDERS, getActiveProvider } from "./ai-config";
+import { aiAction } from "./ai-bridge";
 import { FortunaAPI } from "./fortuna";
 import { PhilanthropyAPI } from "./philanthropy";
 
@@ -898,5 +899,9 @@ Size: ${profile?.employees || 'Small'}`;
             ],
         };
     },
+
+    // Server-side AI actions (find-grants, draft-section, review, etc.)
+    // These bypass user API keys and use the server-side Netlify function
+    aiAction,
 
 };

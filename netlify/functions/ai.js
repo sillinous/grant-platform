@@ -294,8 +294,8 @@ Return JSON: { "innovativeAngles": [string], "alternativeMetrics": [string], "pa
       // Multi-turn: build conversation history from messages array
       if (messages?.length && newMessage) {
         const history = messages.slice(-10).map(m => ({
-          role: m.sender === 'user' ? 'user' : 'assistant',
-          content: m.text
+          role: (m.sender || m.role) === 'user' ? 'user' : 'assistant',
+          content: m.text || m.content || ''
         }))
         history.push({ role: 'user', content: newMessage })
 
