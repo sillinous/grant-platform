@@ -8,6 +8,15 @@ const PRICES = {
   team: 'price_1T40hd6XLHH1oci1JkPoQmmV',
 }
 
+// One-time purchase products (ported from grant-os)
+const ONE_TIME = {
+  'deep-search': {
+    name: 'UNLESS Grant Platform — Deep Search',
+    price: 1900, // $19 one-time
+    description: 'One comprehensive AI-powered grant search with full report',
+  },
+}
+
 function stripePost(path, data) {
   return new Promise((resolve, reject) => {
     const body = Object.entries(data)
@@ -45,6 +54,30 @@ exports.handler = async (event) => {
     // Redirect to checkout
     const plan = event.queryStringParameters?.plan || 'pro'
     const email = event.queryStringParameters?.email || ''
+
+    // One-time purchase flow (deep-search, etc.)
+    const oneTime = ONE_TIME[plan]
+    if (oneTime) {
+      const session = await stripePost('checkout/sessions', {
+        'mode': 'payment',
+        'line_items[0][price_data][currency]': 'usd',
+        'line_items[0][price_data][product_data][name]': oneTime.name,
+        'line_items[0][price_data][product_data][description]': oneTime.description,
+        'line_items[0][price_data][unit_amount]': String(oneTime.price),
+        'line_items[0][quantity]': '1',
+        'success_url': `${BASE_URL}/?session_id={CHECKOUT_SESSION_ID}&plan=${plan}`,
+        'cancel_url': `${BASE_URL}/?upgrade=cancelled`,
+        ...(email ? { 'customer_email': email } : {}),
+        'metadata[platform]': 'grant-platform',
+        'metadata[tier]': plan,
+      })
+      if (session.url) {
+        return { statusCode: 302, headers: { ...cors, Location: session.url }, body: '' }
+      }
+      return { statusCode: 500, headers: cors, body: JSON.stringify({ error: session.error?.message }) }
+    }
+
+    // Subscription flow (pro, team)
     const priceId = PRICES[plan]
     if (!priceId) return { statusCode: 400, body: 'Invalid plan' }
 
@@ -87,9 +120,13 @@ exports.handler = async (event) => {
 
     if (session.payment_status === 'paid' || session.status === 'complete') {
       const sub = session.subscription
-      const tier = sub?.items?.data?.[0]?.price?.id === PRICES.team ? 'team' : 'pro'
+      const metaTier = session.metadata?.tier
+      const isOneTime = !sub && ONE_TIME[metaTier]
+      const tier = isOneTime ? metaTier : (sub?.items?.data?.[0]?.price?.id === PRICES.team ? 'team' : 'pro')
       const email = session.customer_details?.email || session.customer_email || ''
-      const expiresAt = (sub?.current_period_end || Math.floor(Date.now()/1000) + 2592000) * 1000
+      const expiresAt = isOneTime
+        ? Date.now() + 30 * 24 * 60 * 60 * 1000 // 30 days for one-time purchases
+        : (sub?.current_period_end || Math.floor(Date.now()/1000) + 2592000) * 1000
 
       // Fire ecosystem cross-sell in background (non-blocking)
       if (email) {

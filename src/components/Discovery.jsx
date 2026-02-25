@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { T, PROFILE, LS, uid, fmt, fmtDate, daysUntil, ALL_STATES } from "../globals";
 import { Tab, Card, Input, Btn, Select, Badge, Empty, Progress, Icon } from "../ui";
 import { API } from "../api";
-import { getTier } from "../subscription";
+import { getTier, canAccess, getCheckoutUrl } from "../subscription";
 
 import { RegionalPulse } from "./RegionalPulse";
 import { PolicySentinel } from "./PolicySentinel";
@@ -55,6 +55,8 @@ export const Discovery = () => {
     const [searchHistory, setSearchHistory] = useState(() => LS.get("search_history", []));
     const [savedResults, setSavedResults] = useState(() => LS.get("saved_discoveries", []));
     const [aiRecs, setAiRecs] = useState(null);
+    const [aiDiscoveryResults, setAiDiscoveryResults] = useState([]);
+    const [aiDiscoveryLoading, setAiDiscoveryLoading] = useState(false);
     const [loading, setLoading] = useState(false);
     const [aiLoading, setAiLoading] = useState(false);
     const [landscape, setLandscape] = useState(null);
@@ -364,6 +366,7 @@ Narratives: ${PROFILE.narratives.founder}`;
                         <div style={{ fontSize: 10, fontWeight: 700, color: T.mute, textTransform: "uppercase", letterSpacing: 1, marginBottom: 8, paddingLeft: 8 }}>Federal & Core</div>
                         {[
                             { id: "search", icon: "🔍", label: "Smart Search" },
+                            { id: "ai-discovery", icon: "🧠", label: "AI Discovery" },
                             { id: "saved", icon: "⭐", label: `Saved (${savedResults.length})` },
                             { id: "contracts", icon: "🏛️", label: "Gov Contract Radar" },
                             { id: "taxcredits", icon: "💸", label: "Tax Credits" },
@@ -474,6 +477,72 @@ Narratives: ${PROFILE.narratives.founder}`;
                     {tab === "pulse" && <PhilanthropyPulse onAdd={onAdd} grants={grants} />}
                     {tab === "scout990" && <FoundationScout990 onAdd={onAdd} grants={grants} />}
                     {tab === "familyoffice" && <FamilyOfficeProspector onAdd={onAdd} grants={grants} />}
+
+            {/* ━━━ AI DISCOVERY TAB (unified from grant-os) ━━━ */}
+            {tab === "ai-discovery" && (
+                <div>
+                    <Card style={{ marginBottom: 12 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 8 }}>AI-Powered Grant Discovery</div>
+                        <div style={{ fontSize: 12, color: T.sub, marginBottom: 12 }}>Uses your organization profile to find matching grants with AI scoring, tier classification, and deadline tracking.</div>
+                        {canAccess("ai_discovery") ? (
+                            <Btn variant="primary" disabled={aiDiscoveryLoading} onClick={async () => {
+                                const profile = PROFILE();
+                                if (!profile?.name) { alert("Set up your organization profile first (Settings)."); return; }
+                                setAiDiscoveryLoading(true);
+                                try {
+                                    const data = await API.aiAction("find-grants", { profile });
+                                    setAiDiscoveryResults(data?.opportunities || []);
+                                } catch (e) { console.error("AI Discovery error:", e); setAiDiscoveryResults([]); }
+                                setAiDiscoveryLoading(false);
+                            }}>{aiDiscoveryLoading ? "Searching..." : "Find Matching Grants"}</Btn>
+                        ) : (
+                            <div>
+                                <div style={{ fontSize: 12, color: T.mute, marginBottom: 8 }}>Unlock AI-powered discovery to find grants matched to your profile.</div>
+                                <Btn variant="primary" onClick={() => window.location.href = getCheckoutUrl("deep-search")}>Get Deep Search — $19</Btn>
+                            </div>
+                        )}
+                    </Card>
+                    {aiDiscoveryResults.length > 0 && (
+                        <div>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: T.text, marginBottom: 12 }}>{aiDiscoveryResults.length} AI-Matched Opportunities</div>
+                            {aiDiscoveryResults.map((opp, i) => (
+                                <Card key={i} style={{ marginBottom: 8, borderLeft: `4px solid ${opp.tier === "a" ? T.green : opp.tier === "b" ? T.amber : T.mute}` }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                                                <Badge color={opp.tier === "a" ? T.green : opp.tier === "b" ? T.amber : T.mute}>
+                                                    {opp.tier === "a" ? "Top Match" : opp.tier === "b" ? "Good Match" : "Possible"}
+                                                </Badge>
+                                                <Badge color={T.blue}>{opp.matchScore}% match</Badge>
+                                                {opp.industry && <Badge color={T.purple}>{opp.industry}</Badge>}
+                                            </div>
+                                            <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{opp.name}</div>
+                                            <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>{opp.description}</div>
+                                            <div style={{ fontSize: 11, color: T.mute, marginTop: 4, display: "flex", gap: 12 }}>
+                                                {opp.funder && <span>Funder: {opp.funder}</span>}
+                                                {opp.fundingAmount && <span>Amount: {opp.fundingAmount}</span>}
+                                                {opp.deadline && <span>Deadline: {opp.deadline}</span>}
+                                            </div>
+                                        </div>
+                                        <div style={{ display: "flex", gap: 4 }}>
+                                            {opp.url && <Btn size="sm" variant="ghost" onClick={() => window.open(opp.url, "_blank")}>View</Btn>}
+                                            <Btn size="sm" variant="primary" onClick={() => onAdd({
+                                                id: uid(), title: opp.name, agency: opp.funder || "",
+                                                amount: parseInt(String(opp.fundingAmount).replace(/\D/g, "")) || 0,
+                                                deadline: opp.deadline || "", status: "Researching",
+                                                matchScore: opp.matchScore, source: "ai-discovery",
+                                            })}>+ Track</Btn>
+                                        </div>
+                                    </div>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
+                    {aiDiscoveryResults.length === 0 && !aiDiscoveryLoading && (
+                        <Empty icon="🧠" title="AI Grant Discovery" sub="Click 'Find Matching Grants' to search for opportunities tailored to your organization" />
+                    )}
+                </div>
+            )}
 
             {/* ━━━ SMART SEARCH TAB ━━━ */}
             {tab === "search" && (

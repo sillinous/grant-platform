@@ -1,5 +1,5 @@
 // ── Subscription State ────────────────────────────────────────────
-// Tiers: free | pro | team
+// Tiers: free | deep-search | pro | team
 // Stored in localStorage after Stripe checkout verification
 
 const KEY = 'gp_sub'
@@ -8,8 +8,15 @@ const PRICES = {
   team: 'price_1T40hd6XLHH1oci1JkPoQmmV',
 }
 
+// Tier hierarchy for access checks: team > pro > deep-search > free
+const TIER_LEVEL = { free: 0, 'deep-search': 1, pro: 2, team: 3 }
+
 // Features gated by tier
 export const GATES = {
+  // Deep-search tier (one-time $19 — AI discovery access for 30 days)
+  ai_discovery:     'deep-search',
+  ai_find_grants:   'deep-search',
+  // Pro tier
   ai_drafter:       'pro',
   rfp_parser:       'pro',
   match_scorer:     'pro',
@@ -78,9 +85,7 @@ export function canAccess(featureId) {
   const required = GATES[featureId]
   if (!required) return true  // unprotected
   const tier = getTier()
-  if (required === 'pro') return tier === 'pro' || tier === 'team'
-  if (required === 'team') return tier === 'team'
-  return false
+  return (TIER_LEVEL[tier] || 0) >= (TIER_LEVEL[required] || 0)
 }
 
 export function getCheckoutUrl(plan) {
@@ -88,6 +93,17 @@ export function getCheckoutUrl(plan) {
 }
 
 export const PLANS = {
+  'deep-search': {
+    name: 'Deep Search',
+    price: 19,
+    oneTime: true,
+    features: [
+      'One comprehensive AI-powered grant search',
+      'Full match report with scoring & tier ranking',
+      'Industry-specific opportunity discovery',
+      '30-day access to AI discovery tools',
+    ]
+  },
   pro: {
     name: 'Pro',
     price: 49,
