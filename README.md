@@ -1,8 +1,10 @@
-# UNLESS — Grant Lifecycle Platform v5.0
+# UNLESS — Grant Lifecycle Platform v5.1
 
-> 39 modules · 23+ live APIs · AI-powered intelligence · $0/month
+> 39 modules · 23+ live APIs · AI-powered intelligence · Unified from Grant OS + Grant Platform
 
 A comprehensive grant management platform built for entrepreneurs, nonprofits, and small organizations. Discover federal grants, write proposals with AI, track compliance, manage awards, and optimize your portfolio — all in one place.
+
+> **Canonical repository** — [grant-os](https://github.com/sillinous/grant-os) has been unified into this repo. All Grant OS AI endpoints, multi-turn chat, and grant discovery features are now here.
 
 ## 39 Modules Across 8 Groups
 
@@ -24,7 +26,8 @@ A comprehensive grant management platform built for entrepreneurs, nonprofits, a
 - **Census Bureau ACS** — Demographic data for Statement of Need narratives
 - **Regulations.gov** — Regulatory intelligence & comment tracking
 - **SAM.gov** — Entity verification & registration status
-- **Anthropic Claude** — AI drafting, scoring, analysis, and chat
+- **Anthropic Claude** — AI drafting, scoring, analysis, and multi-turn chat
+- **OpenRouter** — Multi-model AI routing with provider fallback
 
 ## Deploy
 

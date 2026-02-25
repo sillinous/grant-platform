@@ -1,5 +1,5 @@
-// Grant OS — Unified AI Function
-// Replaces the entire Express backend from EnhancedGrantSystem
+// UNLESS Grant Platform — Unified AI Function
+// Canonical grant AI backend (unified from grant-os + grant-platform)
 // All AI calls route through here: /api/ai/:action
 
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY
@@ -93,7 +93,7 @@ exports.handler = async (event) => {
       const { profile } = body
       const text = await callClaude(
         `You are a grant research expert. Return ONLY valid JSON, no markdown.`,
-        `Find 4 grant opportunities for this organization:
+        `Find 6 grant opportunities for this organization:
 Name: ${profile.name}
 Type: ${profile.profileType}
 Industry: ${profile.industry}
@@ -101,8 +101,8 @@ Stage: ${profile.stage}
 Description: ${profile.description}
 Funding needs: ${profile.fundingNeeds}
 
-Return JSON: {"opportunities":[{"title":string,"description":string,"amount":string,"funder":string,"matchScore":number}]}`,
-        500
+Return JSON: { "opportunities": [ { "name": string, "description": string, "fundingAmount": string, "url": string, "industry": string, "deadline": string, "funder": string, "matchScore": number (60-98), "tier": "a"|"b"|"c" } ] }`,
+        1200
       )
       const parsed = parseJSON(text)
       return respond(parsed || { opportunities: [] })
@@ -289,9 +289,55 @@ Return JSON: { "innovativeAngles": [string], "alternativeMetrics": [string], "pa
     // ── CHAT ───────────────────────────────────────────────────────────────────
     if (action === 'chat') {
       const { profile, grant, messages, newMessage, message, context } = body
-      // Support both old format (message/context) and new format (messages/newMessage)
-      const userMsg = newMessage || message || ''
       const sys = `You are an expert grant writing assistant helping ${profile?.name || 'an organization'}${grant?.name ? ` apply for "${grant.name}" (${grant.fundingAmount})` : ''}. Give specific, actionable advice.${context ? ` Context: ${context}` : ''}`
+
+      // Multi-turn: build conversation history from messages array
+      if (messages?.length && newMessage) {
+        const history = messages.slice(-10).map(m => ({
+          role: m.sender === 'user' ? 'user' : 'assistant',
+          content: m.text
+        }))
+        history.push({ role: 'user', content: newMessage })
+
+        const key = OPENROUTER_KEY || ANTHROPIC_KEY
+        const useOpenRouter = !!OPENROUTER_KEY
+
+        let reply
+        if (useOpenRouter) {
+          const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${key}`,
+              'HTTP-Referer': 'https://unless-fortuna-grants.netlify.app'
+            },
+            body: JSON.stringify({
+              model: 'arcee-ai/trinity-large-preview:free',
+              max_tokens: 800,
+              messages: [{ role: 'system', content: sys }, ...history]
+            })
+          })
+          const d = await res.json()
+          reply = d.choices?.[0]?.message?.content || ''
+        } else {
+          const res = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+            body: JSON.stringify({
+              model: 'claude-haiku-4-5',
+              max_tokens: 800,
+              system: sys,
+              messages: history
+            })
+          })
+          const d = await res.json()
+          reply = d.content?.[0]?.text || ''
+        }
+        return respond({ reply: reply || 'Unable to respond.' })
+      }
+
+      // Single message fallback (legacy format)
+      const userMsg = newMessage || message || ''
       const text = await callClaude(sys, userMsg, 800)
       return respond({ reply: text || 'Unable to respond.' })
     }
@@ -348,4 +394,4 @@ Return JSON: { "tasks": [ { "description": string, "dueDate": string } ] }`,
     return { statusCode: 500, body: JSON.stringify({ error: err.message }) }
   }
 }
-// Phase 1 deploy marker: 20260224T163532Z
+// Unified from grant-os + grant-platform — 2026-02-25
