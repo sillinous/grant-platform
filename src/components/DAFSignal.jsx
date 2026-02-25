@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Badge, Btn, TrackBtn } from '../ui';
+import { Card, Badge, Btn, TrackBtn, SkeletonCard, Empty } from '../ui';
 import { T, uid } from '../globals';
 import { API } from '../api';
+import { useStore } from '../store';
 
-export const DAFSignal = ({ onAdd }) => {
+export const DAFSignal = ({ onAdd: propOnAdd }) => {
+    const { addGrant: storeOnAdd } = useStore();
+    const onAdd = propOnAdd || storeOnAdd;
     const [signals, setSignals] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -41,44 +44,45 @@ export const DAFSignal = ({ onAdd }) => {
                 </Card>
             )}
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                {loading ? <div style={{ color: T.mute }}>Listening to wealth advisor channels...</div> : 
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+                {loading ? <div style={{ display: "contents" }}><SkeletonCard lines={6} /><SkeletonCard lines={6} /></div> :
+                    signals.length === 0 ? <div style={{ gridColumn: "1 / -1" }}><Empty icon="🤫" title="No DAF Signals Found" sub="Monitoring wealth advisor activity for donor-advised fund leads." /></div> :
                     signals.map(s => (
-                        <Card key={s.id} style={{ borderTop: `4px solid ${T.gold}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-                                <Badge color={T.gold}>WEALTH ADVISOR</Badge>
-                                <div style={{ fontSize: 14, fontWeight: 800, color: T.gold }}>{s.grantRange}</div>
+                        <Card key={s.id} glow style={{ borderTop: `6px solid ${T.gold}`, padding: 24 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+                                <Badge color={T.gold} style={{ background: `${T.gold}11`, letterSpacing: 1 }}>WEALTH ADVISOR SIGNAL</Badge>
+                                <div style={{ fontSize: 20, fontWeight: 900, color: T.gold, letterSpacing: "-0.04em" }}>{s.grantRange}</div>
                             </div>
 
-                            <div style={{ fontSize: 10, color: T.mute, fontWeight: 700, letterSpacing: 0.5, marginBottom: 4 }}>INTERMEDIARY</div>
-                            <h3 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0 }}>{s.advisorFirm}</h3>
+                            <div style={{ fontSize: 10, color: T.mute, fontWeight: 800, letterSpacing: 1, marginBottom: 8 }}>INTERMEDIARY INSTITUTION</div>
+                            <h3 style={{ fontSize: 20, fontWeight: 900, color: T.text, margin: 0, fontFamily: "Outfit", lineHeight: 1.3 }}>{s.advisorFirm}</h3>
                             
-                            <div style={{ padding: 12, background: `${T.gold}11`, borderRadius: 8, margin: "16px 0", borderLeft: `3px solid ${T.gold}` }}>
-                                <div style={{ fontSize: 10, color: T.gold, fontWeight: 700, letterSpacing: 0.5, marginBottom: 6 }}>CLIENT MANDATE</div>
-                                <p style={{ fontSize: 13, color: T.text, margin: 0, fontStyle: "italic", lineHeight: 1.5 }}>"{s.note}"</p>
+                            <div style={{ padding: 20, background: "rgba(255,255,255,0.02)", borderRadius: 16, margin: "24px 0", borderLeft: `6px solid ${T.gold}`, border: `1px solid ${T.glassBorder}`, borderLeftWidth: 6 }}>
+                                <div style={{ fontSize: 10, color: T.gold, fontWeight: 800, letterSpacing: 1, marginBottom: 10 }}>ADVISOR-LED MANDATE</div>
+                                <p style={{ fontSize: 14, color: T.text, margin: 0, fontStyle: "italic", lineHeight: 1.7 }}>"{s.note}"</p>
                             </div>
 
-                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: T.sub, marginBottom: 16 }}>
-                                <div><span style={{ fontWeight: 600, color: T.text }}>Focus:</span> {s.clientFocus}</div>
-                                <div><span style={{ fontWeight: 600, color: T.text }}>Deadline:</span> {s.deadline}</div>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: T.sub, marginBottom: 24, padding: "0 4px" }}>
+                                <div><span style={{ fontWeight: 800, color: T.mute, marginRight: 6 }}>FOCUS:</span> {s.clientFocus?.toUpperCase()}</div>
+                                <div><span style={{ fontWeight: 800, color: T.mute, marginRight: 6 }}>DEADLINE:</span> {s.deadline?.toUpperCase()}</div>
                             </div>
 
-                            <div style={{ display: "flex", gap: 10, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
-                                <Btn variant="primary" style={{ flex: 1 }}>One-Sheet Pitch</Btn>
+                            <div style={{ display: "flex", gap: 12, borderTop: `1px solid ${T.glassBorder}`, paddingTop: 24 }}>
+                                <Btn variant="primary" style={{ flex: 1 }}>Draft Advisor Pitch</Btn>
                                 {onAdd && (
                                     <TrackBtn onTrack={() => {
                                         onAdd({
                                             id: uid(),
                                             title: s.advisorFirm,
                                             agency: "Donor Advised Fund",
-                                            amount: 0,
+                                            amount: "TBD",
                                             deadline: s.deadline || "Rolling",
                                             stage: "discovered",
                                             description: `Advisor: ${s.advisorFirm}. Focus: ${s.clientFocus}. Note: ${s.note}`,
-                                            category: "DAF",
+                                            category: "DAF Lead",
                                             createdAt: new Date().toISOString()
                                         });
-                                    }} defaultLabel="+ Track Lead" />
+                                    }} label="+ Track Lead" />
                                 )}
                             </div>
                         </Card>

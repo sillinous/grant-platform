@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Badge, Btn, TrackBtn } from '../ui';
+import { Card, Badge, Btn, TrackBtn, SkeletonCard, Empty } from '../ui';
 import { T, fmt, uid } from '../globals';
 import { API } from '../api';
+import { useStore } from '../store';
 
-export const GivingCircleScout = ({ onAdd }) => {
+export const GivingCircleScout = ({ onAdd: propOnAdd }) => {
+    const { addGrant: storeOnAdd } = useStore();
+    const onAdd = propOnAdd || storeOnAdd;
     const [circles, setCircles] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -24,29 +27,30 @@ export const GivingCircleScout = ({ onAdd }) => {
                 </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
-                {loading ? <div style={{ color: T.mute }}>Mapping local circles...</div> : 
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 24 }}>
+                {loading ? <div style={{ display: "contents" }}><SkeletonCard lines={6} /><SkeletonCard lines={6} /><SkeletonCard lines={6} /></div> :
+                    circles.length === 0 ? <div style={{ gridColumn: "1 / -1" }}><Empty icon="⭕" title="No Active Circles" sub="We couldn't locate active giving circles in your impact area." /></div> :
                     circles.map(c => (
-                        <Card key={c.id} style={{ borderTop: `4px solid ${T.pink}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-                                <Badge color={T.pink}>{c.cycle}</Badge>
-                                <div style={{ fontSize: 11, color: T.mute, fontWeight: 600 }}>{c.members} VOTERS</div>
+                        <Card key={c.id} glow style={{ borderTop: `6px solid ${T.pink}`, padding: 24 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, alignItems: "center" }}>
+                                <Badge color={T.pink} style={{ background: `${T.pink}11`, fontWeight: 800 }}>{c.cycle?.toUpperCase()}</Badge>
+                                <div style={{ fontSize: 11, color: T.sub, fontWeight: 900, letterSpacing: 2 }}>{c.members} VOTERS</div>
                             </div>
 
-                            <h3 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0, marginBottom: 8, height: 44, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{c.name}</h3>
+                            <h3 style={{ fontSize: 20, fontWeight: 900, color: T.text, margin: 0, marginBottom: 12, fontFamily: "Outfit", lineHeight: 1.4 }}>{c.name}</h3>
                             
-                            <div style={{ padding: 12, background: T.panel, borderRadius: 8, marginBottom: 16 }}>
-                                <div style={{ fontSize: 10, color: T.mute, fontWeight: 700, letterSpacing: 0.5, marginBottom: 4 }}>CURRENT POOL</div>
-                                <div style={{ fontSize: 24, fontWeight: 900, color: T.pink }}>{fmt(c.pool)}</div>
+                            <div style={{ padding: 20, background: "rgba(255,255,255,0.02)", borderRadius: 16, marginBottom: 24, border: `1px solid ${T.glassBorder}` }}>
+                                <div style={{ fontSize: 10, color: T.mute, fontWeight: 800, letterSpacing: 1, marginBottom: 8 }}>RESERVED FUND POOL</div>
+                                <div style={{ fontSize: 32, fontWeight: 900, color: T.pink, letterSpacing: "-0.04em" }}>{fmt(c.pool)}</div>
                             </div>
 
-                            <div style={{ marginBottom: 16 }}>
-                                <div style={{ fontSize: 13, color: T.sub, marginBottom: 4 }}><span style={{ fontWeight: 600, color: T.text }}>Focus:</span> {c.focus}</div>
-                                <div style={{ fontSize: 13, color: T.sub }}><span style={{ fontWeight: 600, color: T.text }}>Vote Date:</span> {c.votingDate}</div>
+                            <div style={{ marginBottom: 24, display: "flex", flexDirection: "column", gap: 10 }}>
+                                <div style={{ fontSize: 13, color: T.sub, fontWeight: 700 }}><span style={{ color: T.mute, marginRight: 8 }}>MISSION:</span> {c.focus?.toUpperCase()}</div>
+                                <div style={{ fontSize: 13, color: T.sub, fontWeight: 700 }}><span style={{ color: T.mute, marginRight: 8 }}>VOTE EPOCH:</span> {c.votingDate?.toUpperCase()}</div>
                             </div>
 
-                            <div style={{ display: "flex", gap: 10, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
-                                <Btn size="sm" variant="primary" style={{ flex: 1 }}>Present</Btn>
+                            <div style={{ display: "flex", gap: 12, borderTop: `1px solid ${T.glassBorder}`, paddingTop: 24 }}>
+                                <Btn variant="primary" style={{ flex: 1 }}>Submit Impact Story</Btn>
                                 {onAdd && (
                                     <TrackBtn onTrack={() => {
                                         onAdd({
@@ -60,7 +64,7 @@ export const GivingCircleScout = ({ onAdd }) => {
                                             category: "Giving Circle",
                                             createdAt: new Date().toISOString()
                                         });
-                                    }} defaultLabel="+ Track" />
+                                    }} label="+ Track Circle" />
                                 )}
                             </div>
                         </Card>

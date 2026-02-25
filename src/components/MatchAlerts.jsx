@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Card, Input, Btn, Stat, Badge, Empty } from '../ui';
 import { LS, T, uid, fmt, fmtDate } from '../globals';
 import { API } from '../api';
+import { useStore } from '../store';
 
-export const MatchAlerts = ({ grants, addGrant }) => {
+export const MatchAlerts = ({ onAdd }) => {
+  const { grants, addGrant: storeAddGrant } = useStore();
+  const activeOnAdd = onAdd || storeAddGrant;
   const [alerts, setAlerts] = useState(() => LS.get("match_alerts", []));
   const [watchTerms, setWatchTerms] = useState(() => LS.get("watch_terms", ["rural technology","disability entrepreneurship","small business innovation","AI research","workforce development"]));
   const [newTerm, setNewTerm] = useState("");
@@ -63,7 +66,7 @@ export const MatchAlerts = ({ grants, addGrant }) => {
 
   const dismissAlert = (id) => setAlerts(prev => prev.map(a => a.id === id ? { ...a, dismissed:true } : a));
   const trackAlert = (alert) => {
-    addGrant({
+    activeOnAdd({
       id: uid(), title: alert.title, agency: alert.agency, amount: alert.amount,
       deadline: alert.deadline, stage: "discovered", description: alert.description,
       oppId: alert.oppId, createdAt: new Date().toISOString(), notes: `Discovered via Match Alert (${alert.matchTerm})`, tags: [alert.matchTerm],
@@ -74,9 +77,12 @@ export const MatchAlerts = ({ grants, addGrant }) => {
   const activeAlerts = alerts.filter(a => !a.dismissed);
 
   return (
-    <div>
-      <Card style={{ marginBottom:16 }}>
-        <div style={{ fontSize:13, fontWeight:600, color:T.text, marginBottom:8 }}>🔔 Grant Watch List</div>
+    <div className="animate-in">
+      <Card style={{ marginBottom: 24, background: T.glassLg }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+          <div style={{ fontSize: 20 }}>🔔</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: T.text, fontFamily: "Outfit" }}>Grant Watch List</div>
+        </div>
         <div style={{ fontSize:11, color:T.sub, marginBottom:8 }}>Monitor for new grants matching these keywords. Scan runs against Grants.gov and scores matches against your profile.</div>
         <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:8 }}>
           {watchTerms.map(t => (
@@ -91,38 +97,44 @@ export const MatchAlerts = ({ grants, addGrant }) => {
         {lastScan && <div style={{ fontSize:10, color:T.dim, marginTop:6 }}>Last scan: {fmtDate(lastScan)}</div>}
       </Card>
 
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:8, marginBottom:16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
         <Card><Stat label="Active Alerts" value={activeAlerts.length} color={T.amber} /></Card>
         <Card><Stat label="Watch Terms" value={watchTerms.length} color={T.blue} /></Card>
         <Card><Stat label="Tracked" value={alerts.filter(a => a.dismissed).length} color={T.green} /></Card>
         <Card><Stat label="Avg Match" value={activeAlerts.length > 0 ? `${Math.round(activeAlerts.reduce((s,a)=>s+a.matchScore,0)/activeAlerts.length)}` : "—"} color={T.purple} /></Card>
       </div>
 
-      {activeAlerts.length === 0 ? <Empty icon="🔔" title="No new alerts" sub="Click 'Scan Now' to check for new matching grants" /> :
-        activeAlerts.sort((a,b) => b.matchScore - a.matchScore).map(a => (
-          <Card key={a.id} style={{ marginBottom:8, borderColor: a.matchScore >= 50 ? T.green+"44" : T.border }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-              <div style={{ flex:1 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4 }}>
-                  <Badge color={a.matchScore >= 50 ? T.green : a.matchScore >= 25 ? T.yellow : T.mute}>Match: {a.matchScore}</Badge>
-                  <Badge color={T.blue}>{a.matchTerm}</Badge>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
+        {activeAlerts.length === 0 ? <div style={{ gridColumn: "1 / -1" }}><Empty icon="🔔" title="No new alerts" sub="Click 'Scan Now' to check for new matching grants" /></div> :
+          activeAlerts.sort((a, b) => b.matchScore - a.matchScore).map(a => (
+            <Card key={a.id} glow={a.matchScore >= 75} style={{ borderTop: `6px solid ${a.matchScore >= 50 ? T.green : T.yellow}`, padding: 24 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                    <Badge color={a.matchScore >= 50 ? T.green : a.matchScore >= 25 ? T.yellow : T.mute} style={{ background: a.matchScore >= 50 ? `${T.green}11` : `${T.yellow}11`, fontWeight: 800 }}>MATCH: {a.matchScore}%</Badge>
+                    <Badge color={T.blue} style={{ background: `${T.blue}11`, textTransform: "none", fontWeight: 700 }}>#{a.matchTerm}</Badge>
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: T.text, marginBottom: 6, fontFamily: "Outfit", lineHeight: 1.3 }}>{a.title}</div>
+                  <div style={{ fontSize: 11, color: T.mute, fontWeight: 800, letterSpacing: 1 }}>{a.agency?.toUpperCase()}</div>
                 </div>
-                <div style={{ fontSize:13, fontWeight:600, color:T.text, marginBottom:2 }}>{a.title?.slice(0,60)}</div>
-                <div style={{ fontSize:11, color:T.mute }}>{a.agency}</div>
-                <div style={{ fontSize:11, color:T.sub, marginTop:4, lineHeight:1.4 }}>{a.description?.slice(0,150)}...</div>
-              </div>
-              <div style={{ textAlign:"right", marginLeft:12, flexShrink:0 }}>
-                {a.amount > 0 && <div style={{ fontSize:14, fontWeight:700, color:T.green }}>{fmt(a.amount)}</div>}
-                {a.deadline && <div style={{ fontSize:11, color:T.mute }}>{fmtDate(a.deadline)}</div>}
-                <div style={{ display:"flex", gap:4, marginTop:8 }}>
-                  <Btn size="sm" variant="success" onClick={() => trackAlert(a)}>📋 Track</Btn>
-                  <Btn size="sm" variant="ghost" onClick={() => dismissAlert(a.id)}>✕</Btn>
+                <div style={{ textAlign: "right", marginLeft: 20, flexShrink: 0 }}>
+                  {a.amount > 0 && <div style={{ fontSize: 20, fontWeight: 900, color: T.green, letterSpacing: "-0.04em" }}>{fmt(a.amount)}</div>}
+                  {a.deadline && <div style={{ fontSize: 11, color: T.mute, fontWeight: 800, marginTop: 4 }}>{fmtDate(a.deadline).toUpperCase()}</div>}
                 </div>
               </div>
-            </div>
-          </Card>
-        ))
-      }
+
+              <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.7, marginBottom: 24, padding: 20, background: "rgba(255,255,255,0.02)", borderRadius: 16, border: `1px solid ${T.glassBorder}`, fontStyle: "italic" }}>
+                {a.description?.slice(0, 250)}...
+              </div>
+
+              <div style={{ display: "flex", gap: 12, borderTop: `1px solid ${T.glassBorder}`, paddingTop: 24 }}>
+                <Btn variant="success" style={{ flex: 1 }} onClick={() => trackAlert(a)}>📋 Initialize Tracking</Btn>
+                <Btn variant="ghost" onClick={() => dismissAlert(a.id)}>✕ Dismiss</Btn>
+              </div>
+            </Card>
+          ))
+        }
+      </div>
     </div>
   );
 };

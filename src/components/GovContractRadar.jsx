@@ -81,38 +81,38 @@ export const GovContractRadar = ({ onAdd }) => {
             )}
 
             {loading && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                    <SkeletonCard lines={3} />
-                    <SkeletonCard lines={3} />
-                    <SkeletonCard lines={3} />
+                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                    <SkeletonCard lines={4} />
+                    <SkeletonCard lines={4} />
+                    <SkeletonCard lines={4} />
                 </div>
             )}
 
             {results.length > 0 && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                     {results.map(r => (
-                        <Card key={r.id} style={{ borderLeft: `4px solid ${T.blue}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-                                <div style={{ display: "flex", gap: 8 }}>
-                                    <Badge color={T.blue}>{r.type.toUpperCase()}</Badge>
-                                    {r.setAside && <Badge color={T.amber}>{r.setAside}</Badge>}
+                        <Card key={r.id} glow style={{ borderLeft: `6px solid ${T.blue}`, padding: 24 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, alignItems: "center" }}>
+                                <div style={{ display: "flex", gap: 10 }}>
+                                    <Badge color={T.blue} style={{ background: `${T.blue}11` }}>{r.type.toUpperCase()}</Badge>
+                                    {r.setAside && <Badge color={T.amber} style={{ background: `${T.amber}11` }}>{r.setAside?.toUpperCase()}</Badge>}
                                 </div>
-                                <span style={{ fontSize: 12, color: T.red, fontWeight: 700 }}>
-                                    DUE: {new Date(r.deadline).toLocaleDateString()}
-                                </span>
+                                <div style={{ fontSize: 11, color: T.red, fontWeight: 800, letterSpacing: 1, background: `${T.red}08`, padding: "4px 8px", borderRadius: 6 }}>
+                                    EXPIRES: {new Date(r.deadline).toLocaleDateString()}
+                                </div>
                             </div>
 
-                            <h3 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0, marginBottom: 8 }}>{r.title}</h3>
-                            <div style={{ fontSize: 13, color: T.sub, marginBottom: 12 }}>
-                                <span style={{ fontWeight: 600, color: T.text }}>{r.agency}</span> • NAICS: <span style={{ fontFamily: "monospace", color: T.text }}>{r.naics}</span>
+                            <h3 style={{ fontSize: 20, fontWeight: 800, color: T.text, margin: 0, marginBottom: 8, fontFamily: "Outfit" }}>{r.title}</h3>
+                            <div style={{ fontSize: 13, color: T.sub, marginBottom: 20, fontWeight: 700, letterSpacing: 0.5 }}>
+                                <span style={{ color: T.text }}>{r.agency?.toUpperCase()}</span> • NAICS: <span style={{ fontFamily: "monospace", color: T.text }}>{r.naics}</span>
                             </div>
 
-                            <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.6, padding: "12px", background: T.panel, borderRadius: "6px" }}>
+                            <div style={{ fontSize: 14, color: T.sub, lineHeight: 1.7, padding: "20px", background: "rgba(255,255,255,0.02)", borderRadius: "12px", border: `1px solid ${T.glassBorder}`, fontStyle: "italic" }}>
                                 {r.description}
                             </div>
 
-                            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16, paddingTop: 16, borderTop: `1px solid ${T.border}` }}>
-                                <Btn variant="ghost" size="sm">🔗 SAM.gov</Btn>
+                            <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24, paddingTop: 20, borderTop: `1px solid ${T.glassBorder}` }}>
+                                <Btn variant="ghost" size="sm">🔗 SAM.GOV ORIGIN</Btn>
                                 {onAdd && (
                                     <TrackBtn onTrack={() => onAdd({
                                         id: uid(),
@@ -123,9 +123,8 @@ export const GovContractRadar = ({ onAdd }) => {
                                         stage: "discovered",
                                         description: `Type: ${r.type}. ${r.description}`,
                                         category: "Federal Contract",
-                                        tags: ["federal-contract", r.naics],
                                         createdAt: new Date().toISOString()
-                                    })} defaultLabel="+ Track Contract" />
+                                    })} label="+ Track Contract" />
                                 )}
                             </div>
                         </Card>

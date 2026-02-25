@@ -1,0 +1,79 @@
+﻿
+> grant-platform@0.0.0 build
+> vite build
+
+[36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32mΓ£ô[39m 1824 modules transformed.
+node.exe : [31mΓ£ù[39m Build failed in 2.06s
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" 
+"C:\Users\travi\AppData\Roaming\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified:     
+([31mΓ£ù[39m Build failed in 2.06s:Str    
+ing) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandE    
+rror
+ 
+[31merror during build:
+[31msrc/components/AIDrafter.jsx (3:14): 
+"buildPortfolioContext" is not exported by 
+"src/api.js", imported by 
+"src/components/AIDrafter.jsx".[31m
+file: [36mC:/GitHub/GitHubRoot/sillinous/grant-
+platform/grant-platform/src/components/AIDrafter
+.jsx:3:14[31m
+[33m
+1: import React, { useState, useEffect, useRef 
+} from 'react';
+2: import { Card, Btn, Select, TextArea, Badge, 
+Progress } from '../ui';
+3: import { API, buildPortfolioContext } from 
+'../api';
+                 ^
+4: import { T, LS, uid, fmtDate } from 
+'../globals';
+5: import { useOrganization } from 
+'../context/OrganizationContext.jsx';
+[31m
+    at getRollupError (file:///C:/GitHub/GitHubR
+oot/sillinous/grant-platform/grant-platform/node
+_modules/rollup/dist/es/shared/parseAst.js:402:4
+1)
+    at error (file:///C:/GitHub/GitHubRoot/silli
+nous/grant-platform/grant-platform/node_modules/
+rollup/dist/es/shared/parseAst.js:398:42)
+    at Module.error (file:///C:/GitHub/GitHubRoo
+t/sillinous/grant-platform/grant-platform/node_m
+odules/rollup/dist/es/shared/node-entry.js:17040
+:16)
+    at Module.traceVariable (file:///C:/GitHub/G
+itHubRoot/sillinous/grant-platform/grant-platfor
+m/node_modules/rollup/dist/es/shared/node-entry.
+js:17452:29)
+    at ModuleScope.findVariable (file:///C:/GitH
+ub/GitHubRoot/sillinous/grant-platform/grant-pla
+tform/node_modules/rollup/dist/es/shared/node-en
+try.js:15070:39)
+    at ReturnValueScope.findVariable (file:///C:
+/GitHub/GitHubRoot/sillinous/grant-platform/gran
+t-platform/node_modules/rollup/dist/es/shared/no
+de-entry.js:5673:38)
+    at FunctionBodyScope.findVariable (file:///C
+:/GitHub/GitHubRoot/sillinous/grant-platform/gra
+nt-platform/node_modules/rollup/dist/es/shared/n
+ode-entry.js:5673:38)
+    at ReturnValueScope.findVariable (file:///C:
+/GitHub/GitHubRoot/sillinous/grant-platform/gran
+t-platform/node_modules/rollup/dist/es/shared/no
+de-entry.js:5673:38)
+    at FunctionBodyScope.findVariable (file:///C
+:/GitHub/GitHubRoot/sillinous/grant-platform/gra
+nt-platform/node_modules/rollup/dist/es/shared/n
+ode-entry.js:5673:38)
+    at Identifier.bind (file:///C:/GitHub/GitHub
+Root/sillinous/grant-platform/grant-platform/nod
+e_modules/rollup/dist/es/shared/node-entry.js:54
+47:40)[39m

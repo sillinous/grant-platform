@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Badge, Btn, TrackBtn } from '../ui';
+import { Card, Badge, Btn, TrackBtn, SkeletonCard, Empty } from '../ui';
 import { T, fmt, uid } from '../globals';
 import { API } from '../api';
+import { useStore } from '../store';
 
-export const FaithFunder = ({ onAdd }) => {
+export const FaithFunder = ({ onAdd: propOnAdd }) => {
+    const { addGrant: storeOnAdd } = useStore();
+    const onAdd = propOnAdd || storeOnAdd;
     const [grants, setGrants] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -24,29 +27,30 @@ export const FaithFunder = ({ onAdd }) => {
                 </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                {loading ? <div style={{ color: T.mute }}>Scanning interfaith councils...</div> : 
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                {loading ? <div style={{ display: "contents" }}><SkeletonCard lines={6} /><SkeletonCard lines={6} /></div> :
+                    grants.length === 0 ? <div style={{ gridColumn: "1 / -1" }}><Empty icon="🕌" title="No Faith-Based Grants Found" sub="Monitoring religious philanthropic networks for secular-aligned opportunities." /></div> :
                     grants.map(g => (
-                        <Card key={g.id} style={{ borderTop: `4px solid ${T.blue}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-                                <Badge color={T.blue}>{g.deadline} DEADLINE</Badge>
-                                <Badge color={T.shade}>SECULAR</Badge>
+                        <Card key={g.id} glow style={{ borderTop: `4px solid ${T.blue}` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+                                <Badge color={T.blue} style={{ background: `${T.blue}11`, border: `1px solid ${T.blue}22` }}>{g.deadline} DEADLINE</Badge>
+                                <Badge color={T.sub}>SECULAR ALIGNED</Badge>
                             </div>
 
-                            <h3 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0, marginBottom: 4, height: 44, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{g.grant}</h3>
-                            <div style={{ fontSize: 13, color: T.mute, marginBottom: 16 }}>{g.org}</div>
+                            <h3 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0, marginBottom: 8, fontFamily: "Outfit", height: 48, overflow: "hidden", lineHeight: 1.3 }}>{g.grant}</h3>
+                            <div style={{ fontSize: 13, color: T.sub, marginBottom: 20, fontWeight: 700, letterSpacing: 0.5 }}>{g.org?.toUpperCase()}</div>
                             
-                            <div style={{ padding: 12, background: T.panel, borderRadius: 8, marginBottom: 16 }}>
-                                <div style={{ fontSize: 10, color: T.mute, fontWeight: 700, letterSpacing: 0.5, marginBottom: 4 }}>GRANT AMOUNT</div>
-                                <div style={{ fontSize: 24, fontWeight: 900, color: T.text }}>{fmt(g.amount)}</div>
+                            <div style={{ padding: 16, background: "rgba(255,255,255,0.02)", borderRadius: 12, marginBottom: 20, border: `1px solid ${T.glassBorder}` }}>
+                                <div style={{ fontSize: 10, color: T.mute, fontWeight: 800, letterSpacing: 1, marginBottom: 4 }}>GRANT AMOUNT</div>
+                                <div style={{ fontSize: 28, fontWeight: 900, color: T.text, letterSpacing: "-0.02em" }}>{fmt(g.amount)}</div>
                             </div>
 
-                            <div style={{ padding: 12, background: `${T.blue}11`, borderRadius: 8, borderLeft: `3px solid ${T.blue}`, fontSize: 13, color: T.sub, marginBottom: 16 }}>
-                                <strong style={{ color: T.text }}>Mission Fit:</strong> {g.focus}
+                            <div style={{ padding: 16, background: `${T.blue}08`, borderRadius: 12, borderLeft: `4px solid ${T.blue}`, fontSize: 14, color: T.sub, marginBottom: 24, lineHeight: 1.6 }}>
+                                <strong style={{ color: T.text, display: "block", marginBottom: 4 }}>STRATEGIC ALIGNMENT</strong> {g.focus}
                             </div>
 
-                            <div style={{ display: "flex", gap: 10, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
-                                <Btn size="sm" variant="primary" style={{ flex: 1 }}>Review Guidelines</Btn>
+                            <div style={{ display: "flex", gap: 12, borderTop: `1px solid ${T.glassBorder}`, paddingTop: 20 }}>
+                                <Btn variant="primary" style={{ flex: 1 }}>Review Specs</Btn>
                                 {onAdd && (
                                     <TrackBtn onTrack={() => {
                                         onAdd({
@@ -60,7 +64,7 @@ export const FaithFunder = ({ onAdd }) => {
                                             category: "Faith-Based Grant",
                                             createdAt: new Date().toISOString()
                                         });
-                                    }} defaultLabel="+ Track" />
+                                    }} label="+ Track" />
                                 )}
                             </div>
                         </Card>

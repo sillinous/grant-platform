@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { T, fmt, uid, PROFILE } from '../globals';
 import { API } from '../api';
-import { Card, Badge, Btn, TrackBtn, SkeletonCard } from '../ui';
+import { Card, Badge, Btn, TrackBtn, SkeletonCard, Empty } from '../ui';
+import { useStore } from '../store';
 
-export const ChamberPulse = ({ onAdd }) => {
+export const ChamberPulse = ({ onAdd: propOnAdd }) => {
+    const { addGrant: storeOnAdd } = useStore();
+    const onAdd = propOnAdd || storeOnAdd;
     const [grants, setGrants] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -24,35 +27,36 @@ export const ChamberPulse = ({ onAdd }) => {
                 </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16 }}>
-                <div style={{ padding: 12, background: `${T.orange}11`, borderRadius: 8, border: `1px solid ${T.orange}33`, display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 18 }}>📍</span>
-                    <div style={{ fontSize: 12, color: T.sub }}>
-                        <b>Local Target:</b> Scanning Chambers of Commerce and Business Improvement Districts near <b>{PROFILE.zip || "your location"}</b>.
+            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 20 }}>
+                <Card style={{ padding: "16px 20px", background: `${T.orange}08`, border: `1px solid ${T.orange}22`, display: "flex", alignItems: "center", gap: 12, borderRadius: 12 }}>
+                    <span style={{ fontSize: 20 }}>📍</span>
+                    <div style={{ fontSize: 14, color: T.sub }}>
+                        Scanning local Business Improvement Districts (BIDs) near <b style={{ color: T.text }}>{PROFILE.zip || "your registered location"}</b>.
                     </div>
-                </div>
+                </Card>
 
                 {loading ? (
-                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                        <SkeletonCard lines={2} style={{ borderLeft: `4px solid ${T.orange}` }} />
-                        <SkeletonCard lines={2} style={{ borderLeft: `4px solid ${T.orange}` }} />
+                    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                        <SkeletonCard lines={2} style={{ borderLeft: `6px solid ${T.orange}` }} />
+                        <SkeletonCard lines={2} style={{ borderLeft: `6px solid ${T.orange}` }} />
                     </div>
                 ) : 
+                    grants.length === 0 ? <Empty icon="🏛️" title="No Local Grants Found" sub="Checking Business Improvement Districts (BIDs) and local chambers." /> :
                     grants.map(g => (
-                        <Card key={g.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", borderLeft: `4px solid ${T.orange}` }}>
-                            <div style={{ flex: 1, paddingRight: 24 }}>
-                                <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12 }}>
-                                    <Badge color={T.orange}>{g.org}</Badge>
-                                    <Badge color={T.shade}>{g.type}</Badge>
+                        <Card key={g.id} glow style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderLeft: `6px solid ${T.orange}`, padding: "24px 32px" }}>
+                            <div style={{ flex: 1, paddingRight: 32 }}>
+                                <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12 }}>
+                                    <Badge color={T.orange} style={{ background: `${T.orange}11` }}>{g.org}</Badge>
+                                    <Badge color={T.sub}>{g.type?.toUpperCase()}</Badge>
                                 </div>
-                                <h3 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0, marginBottom: 8 }}>{g.title}</h3>
-                                <p style={{ fontSize: 13, color: T.sub, margin: 0, lineHeight: 1.5 }}>{g.description}</p>
+                                <h3 style={{ fontSize: 20, fontWeight: 800, color: T.text, margin: 0, marginBottom: 8, fontFamily: "Outfit" }}>{g.title}</h3>
+                                <p style={{ fontSize: 14, color: T.sub, margin: 0, lineHeight: 1.6 }}>{g.description}</p>
                             </div>
-                            <div style={{ textAlign: "right", minWidth: 150 }}>
-                                <div style={{ fontSize: 10, color: T.mute, fontWeight: 700, letterSpacing: 0.5, marginBottom: 4 }}>FUNDING</div>
-                                <div style={{ fontSize: 24, fontWeight: 900, color: T.text, marginBottom: 16 }}>{fmt(g.amount)}</div>
-                                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                                    <Btn size="sm" variant="primary">Apply</Btn>
+                            <div style={{ textAlign: "right", minWidth: 180 }}>
+                                <div style={{ fontSize: 11, color: T.mute, fontWeight: 800, letterSpacing: 1, marginBottom: 4 }}>DIRECT FUNDING</div>
+                                <div style={{ fontSize: 32, fontWeight: 900, color: T.text, marginBottom: 20, letterSpacing: "-0.02em" }}>{fmt(g.amount)}</div>
+                                <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+                                    <Btn size="md" variant="primary">Access Portal</Btn>
                                     {onAdd && (
                                         <TrackBtn onTrack={() => {
                                             onAdd({
@@ -63,10 +67,10 @@ export const ChamberPulse = ({ onAdd }) => {
                                                 deadline: "Rolling",
                                                 stage: "discovered",
                                                 description: g.description,
-                                                category: "Chamber Pulse",
+                                                category: "Local Chamber",
                                                 createdAt: new Date().toISOString()
                                             });
-                                        }} defaultLabel="+ Track" />
+                                        }} label="+ Watch" />
                                     )}
                                 </div>
                             </div>

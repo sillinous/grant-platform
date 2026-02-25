@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, Badge, Btn, Stat, Progress, Empty, Modal, Tab } from '../ui';
+import { Card, Badge, Btn, Stat, Progress, Empty, Modal, Tabs } from '../ui';
 import { T, fmt, fmtDate, daysUntil, STAGE_MAP, uid } from '../globals';
 import { useStore } from '../store';
 

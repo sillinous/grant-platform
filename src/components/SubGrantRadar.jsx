@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Badge, Btn, TrackBtn } from '../ui';
-import { T, uid } from '../globals';
+import { Card, Badge, Btn, TrackBtn, SkeletonCard, Empty } from '../ui';
+import { T, uid, fmt } from '../globals';
 import { API } from '../api';
 import { useStore } from '../store';
 
@@ -27,37 +27,39 @@ export const SubGrantRadar = ({ onAdd: propOnAdd }) => {
                 </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                {loading ? <div style={{ color: T.mute }}>Scanning prime award registries...</div> : 
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+                {loading ? <div style={{ display: "contents" }}><SkeletonCard lines={6} /><SkeletonCard lines={6} /></div> :
+                    data.length === 0 ? <div style={{ gridColumn: "1 / -1" }}><Empty icon="🛰️" title="No Sub-Grants Found" sub="Monitoring for prime awards that mandate partnership distributions." /></div> :
                     data.map(item => (
-                        <Card key={item.id} style={{ borderTop: `4px solid ${T.amber}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-                                <Badge color={T.amber}>{item.status}</Badge>
+                        <Card key={item.id} glow style={{ borderTop: `6px solid ${T.amber}`, padding: 24 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, alignItems: "center" }}>
+                                <Badge color={T.amber} style={{ background: `${T.amber}11`, fontWeight: 800 }}>{item.status?.toUpperCase()}</Badge>
                                 <div style={{ textAlign: "right" }}>
-                                    <div style={{ fontSize: 10, color: T.mute, fontWeight: 700, letterSpacing: 0.5, marginBottom: 4 }}>POTENTIAL WIN</div>
-                                    <div style={{ fontSize: 18, fontWeight: 900, color: T.green }}>{fmt(item.subGrantAlloc)}</div>
+                                    <div style={{ fontSize: 10, color: T.mute, fontWeight: 900, letterSpacing: 1.5, marginBottom: 4 }}>SUB-ALLOCATION</div>
+                                    <div style={{ fontSize: 24, fontWeight: 900, color: T.green, letterSpacing: "-0.04em" }}>{fmt(item.subGrantAlloc)}</div>
                                 </div>
                             </div>
                             
-                            <h3 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0, marginBottom: 16, height: 44, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{item.title}</h3>
+                            <h3 style={{ fontSize: 18, fontWeight: 900, color: T.text, margin: 0, marginBottom: 20, height: 48, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", fontFamily: "Outfit", lineHeight: 1.3 }}>{item.title}</h3>
 
-                            <div style={{ padding: 12, background: T.panel, borderRadius: 8, marginBottom: 16 }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 8 }}>
-                                    <span style={{ color: T.mute }}>PRIME FUNDER</span>
-                                    <span style={{ color: T.text, fontWeight: 600 }}>{item.prime}</span>
+                            <div style={{ padding: 20, background: "rgba(255,255,255,0.02)", borderRadius: 16, marginBottom: 24, border: `1px solid ${T.glassBorder}` }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 12 }}>
+                                    <span style={{ color: T.mute, fontWeight: 800 }}>PRIME FUNDER</span>
+                                    <span style={{ color: T.text, fontWeight: 900 }}>{item.prime?.toUpperCase()}</span>
                                 </div>
-                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11 }}>
-                                    <span style={{ color: T.mute }}>PRIMARY RECIPIENT</span>
-                                    <span style={{ color: T.blue, fontWeight: 600 }}>{item.recipient}</span>
+                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                                    <span style={{ color: T.mute, fontWeight: 800 }}>PRIMARY RECIPIENT</span>
+                                    <span style={{ color: T.blue, fontWeight: 900 }}>{item.recipient?.toUpperCase()}</span>
                                 </div>
                             </div>
 
-                            <div style={{ padding: 12, background: `${T.green}11`, borderLeft: `3px solid ${T.green}`, borderRadius: 8, fontSize: 12, color: T.sub, marginBottom: 16, lineHeight: 1.5 }}>
-                                <strong style={{ color: T.text }}>PARTNERSHIP MANDATE:</strong> {item.requirement}
+                            <div style={{ padding: 20, background: `${T.green}08`, borderLeft: `6px solid ${T.green}`, borderRadius: 16, fontSize: 14, color: T.sub, marginBottom: 24, lineHeight: 1.7 }}>
+                                <strong style={{ color: T.text, fontWeight: 900, display: "block", marginBottom: 8, fontSize: 11, letterSpacing: 1 }}>PARTNERSHIP MANDATE</strong>
+                                {item.requirement}
                             </div>
 
-                            <div style={{ display: "flex", gap: 10, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
-                                <Btn variant="primary" style={{ flex: 1 }}>Contact Prime</Btn>
+                            <div style={{ display: "flex", gap: 12, borderTop: `1px solid ${T.glassBorder}`, paddingTop: 24 }}>
+                                <Btn variant="primary" style={{ flex: 1 }}>Initiate Prime Contact</Btn>
                                 {onAdd && (
                                     <TrackBtn onTrack={() => {
                                         onAdd({

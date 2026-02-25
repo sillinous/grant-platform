@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { Card, Input, Btn, Badge, Progress } from '../ui';
-import { T, fmtDate } from '../globals';
+import { Card, Input, Btn, Badge, Progress, SkeletonCard, Empty, TrackBtn } from '../ui';
+import { T, fmtDate, uid } from '../globals';
 import { API } from '../api';
+import { useStore } from '../store';
 
-export const LegislativeTracker = () => {
+export const LegislativeTracker = ({ onAdd: propOnAdd }) => {
+  const { addGrant: storeOnAdd } = useStore();
+  const onAdd = propOnAdd || storeOnAdd;
   const [query, setQuery] = useState("");
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -41,9 +44,12 @@ export const LegislativeTracker = () => {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <Card>
-        <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 8 }}>🗳️ Upstream Legislative Tracking</div>
+    <div className="animate-in" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      <Card style={{ background: T.glassLg }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+          <div style={{ fontSize: 20 }}>🗳️</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: T.text, fontFamily: "Outfit" }}>Upstream Legislative Tracking</div>
+        </div>
         <div style={{ fontSize: 12, color: T.sub, marginBottom: 12 }}>
           Track appropriations and funding bills in Congress to forecast grant opportunities 6-12 months before they are posted to Grants.gov.
         </div>
@@ -59,22 +65,28 @@ export const LegislativeTracker = () => {
         </div>
       </Card>
 
-      {bills.length > 0 && (
-        <Card>
-          <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>📋 Relevant Legislation ({bills.length})</div>
+      {loading && <div style={{ marginBottom: 20 }}><SkeletonCard lines={4} /><SkeletonCard lines={4} /></div>}
+
+      {bills.length === 0 && !loading && (
+        <Empty icon="🗳️" title="No Bills Searched" sub="Search for keywords like 'agriculture' or 'broadband' to find active Congressional bills." />
+      )}
+
+      {bills.length > 0 && !loading && (
+        <Card glow style={{ borderTop: `4px solid ${T.blue}` }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: T.text, marginBottom: 20, letterSpacing: 1, textTransform: "uppercase" }}>📋 Strategic Appropriations ({bills.length})</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {bills.map((b, i) => (
-              <div key={i} style={{ padding: 12, background: T.panel, borderRadius: 8, border: `1px solid ${T.border}` }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
+              <div key={i} style={{ padding: 16, background: "rgba(255,255,255,0.02)", borderRadius: 12, border: `1px solid ${T.glassBorder}` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{b.title}</div>
-                    <div style={{ fontSize: 10, color: T.mute, marginTop: 2 }}>
-                      {b.number} · {b.type} · Latest Action: {fmtDate(b.latestAction?.actionDate)}
+                    <div style={{ fontSize: 15, fontWeight: 800, color: T.text, fontFamily: "Outfit" }}>{b.title}</div>
+                    <div style={{ fontSize: 12, color: T.sub, marginTop: 4, fontWeight: 700, letterSpacing: 0.5 }}>
+                      {b.number?.toUpperCase()} • {b.type?.toUpperCase()} • ACTION: {fmtDate(b.latestAction?.actionDate)}
                     </div>
                   </div>
-                  <Btn size="xs" variant="ghost" onClick={() => predictImpact(b)} disabled={loading}>🧠 Forecast</Btn>
+                  <Btn size="xs" variant="primary" onClick={() => predictImpact(b)} disabled={loading}>🧠 Run Forecast</Btn>
                 </div>
-                <div style={{ fontSize: 11, color: T.sub }}>{b.latestAction?.text}</div>
+                <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.5 }}>{b.latestAction?.text}</div>
               </div>
             ))}
           </div>
@@ -82,16 +94,23 @@ export const LegislativeTracker = () => {
       )}
 
       {selectedBill && selectedBill.forecast && (
-        <Card style={{ borderLeft: `4px solid ${T.amber}` }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: T.amber }}>🔮 AI Funding Forecast: {selectedBill.number}</div>
-            <button onClick={() => setSelectedBill(null)} style={{ background: "none", border: "none", color: T.sub, cursor: "pointer" }}>✕</button>
+        <Card glow style={{ borderLeft: `6px solid ${T.amber}`, background: `${T.amber}05`, padding: 24 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: T.amber, letterSpacing: 2 }}>🔮 AI STRATEGIC FUNDING FORECAST: {selectedBill.number}</div>
+            <button onClick={() => setSelectedBill(null)} style={{ background: "none", border: "none", color: T.sub, cursor: "pointer", fontSize: 16 }}>✕</button>
           </div>
-          <div style={{ fontSize: 11, color: T.text, whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+          <div style={{ fontSize: 14, color: T.text, whiteSpace: "pre-wrap", lineHeight: 1.7, fontStyle: "italic", marginBottom: 24 }}>
             {selectedBill.forecast}
           </div>
-          <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.border}`, display: "flex", justifyContent: "flex-end" }}>
-            <Btn size="xs" variant="primary" onClick={() => alert("Monitoring bill state. You will be notified of major actions.")}>🔔 Watch Bill</Btn>
+          <div style={{ marginTop: 20, paddingTop: 20, borderTop: `1px solid ${T.glassBorder}`, display: "flex", justifyContent: "flex-end", gap: 12 }}>
+            <Btn variant="ghost" onClick={() => alert("Monitoring bill state. You will be notified of major actions.")}>🔔 Watch Action</Btn>
+            {onAdd && (
+              <TrackBtn onTrack={() => onAdd({
+                id: uid(), title: selectedBill.title, agency: "Legislative Forecast",
+                stage: "discovered", description: selectedBill.forecast, category: "Foresight",
+                createdAt: new Date().toISOString()
+              })} label="+ Track Strategy" />
+            )}
           </div>
         </Card>
       )}

@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Badge, Btn, Stat, TrackBtn } from '../ui';
+import { Card, Badge, Btn, Stat, TrackBtn, SkeletonCard, Empty } from '../ui';
 import { T, fmt, uid } from '../globals';
 import { API } from '../api';
+import { useStore } from '../store';
 
-export const PRINavigator = ({ onAdd }) => {
+export const PRINavigator = ({ onAdd: propOnAdd }) => {
+    const { addGrant: storeOnAdd } = useStore();
+    const onAdd = propOnAdd || storeOnAdd;
     const [signals, setSignals] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -24,30 +27,30 @@ export const PRINavigator = ({ onAdd }) => {
                 </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                {loading ? <div style={{ color: T.mute }}>Analyzing foundation balance sheets...</div> : 
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+                {loading ? <div style={{ display: "contents" }}><SkeletonCard lines={6} /><SkeletonCard lines={6} /></div> :
+                    signals.length === 0 ? <div style={{ gridColumn: "1 / -1" }}><Empty icon="🏦" title="No PRI Opportunities Found" sub="Monitoring foundations for low-interest program-related investments." /></div> :
                     signals.map(s => (
-                        <Card key={s.id} style={{ borderTop: `4px solid ${T.green}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-                                <Badge color={T.green}>RATE: {s.rate}</Badge>
+                        <Card key={s.id} glow style={{ borderTop: `6px solid ${T.green}`, padding: 24 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 24, alignItems: "center" }}>
+                                <Badge color={T.green} style={{ background: `${T.green}11`, padding: "8px 12px", fontWeight: 800 }}>RATE: {s.rate}</Badge>
                                 <div style={{ textAlign: "right" }}>
-                                    <div style={{ fontSize: 10, color: T.mute, fontWeight: 700, letterSpacing: 0.5 }}>TERM</div>
-                                    <div style={{ fontSize: 15, fontWeight: 800, color: T.text }}>{s.term}</div>
+                                    <div style={{ fontSize: 10, color: T.mute, fontWeight: 800, letterSpacing: 1, marginBottom: 4 }}>REPAYMENT TERM</div>
+                                    <div style={{ fontSize: 18, fontWeight: 900, color: T.text, letterSpacing: "-0.02em" }}>{s.term}</div>
                                 </div>
                             </div>
 
-                            <h3 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0, marginBottom: 8 }}>{s.foundation}</h3>
-                            <div style={{ fontSize: 24, fontWeight: 900, color: T.green, marginBottom: 16 }}>{fmt(s.amount)}</div>
+                            <h3 style={{ fontSize: 20, fontWeight: 900, color: T.text, margin: 0, marginBottom: 12, fontFamily: "Outfit", lineHeight: 1.3 }}>{s.foundation}</h3>
+                            <div style={{ fontSize: 36, fontWeight: 900, color: T.green, marginBottom: 24, letterSpacing: "-0.04em" }}>{fmt(s.amount)}</div>
                             
-                            <div style={{ padding: 12, background: T.panel, borderRadius: 8, fontSize: 13, color: T.sub, lineHeight: 1.5, marginBottom: 20 }}>
-                                <div style={{ fontSize: 11, color: T.mute, fontWeight: 700, letterSpacing: 0.5, marginBottom: 4 }}>🎯 FOCUS</div>
-                                <div style={{ color: T.text, fontWeight: 600, marginBottom: 6 }}>{s.focus}</div>
-                                <span style={{ fontSize: 12, display: "block" }}>{s.logic}</span>
+                            <div style={{ padding: 20, background: "rgba(255,255,255,0.02)", borderRadius: 16, fontSize: 14, color: T.sub, lineHeight: 1.7, marginBottom: 24, border: `1px solid ${T.glassBorder}` }}>
+                                <div style={{ fontSize: 10, color: T.sub, fontWeight: 800, letterSpacing: 1, marginBottom: 10 }}>🎯 PRI STRATEGIC ALIGNMENT</div>
+                                <div style={{ color: T.text, fontWeight: 800, marginBottom: 10, fontSize: 15 }}>{s.focus}</div>
+                                <span style={{ fontSize: 13, display: "block", fontStyle: "italic", color: T.sub }}>{s.logic}</span>
                             </div>
 
-                            <div style={{ display: "flex", gap: 10, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
-                                <Btn variant="primary" style={{ flex: 1 }}>Investment Prequel</Btn>
-                                <Btn variant="ghost">Tax Compliance</Btn>
+                            <div style={{ display: "flex", gap: 12, borderTop: `1px solid ${T.glassBorder}`, paddingTop: 24 }}>
+                                <Btn variant="primary" style={{ flex: 1 }}>Structure Deal</Btn>
                                 {onAdd && (
                                     <TrackBtn onTrack={() => {
                                         onAdd({
@@ -58,10 +61,10 @@ export const PRINavigator = ({ onAdd }) => {
                                             deadline: "Rolling",
                                             stage: "discovered",
                                             description: `Term: ${s.term}. Rate: ${s.rate}. Focus: ${s.focus}.`,
-                                            category: "PRI",
+                                            category: "PRI Investment",
                                             createdAt: new Date().toISOString()
                                         });
-                                    }} defaultLabel="+ Track PRI" />
+                                    }} label="+ Track PRI" />
                                 )}
                             </div>
                         </Card>

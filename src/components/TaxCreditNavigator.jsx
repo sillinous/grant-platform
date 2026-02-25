@@ -101,38 +101,38 @@ export const TaxCreditNavigator = ({ onAdd }) => {
             </Card>
 
             {hasCalculated && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: T.mute, letterSpacing: 1.2, marginBottom: 4, paddingLeft: 4, textTransform: "uppercase" }}>Top Matched Tax Credits</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color: T.mute, letterSpacing: 2, marginBottom: 4, paddingLeft: 4, textTransform: "uppercase" }}>Strategic Tax Yields</div>
 
                     {credits.map(c => (
-                        <Card key={c.id} style={{ borderLeft: `3px solid ${c.isState ? T.blue : T.purple}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                        <Card key={c.id} glow style={{ borderLeft: `6px solid ${c.isState ? T.blue : T.purple}`, padding: 24 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
                                 <div>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                                        <Badge color={c.match > 80 ? T.green : T.amber}>{c.match}% Match</Badge>
-                                        <Badge color={c.isState ? T.blue : T.purple}>{c.isState ? "State Credit" : "Federal Credit"}</Badge>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                                        <Badge color={c.match > 80 ? T.green : T.amber} style={{ background: `${c.match > 80 ? T.green : T.amber}11` }}>{c.match}% ALIGNMENT</Badge>
+                                        <Badge color={c.isState ? T.blue : T.purple} style={{ background: `${c.isState ? T.blue : T.purple}11` }}>{c.isState ? "STATE INCENTIVE" : "FEDERAL CREDIT"}</Badge>
                                     </div>
-                                    <div style={{ fontSize: 15, fontWeight: 700, color: T.text, marginBottom: 4 }}>{c.title}</div>
-                                    <div style={{ fontSize: 12, color: T.sub }}>{c.agency}</div>
+                                    <div style={{ fontSize: 18, fontWeight: 800, color: T.text, marginBottom: 6, fontFamily: "Outfit" }}>{c.title}</div>
+                                    <div style={{ fontSize: 13, color: T.sub, fontWeight: 700 }}>{c.agency?.toUpperCase()}</div>
                                 </div>
-                                <div style={{ fontSize: 16, fontWeight: 800, color: T.green, background: `${T.green}11`, padding: "6px 12px", borderRadius: "16px" }}>
+                                <div style={{ fontSize: 18, fontWeight: 900, color: T.green, background: `${T.green}11`, padding: "8px 16px", borderRadius: "12px", border: `1px solid ${T.green}22` }}>
                                     {c.amount}
                                 </div>
                             </div>
 
-                            <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.6, marginBottom: 12 }}>{c.description}</div>
+                            <div style={{ fontSize: 14, color: T.sub, lineHeight: 1.6, marginBottom: 20 }}>{c.description}</div>
 
-                            <div style={{ fontSize: 12, color: T.text, background: T.panel, padding: "10px 12px", borderRadius: "6px", marginBottom: 16, borderLeft: `2px solid ${T.border}` }}>
-                                <b style={{ color: T.mute, marginRight: 6 }}>Key Eligibility Criteria:</b> {c.criteria}
+                            <div style={{ fontSize: 13, color: T.text, background: "rgba(255,255,255,0.02)", padding: "16px", borderRadius: "12px", marginBottom: 24, border: `1px solid ${T.glassBorder}` }}>
+                                <b style={{ color: T.mute, marginRight: 8, fontSize: 11, fontWeight: 800, letterSpacing: 1 }}>ELIGIBILITY CRITERIA:</b> {c.criteria}
                             </div>
 
-                            <div style={{ display: "flex", gap: 10, borderTop: `1px solid ${T.border}`, paddingTop: 12 }}>
+                            <div style={{ display: "flex", gap: 12, borderTop: `1px solid ${T.glassBorder}`, paddingTop: 20 }}>
                                 {onAdd && (
                                     <TrackBtn onTrack={() => onAdd({
-                                        id: uid(), title: c.title, agency: c.agency, stage: "discovered", description: c.description, category: "Tax Credit", tags: ["tax-credit", c.isState ? "state" : "federal"]
-                                    })} defaultLabel="📋 Track Credit" />
+                                        id: uid(), title: c.title, agency: c.agency, stage: "discovered", description: c.description, category: "Tax Credit", createdAt: new Date().toISOString()
+                                    })} label="Track Credit" />
                                 )}
-                                <Btn size="sm" variant="ghost">📄 IRS Form / Guidelines</Btn>
+                                <Btn variant="ghost">📄 Compliance Documentation</Btn>
                             </div>
                         </Card>
                     ))}

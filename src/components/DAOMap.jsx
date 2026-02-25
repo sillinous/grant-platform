@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Badge, Btn, TrackBtn } from '../ui';
+import { Card, Badge, Btn, TrackBtn, SkeletonCard, Empty } from '../ui';
 import { T, uid } from '../globals';
 import { API } from '../api';
+import { useStore } from '../store';
 
-export const DAOMap = ({ onAdd }) => {
+export const DAOMap = ({ onAdd: propOnAdd }) => {
+    const { addGrant: storeOnAdd } = useStore();
+    const onAdd = propOnAdd || storeOnAdd;
     const [treasuries, setTreasuries] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -24,31 +27,32 @@ export const DAOMap = ({ onAdd }) => {
                 </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                {loading ? <div style={{ color: T.mute }}>Syncing blockchain governance proposals...</div> : 
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                {loading ? <div style={{ display: "contents" }}><SkeletonCard lines={6} /><SkeletonCard lines={6} /></div> :
+                    treasuries.length === 0 ? <div style={{ gridColumn: "1 / -1" }}><Empty icon="⛓️" title="No DAO Treasuries Found" sub="Monitoring decentralized governance networks for public goods funding." /></div> :
                     treasuries.map(dao => (
-                        <Card key={dao.id} style={{ borderTop: `4px solid ${T.indigo}`, background: `linear-gradient(145deg, ${T.panel}, transparent)` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-                                <div style={{ display: 'flex', gap: 6 }}>
-                                    <Badge color={T.indigo}>{dao.token}</Badge>
-                                    <Badge color={T.shade}>WEB3</Badge>
+                        <Card key={dao.id} glow style={{ borderTop: `4px solid ${T.indigo}`, background: `linear-gradient(145deg, ${T.indigo}08, transparent)` }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    <Badge color={T.indigo} style={{ background: `${T.indigo}11` }}>{dao.token}</Badge>
+                                    <Badge color={T.sub}>GOVERNANCE TOKEN</Badge>
                                 </div>
                                 <div style={{ textAlign: "right" }}>
-                                    <div style={{ fontSize: 10, color: T.mute, fontWeight: 700, letterSpacing: 0.5 }}>TREASURY AUM</div>
-                                    <div style={{ fontSize: 15, fontWeight: 800, color: T.text }}>{dao.aum}</div>
+                                    <div style={{ fontSize: 10, color: T.mute, fontWeight: 800, letterSpacing: 1, marginBottom: 4 }}>TREASURY AUM</div>
+                                    <div style={{ fontSize: 18, fontWeight: 900, color: T.text, letterSpacing: "-0.02em" }}>{dao.aum}</div>
                                 </div>
                             </div>
 
-                            <h3 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0, marginBottom: 8 }}>{dao.name}</h3>
-                            <div style={{ fontSize: 13, color: T.indigo, marginBottom: 16 }}>🔭 Focus: <span style={{ fontWeight: 600 }}>{dao.focus}</span></div>
+                            <h3 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0, marginBottom: 8, fontFamily: "Outfit" }}>{dao.name}</h3>
+                            <div style={{ fontSize: 13, color: T.indigo, marginBottom: 20, fontWeight: 700, letterSpacing: 0.5 }}>🔭 MISSION: {dao.focus?.toUpperCase()}</div>
 
-                            <div style={{ padding: 12, background: `${T.indigo}11`, border: `1px solid ${T.indigo}22`, borderRadius: 8, marginBottom: 16 }}>
-                                <div style={{ fontSize: 10, color: T.indigo, fontWeight: 700, letterSpacing: 0.5, marginBottom: 4 }}>ACTIVE PROPOSAL EPOCH</div>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 8 }}>{dao.activeProp}</div>
-                                <div style={{ fontSize: 12, color: T.green, fontWeight: 600 }}>💰 Grant Size: {dao.GrantSize}</div>
+                            <div style={{ padding: 16, background: "rgba(255,255,255,0.02)", border: `1px solid ${T.glassBorder}`, borderRadius: 12, marginBottom: 24 }}>
+                                <div style={{ fontSize: 10, color: T.sub, fontWeight: 800, letterSpacing: 1, marginBottom: 12 }}>ACTIVE PROPOSAL EPOCH</div>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 8 }}>{dao.activeProp}</div>
+                                <div style={{ fontSize: 13, color: T.green, fontWeight: 800, letterSpacing: 0.5 }}>💰 GRANT POOL: {dao.GrantSize}</div>
                             </div>
 
-                            <div style={{ display: "flex", gap: 10, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
+                            <div style={{ display: "flex", gap: 12, borderTop: `1px solid ${T.glassBorder}`, paddingTop: 20 }}>
                                 <Btn variant="primary" style={{ flex: 1 }}>Draft Proposal</Btn>
                                 {onAdd && (
                                     <TrackBtn onTrack={() => {
@@ -56,14 +60,14 @@ export const DAOMap = ({ onAdd }) => {
                                             id: uid(),
                                             title: dao.name,
                                             agency: "DAO Treasury",
-                                            amount: 0, // Usually DAO grants are variable, amount not explicitly typed as number in the mock
+                                            amount: 0,
                                             deadline: dao.activeProp,
                                             stage: "discovered",
                                             description: `Token: ${dao.token}. Focus: ${dao.focus}. AUM: ${dao.aum}. Grant Size Expected: ${dao.GrantSize}`,
                                             category: "Web3/DAO",
                                             createdAt: new Date().toISOString()
                                         });
-                                    }} defaultLabel="+ Track" />
+                                    }} label="+ Track" />
                                 )}
                             </div>
                         </Card>

@@ -1,88 +1,65 @@
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body, #root { height: 100%; width: 100%; overflow: hidden; }
-body { font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; background: #060910; color: #ddd5c8; }
-input, select, textarea, button { font-family: inherit; }
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #0b1018; }
-::-webkit-scrollbar-thumb { background: #283548; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #354058; }
-::selection { background: rgba(196,147,85,0.3); }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&display=swap');
 
-/* D3: Mobile Responsive Layout */
-@media (max-width: 768px) {
+:root {
+    --font-inter: 'Inter', sans-serif;
+    --font-outfit: 'Outfit', sans-serif;
+}
 
-    html,
-    body,
-    #root {
-        overflow: auto;
+body {
+    margin: 0;
+    padding: 0;
+    background: #020203;
+    color: #fff;
+    font-family: var(--font-inter);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: var(--font-outfit);
+    letter-spacing: -0.02em;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
     }
 
-    /* Stack sidebar below content on mobile */
-    #root>div {
-        flex-direction: column-reverse !important;
-        height: auto !important;
-        min-height: 100vh;
-    }
-
-    /* Sidebar becomes bottom nav */
-    #root>div>div:first-child {
-        width: 100% !important;
-        max-width: 100% !important;
-        flex-shrink: 0 !important;
-        border-right: none !important;
-        border-top: 1px solid #1a2235 !important;
-        flex-direction: row !important;
-        overflow-x: auto !important;
-        overflow-y: hidden !important;
-        padding: 4px !important;
-        gap: 2px;
-    }
-
-    /* Hide sidebar labels and groups on mobile */
-    #root>div>div:first-child>div:last-child {
-        display: none !important;
-    }
-
-    /* Buttons in bottom nav */
-    #root>div>div:first-child button {
-        min-width: 44px !important;
-        min-height: 44px !important;
-    }
-
-    /* Main content fills viewport */
-    #root>div>div:nth-child(2) {
-        flex: 1 !important;
-        overflow: auto !important;
-    }
-
-    #root>div>div:nth-child(2)>div:last-child {
-        padding: 12px !important;
-    }
-
-    /* Stack grids on mobile */
-    div[style*="gridTemplateColumns"] {
-        grid-template-columns: 1fr !important;
-    }
-
-    /* AI Chat smaller on mobile */
-    div[style*="position: fixed"][style*="width: 380px"],
-    div[style*="position:fixed"][style*="width:380"] {
-        width: calc(100vw - 16px) !important;
-        height: 60vh !important;
-        bottom: 8px !important;
-        right: 8px !important;
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
-@media (max-width: 480px) {
+.animate-in {
+    animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
 
-    /* Even tighter mobile */
-    #root>div>div:nth-child(2)>div:last-child {
-        padding: 8px !important;
-    }
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
 
-    div[style*="gap: 16px"],
-    div[style*="gap:16"] {
-        gap: 8px !important;
-    }
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
 }

@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Badge, Btn, Stat, TrackBtn } from '../ui';
+import { Card, Badge, Btn, Stat, TrackBtn, SkeletonCard, Empty } from '../ui';
 import { T, fmt, uid } from '../globals';
 import { API } from '../api';
+import { useStore } from '../store';
 
-export const InKindVault = ({ onAdd }) => {
+export const InKindVault = ({ onAdd: propOnAdd }) => {
+    const { addGrant: storeOnAdd } = useStore();
+    const onAdd = propOnAdd || storeOnAdd;
     const [credits, setCredits] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -32,24 +35,26 @@ export const InKindVault = ({ onAdd }) => {
                 </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                {loading ? <div style={{ color: T.mute }}>Calculating subsidy potential...</div> : 
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+                {loading ? <div style={{ display: "contents" }}><SkeletonCard lines={6} /><SkeletonCard lines={6} /></div> :
+                    credits.length === 0 ? <div style={{ gridColumn: "1 / -1" }}><Empty icon="💳" title="No Available Credits" sub="Check back later for new high-value operational subsidies." /></div> :
                     credits.map(c => (
-                        <Card key={c.id} style={{ borderTop: `4px solid ${T.teal}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-                                <Badge color={T.teal}>{c.type}</Badge>
-                                <Badge color={T.shade}>DIFFICULTY: {c.claimDifficulty.toUpperCase()}</Badge>
+                        <Card key={c.id} glow style={{ borderTop: `6px solid ${T.teal}`, padding: 24 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, alignItems: "center" }}>
+                                <Badge color={T.teal} style={{ background: `${T.teal}11`, fontWeight: 800 }}>{c.type?.toUpperCase()}</Badge>
+                                <Badge color={T.sub} style={{ background: "rgba(255,255,255,0.03)", fontSize: 10, letterSpacing: 1, fontWeight: 900 }}>MATCH DIFFICULTY: {c.claimDifficulty?.toUpperCase()}</Badge>
                             </div>
 
-                            <h3 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0, marginBottom: 8 }}>{c.provider}</h3>
-                            <div style={{ fontSize: 24, fontWeight: 900, color: T.green, marginBottom: 12 }}>{fmt(c.value)}</div>
+                            <h3 style={{ fontSize: 20, fontWeight: 900, color: T.text, margin: 0, marginBottom: 12, fontFamily: "Outfit", lineHeight: 1.3 }}>{c.provider}</h3>
+                            <div style={{ fontSize: 32, fontWeight: 900, color: T.green, marginBottom: 20, letterSpacing: "-0.04em" }}>{fmt(c.value)}</div>
                             
-                            <div style={{ padding: 12, background: T.panel, borderRadius: 8, fontSize: 13, color: T.text, lineHeight: 1.5, marginBottom: 16 }}>
+                            <div style={{ padding: 20, background: "rgba(255,255,255,0.02)", borderRadius: 16, fontSize: 14, color: T.sub, lineHeight: 1.7, marginBottom: 24, border: `1px solid ${T.glassBorder}` }}>
+                                <div style={{ fontSize: 10, color: T.teal, fontWeight: 800, letterSpacing: 1, marginBottom: 10 }}>OPERATIONAL IMPACT</div>
                                 {c.impact}
                             </div>
 
-                            <div style={{ display: "flex", gap: 10, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
-                                <Btn size="sm" variant="primary" style={{ flex: 1 }}>Claim Credits</Btn>
+                            <div style={{ display: "flex", gap: 12, borderTop: `1px solid ${T.glassBorder}`, paddingTop: 24 }}>
+                                <Btn variant="primary" style={{ flex: 1 }}>Claim Provision</Btn>
                                 {onAdd && (
                                     <TrackBtn onTrack={() => {
                                         onAdd({
@@ -63,7 +68,7 @@ export const InKindVault = ({ onAdd }) => {
                                             category: "In-Kind Subsidy",
                                             createdAt: new Date().toISOString()
                                         });
-                                    }} defaultLabel="+ Track Value" />
+                                    }} label="+ Track Value" />
                                 )}
                             </div>
                         </Card>

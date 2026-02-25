@@ -24,37 +24,34 @@ export const CBALedger = ({ onAdd }) => {
                 </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                {loading ? <div style={{ color: T.mute }}>Auditing construction permits...</div> : 
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                {loading ? <><SkeletonCard lines={6} /><SkeletonCard lines={6} /></> : 
                     projects.map(p => {
-                        const percentLeft = (p.remaining / p.fundTotal) * 100;
                         return (
-                            <Card key={p.id} style={{ borderTop: `4px solid ${T.orange}` }}>
+                            <Card key={p.id} glow style={{ borderTop: `4px solid ${T.orange}` }}>
                                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-                                    <Badge color={T.orange}>DEVELOPER FUND</Badge>
-                                    <Badge color={T.shade}>{p.status}</Badge>
+                                    <Badge color={T.orange} style={{ background: `${T.orange}11` }}>DEVELOPER FUND</Badge>
+                                    <Badge color={T.sub}>{p.status}</Badge>
                                 </div>
 
-                                <h3 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0, marginBottom: 4, height: 44, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{p.project}</h3>
-                                <div style={{ fontSize: 13, color: T.mute, marginBottom: 16 }}>Dev: {p.developer}</div>
+                                <h3 style={{ fontSize: 18, fontWeight: 800, color: T.text, margin: 0, marginBottom: 6, fontFamily: "Outfit", height: 48, overflow: "hidden", lineHeight: 1.3 }}>{p.project}</h3>
+                                <div style={{ fontSize: 13, color: T.sub, marginBottom: 20, fontWeight: 700, letterSpacing: 0.5 }}>DEV: {p.developer?.toUpperCase()}</div>
 
-                                <div style={{ padding: 12, background: T.panel, borderRadius: 8, marginBottom: 16 }}>
-                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: T.mute, fontWeight: 700, letterSpacing: 0.5, marginBottom: 8 }}>
-                                        <span>REMAINING FUNDS</span>
+                                <div style={{ padding: 16, background: "rgba(255,255,255,0.02)", borderRadius: 12, marginBottom: 20, border: `1px solid ${T.glassBorder}` }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: T.sub, fontWeight: 800, letterSpacing: 1, marginBottom: 12 }}>
+                                        <span>CBA POOL UTILIZATION</span>
                                         <span style={{ color: T.text }}>{fmt(p.remaining)} / {fmt(p.fundTotal)}</span>
                                     </div>
-                                    <div style={{ height: 6, background: T.border, borderRadius: 3, overflow: "hidden" }}>
-                                        <div style={{ height: "100%", width: `${percentLeft}%`, background: T.green, borderRadius: 3 }} />
-                                    </div>
+                                    <Progress value={(p.remaining / p.fundTotal) * 100} color={T.green} height={8} />
                                 </div>
 
-                                <div style={{ padding: 12, background: `${T.orange}11`, borderLeft: `3px solid ${T.orange}`, borderRadius: 8, fontSize: 13, color: T.sub, marginBottom: 16 }}>
-                                    <strong style={{ color: T.text }}>Focus:</strong> {p.focus}
+                                <div style={{ padding: 16, background: `${T.orange}08`, borderLeft: `4px solid ${T.orange}`, borderRadius: 12, fontSize: 14, color: T.sub, marginBottom: 24, lineHeight: 1.6 }}>
+                                    <strong style={{ color: T.text, display: "block", marginBottom: 4 }}>COMMUNITY TARGET</strong> {p.focus}
                                 </div>
 
-                                <div style={{ display: "flex", gap: 10, borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
-                                    <Btn variant="primary" style={{ flex: 1 }}>Contact {p.contact}</Btn>
-                                    <Btn variant="ghost" onClick={async () => {
+                                <div style={{ display: "flex", gap: 12, borderTop: `1px solid ${T.glassBorder}`, paddingTop: 20 }}>
+                                    <Btn variant="primary" style={{ flex: 1 }}>Contact Liaison</Btn>
+                                    <Btn variant="ghost" size="sm" onClick={async () => {
                                         const res = await API.fortuna.syncToLedger();
                                         alert(`CBA LEDGER SYNC: ${res.synced} transactions processed for ${p.project}.`);
                                     }}>🔄 Sync</Btn>
@@ -71,7 +68,7 @@ export const CBALedger = ({ onAdd }) => {
                                                 category: "CBA Fund",
                                                 createdAt: new Date().toISOString()
                                             });
-                                        }} defaultLabel="+ Track Fund" />
+                                        }} label="+ Track Fund" />
                                     )}
                                 </div>
                             </Card>

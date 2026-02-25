@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Badge, Btn, Stat, TrackBtn } from '../ui';
+import { Card, Badge, Btn, Stat, TrackBtn, SkeletonCard, Empty } from '../ui';
 import { T, fmt, uid } from '../globals';
 import { API } from '../api';
+import { useStore } from '../store';
 
-export const CSRAllianceMapper = ({ onAdd }) => {
+export const CSRAllianceMapper = ({ onAdd: propOnAdd }) => {
+    const { addGrant: storeOnAdd } = useStore();
+    const onAdd = propOnAdd || storeOnAdd;
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -24,32 +27,33 @@ export const CSRAllianceMapper = ({ onAdd }) => {
                 </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                {loading ? <div style={{ color: T.mute }}>Mapping corporate ESG objectives...</div> : 
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+                {loading ? <div style={{ display: "contents" }}><SkeletonCard lines={6} /><SkeletonCard lines={6} /></div> :
+                    results.length === 0 ? <div style={{ gridColumn: "1 / -1" }}><Empty icon="🤝" title="No Corporate Partners Found" sub="Monitoring CSR initiatives and strategic corporate budgets." /></div> :
                     results.map(r => (
-                        <Card key={r.id} style={{ borderTop: `4px solid ${T.blue}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-                                <Badge color={T.shade}>{r.company}</Badge>
-                                <Badge color={T.blue}>{r.status}</Badge>
+                        <Card key={r.id} glow style={{ borderTop: `6px solid ${T.blue}`, padding: 24 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, alignItems: "center" }}>
+                                <Badge color={T.blue} style={{ background: `${T.blue}11`, fontWeight: 800, padding: "6px 12px" }}>{r.company?.toUpperCase()}</Badge>
+                                <Badge color={r.status === "Open" ? T.green : T.amber} style={{ background: r.status === "Open" ? `${T.green}11` : `${T.amber}11`, fontSize: 11, fontWeight: 900 }}>{r.status?.toUpperCase()}</Badge>
                             </div>
 
-                            <h3 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0, marginBottom: 8 }}>{r.goal}</h3>
-                            <p style={{ fontSize: 13, color: T.sub, margin: 0, lineHeight: 1.5, height: 40, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{r.description}</p>
+                            <h3 style={{ fontSize: 20, fontWeight: 900, color: T.text, margin: 0, marginBottom: 12, fontFamily: "Outfit", lineHeight: 1.4 }}>{r.goal}</h3>
+                            <p style={{ fontSize: 14, color: T.sub, margin: 0, lineHeight: 1.7, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden", marginBottom: 24 }}>{r.description}</p>
 
-                            <div style={{ marginTop: 16, padding: 12, background: T.panel, borderRadius: 8 }}>
-                                <div style={{ fontSize: 11, color: T.mute, fontWeight: 700, letterSpacing: 0.5, marginBottom: 8 }}>SYNERGETIC TAGS</div>
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                                    {r.synergeticTags.map(tag => <Badge key={tag} size="xs" color={T.blue} style={{ opacity: 0.8 }}>{tag}</Badge>)}
+                            <div style={{ padding: 20, background: "rgba(255,255,255,0.02)", borderRadius: 16, border: `1px solid ${T.glassBorder}`, marginBottom: 24 }}>
+                                <div style={{ fontSize: 10, color: T.sub, fontWeight: 900, letterSpacing: 2, marginBottom: 12 }}>ESG STRATEGIC SYNERGIES</div>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                                    {r.synergeticTags?.map(tag => <Badge key={tag} color={T.blue} style={{ background: `${T.blue}08`, textTransform: "none", fontWeight: 700 }}>#{tag}</Badge>)}
                                 </div>
                             </div>
 
-                            <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div style={{ borderTop: `1px solid ${T.glassBorder}`, paddingTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                 <div>
-                                    <div style={{ fontSize: 10, color: T.mute, fontWeight: 700, letterSpacing: 0.5, marginBottom: 2 }}>EST. BUDGET</div>
-                                    <div style={{ fontSize: 18, fontWeight: 900, color: T.green }}>{fmt(r.budget)}</div>
+                                    <div style={{ fontSize: 10, color: T.mute, fontWeight: 800, letterSpacing: 1, marginBottom: 4 }}>ALLOCATED CSR BUDGET</div>
+                                    <div style={{ fontSize: 24, fontWeight: 900, color: T.green, letterSpacing: "-0.04em" }}>{fmt(r.budget)}</div>
                                 </div>
-                                <div style={{ display: "flex", gap: 8 }}>
-                                    <Btn variant="primary" size="sm">Alliance Deck</Btn>
+                                <div style={{ display: "flex", gap: 10 }}>
+                                    <Btn variant="primary">Alliance Deck</Btn>
                                     {onAdd && (
                                         <TrackBtn onTrack={() => {
                                             onAdd({
@@ -60,10 +64,10 @@ export const CSRAllianceMapper = ({ onAdd }) => {
                                                 deadline: "Rolling",
                                                 stage: "discovered",
                                                 description: `Status: ${r.status}. ${r.description}`,
-                                                category: "CSR Partnership",
+                                                category: "CSR Alliance",
                                                 createdAt: new Date().toISOString()
                                             });
-                                        }} defaultLabel="+ Track CSR" size="sm" />
+                                        }} label="+ Track" />
                                     )}
                                 </div>
                             </div>

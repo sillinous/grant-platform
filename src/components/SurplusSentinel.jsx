@@ -27,38 +27,36 @@ export const SurplusSentinel = ({ onAdd }) => {
                 <Badge color={T.red}>CRITICAL Q4 CYCLE</Badge>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                {loading ? <div style={{ color: T.mute }}>Scanning budget committee minutes...</div> : 
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+                {loading ? <div style={{ display: "contents" }}><SkeletonCard lines={6} /><SkeletonCard lines={6} /></div> : 
                     signals.map(s => {
                         const daysLeft = daysUntil(s.eofy);
                         const progress = Math.max(0, Math.min(100, (daysLeft / 180) * 100)); // Simulating 6 month window
 
                         return (
-                            <Card key={s.id} style={{ borderTop: `4px solid ${T.red}` }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+                            <Card key={s.id} glow style={{ borderTop: `6px solid ${T.red}`, padding: 24 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, alignItems: "flex-start" }}>
                                     <div>
-                                        <div style={{ fontSize: 13, color: T.mute, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>{s.budgetPool}</div>
-                                        <div style={{ fontSize: 18, fontWeight: 800, color: T.text }}>{s.jurisdiction}</div>
+                                        <div style={{ fontSize: 10, color: T.mute, textTransform: "uppercase", letterSpacing: 2, fontWeight: 900, marginBottom: 6 }}>{s.budgetPool?.toUpperCase()}</div>
+                                        <div style={{ fontSize: 20, fontWeight: 900, color: T.text, fontFamily: "Outfit", lineHeight: 1.2 }}>{s.jurisdiction}</div>
                                     </div>
-                                    <div style={{ fontSize: 20, fontWeight: 900, color: T.green }}>{fmt(s.surplus)}</div>
+                                    <div style={{ fontSize: 24, fontWeight: 900, color: T.green, textAlign: "right", letterSpacing: "-0.04em" }}>{fmt(s.surplus)}</div>
                                 </div>
                                 
-                                <div style={{ fontSize: 14, color: T.text, fontWeight: 600, padding: 12, background: `${T.amber}11`, borderRadius: 8, borderLeft: `3px solid ${T.amber}` }}>
-                                    🚨 {s.alert}
+                                <div style={{ fontSize: 14, color: T.text, fontWeight: 700, padding: 16, background: `${T.red}08`, borderRadius: 16, borderLeft: `6px solid ${T.red}`, marginBottom: 24 }}>
+                                    ⚠️ {s.alert}
                                 </div>
 
-                                <div style={{ marginTop: 24, padding: 16, background: T.panel, borderRadius: 8 }}>
-                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: T.mute, marginBottom: 8 }}>
-                                        <span style={{ fontWeight: 700, letterSpacing: 0.5 }}>FISCAL DEADLINE</span>
-                                        <span style={{ color: T.red, fontWeight: 800 }}>{daysLeft} DAYS REMAINING</span>
+                                <div style={{ marginTop: "auto", padding: 20, background: "rgba(255,255,255,0.02)", borderRadius: 16, border: `1px solid ${T.glassBorder}` }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: T.mute, marginBottom: 12 }}>
+                                        <span style={{ fontWeight: 900, letterSpacing: 1 }}>FISCAL EPOCH DEADLINE</span>
+                                        <span style={{ color: T.red, fontWeight: 900, letterSpacing: 1 }}>{daysLeft} DAYS REMAINING</span>
                                     </div>
-                                    <div style={{ height: 8, background: T.border, borderRadius: 4, overflow: "hidden" }}>
-                                        <div style={{ height: "100%", width: `${100 - progress}%`, background: T.red, borderRadius: 4 }} />
-                                    </div>
+                                    <Progress value={100 - progress} max={100} color={T.red} height={10} />
                                 </div>
 
-                                <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
-                                    <Btn variant="primary" style={{ flex: 1 }}>Initialize Rapid Inquiry</Btn>
+                                <div style={{ marginTop: 24, display: "flex", gap: 12, borderTop: `1px solid ${T.glassBorder}`, paddingTop: 24 }}>
+                                    <Btn variant="primary" style={{ flex: 1 }}>Expedited Inquiry</Btn>
                                     {onAdd && (
                                         <TrackBtn onTrack={() => {
                                             onAdd({

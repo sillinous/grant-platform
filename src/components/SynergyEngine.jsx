@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Badge, Btn, TrackBtn } from '../ui';
-import { T, PROFILE, uid } from '../globals';
+import { Card, Badge, Btn, TrackBtn, SkeletonCard, Empty } from '../ui';
+import { T, PROFILE, uid, fmt } from '../globals';
 import { API } from '../api';
 import { useStore } from '../store';
 
@@ -27,31 +27,32 @@ export const SynergyEngine = ({ onAdd: propOnAdd }) => {
                 </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
-                {loading ? <div style={{ color: T.mute }}>Mapping cross-sector flows...</div> : 
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 24 }}>
+                {loading ? <div style={{ display: "contents" }}><SkeletonCard lines={6} /><SkeletonCard lines={6} /><SkeletonCard lines={6} /></div> :
+                    synergies.length === 0 ? <div style={{ gridColumn: "1 / -1" }}><Empty icon="🧬" title="No Immediate Synergies" sub="We couldn't find adjacent sector opportunities matching your current profile." /></div> :
                     synergies.map(s => (
-                        <Card key={s.id} style={{ borderTop: `4px solid ${T.blue}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                                <Badge color={T.blue}>{s.sector}</Badge>
+                        <Card key={s.id} glow style={{ borderTop: `6px solid ${T.blue}`, padding: 24 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                                <Badge color={T.blue} style={{ background: `${T.blue}11`, fontWeight: 800, padding: "6px 12px" }}>{s.sector?.toUpperCase()}</Badge>
                                 <div style={{ textAlign: "right" }}>
-                                    <div style={{ fontSize: 10, color: T.mute, fontWeight: 700, letterSpacing: 0.5 }}>SYNERGY</div>
-                                    <div style={{ fontSize: 15, fontWeight: 900, color: T.blue }}>{s.synergyScore}%</div>
+                                    <div style={{ fontSize: 10, color: T.mute, fontWeight: 900, letterSpacing: 1.5, marginBottom: 4 }}>MATCH QUALITY</div>
+                                    <div style={{ fontSize: 20, fontWeight: 900, color: T.blue, letterSpacing: "-0.04em" }}>{s.synergyScore}%</div>
                                 </div>
                             </div>
 
-                            <h3 style={{ fontSize: 15, fontWeight: 700, color: T.text, margin: 0, height: 44, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", marginBottom: 12 }}>{s.title}</h3>
+                            <h3 style={{ fontSize: 18, fontWeight: 900, color: T.text, margin: 0, height: 48, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", marginBottom: 20, fontFamily: "Outfit", lineHeight: 1.3 }}>{s.title}</h3>
                             
-                            <div style={{ padding: 12, background: T.panel, borderRadius: 8, marginBottom: 16 }}>
-                                <div style={{ fontSize: 11, color: T.mute, fontWeight: 700, marginBottom: 8, letterSpacing: 0.5 }}>MATCHING CAPABILITIES</div>
-                                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                                    {s.matchingTags.map(t => <Badge key={t} size="xs" color={T.shade}>{t}</Badge>)}
+                            <div style={{ padding: 20, background: "rgba(255,255,255,0.02)", borderRadius: 16, marginBottom: 24, border: `1px solid ${T.glassBorder}` }}>
+                                <div style={{ fontSize: 10, color: T.mute, fontWeight: 900, marginBottom: 12, letterSpacing: 1.5 }}>STRATEGIC CAPABILITIES</div>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                                    {s.matchingTags.map(t => <Badge key={t} color={T.blue} style={{ background: `${T.blue}08`, textTransform: "none", fontWeight: 700 }}>#{t}</Badge>)}
                                 </div>
                             </div>
 
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${T.border}`, paddingTop: 12 }}>
-                                <div style={{ fontSize: 16, fontWeight: 800, color: T.green }}>{fmt(s.amount)}</div>
-                                <div style={{ display: "flex", gap: 8 }}>
-                                    <Btn size="sm" variant="primary">Match Logic</Btn>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${T.glassBorder}`, paddingTop: 24 }}>
+                                <div style={{ fontSize: 22, fontWeight: 900, color: T.green }}>{fmt(s.amount)}</div>
+                                <div style={{ display: "flex", gap: 10 }}>
+                                    <Btn variant="primary">Match Logic</Btn>
                                     {onAdd && (
                                         <TrackBtn onTrack={() => {
                                             onAdd({

@@ -80,40 +80,41 @@ export const EarmarkScout = ({ onAdd }) => {
             </div>
 
             {loading && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                    <SkeletonCard lines={3} />
-                    <SkeletonCard lines={3} />
-                    <SkeletonCard lines={3} />
+                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                    <SkeletonCard lines={4} />
+                    <SkeletonCard lines={4} />
+                    <SkeletonCard lines={4} />
                 </div>
             )}
 
             {results.length > 0 && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                     {results.map(r => (
-                        <Card key={r.id} style={{ borderLeft: `3px solid ${r.status === "Enacted" ? T.green : r.status === "Requested" ? T.amber : T.blue}` }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                        <Card key={r.id} glow style={{ borderLeft: `6px solid ${r.status === "Enacted" ? T.green : r.status === "Requested" ? T.amber : T.blue}`, padding: 24 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
                                 <div>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                                        <Badge color={r.status === "Enacted" ? T.green : r.status === "Requested" ? T.amber : T.blue}>{r.status}</Badge>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                                        <Badge color={r.status === "Enacted" ? T.green : r.status === "Requested" ? T.amber : T.blue} style={{ background: `${r.status === "Enacted" ? T.green : r.status === "Requested" ? T.amber : T.blue}11` }}>{r.status?.toUpperCase()}</Badge>
+                                        <Badge color={T.sub}>FY2027 PROJECT</Badge>
                                     </div>
-                                    <div style={{ fontSize: 15, fontWeight: 700, color: T.text, marginBottom: 4 }}>{r.title}</div>
-                                    <div style={{ fontSize: 12, color: T.sub }}>{r.sponsor} • {r.agency}</div>
+                                    <div style={{ fontSize: 20, fontWeight: 800, color: T.text, marginBottom: 8, fontFamily: "Outfit" }}>{r.title}</div>
+                                    <div style={{ fontSize: 13, color: T.sub, fontWeight: 700 }}>SPONSOR: {r.sponsor?.toUpperCase()} • {r.agency?.toUpperCase()}</div>
                                 </div>
-                                <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
-                                    <div style={{ fontSize: 16, fontWeight: 800, color: T.green, background: `${T.green}11`, padding: "6px 12px", borderRadius: "16px" }}>{fmt(r.amount)}</div>
-                                    {r.deadline && <div style={{ fontSize: 11, color: T.red, fontWeight: 600, background: `${T.red}11`, padding: "4px 8px", borderRadius: "12px" }}>Due: {new Date(r.deadline).toLocaleDateString()}</div>}
+                                <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
+                                    <div style={{ fontSize: 24, fontWeight: 900, color: T.text, background: "rgba(255,255,255,0.03)", padding: "10px 20px", borderRadius: "14px", border: `1px solid ${T.glassBorder}`, letterSpacing: "-0.02em" }}>{fmt(r.amount)}</div>
+                                    {r.deadline && <div style={{ fontSize: 11, color: T.red, fontWeight: 800, letterSpacing: 1, background: `${T.red}08`, padding: "4px 8px", borderRadius: "6px" }}>WINDOW CLOSES: {new Date(r.deadline).toLocaleDateString()}</div>}
                                 </div>
                             </div>
 
-                            <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.6, marginBottom: 16, padding: "12px", background: T.panel, borderRadius: "6px" }}>{r.description}</div>
+                            <div style={{ fontSize: 14, color: T.sub, lineHeight: 1.7, marginBottom: 24, padding: "16px", background: "rgba(255,255,255,0.02)", borderRadius: "12px", border: `1px solid ${T.glassBorder}`, fontStyle: "italic" }}>{r.description}</div>
 
-                            <div style={{ display: "flex", gap: 10, borderTop: `1px solid ${T.border}`, paddingTop: 12 }}>
+                            <div style={{ display: "flex", gap: 12, borderTop: `1px solid ${T.glassBorder}`, paddingTop: 20 }}>
                                 {onAdd && (
                                     <TrackBtn onTrack={() => onAdd({
-                                        id: uid(), title: r.title, agency: r.agency, stage: "discovered", description: r.description, category: "Earmark", tags: ["earmark", "cds"]
-                                    })} defaultLabel="📋 Track Project" />
+                                        id: uid(), title: r.title, agency: r.agency, stage: "discovered", description: r.description, category: "Earmark", createdAt: new Date().toISOString()
+                                    })} label="Track CDS Request" />
                                 )}
-                                <Btn size="sm" variant="ghost">🔗 Rep. Office Guidelines</Btn>
+                                <Btn variant="ghost">📄 Rep. Office Interface</Btn>
                             </div>
                         </Card>
                     ))}

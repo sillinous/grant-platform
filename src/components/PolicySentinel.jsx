@@ -34,27 +34,26 @@ export const PolicySentinel = ({ onAdd }) => {
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 20 }}>
                 {/* ─── Main Feed ─── */}
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                    {loading ? <div style={{ color: T.mute }}>Scanning legislative records...</div> : 
+                <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                    {loading ? <SkeletonCard lines={8} /> : 
                         signals.map(s => (
-                            <Card key={s.id} style={{ borderLeft: `4px solid ${s.sentiment === 'positive' ? T.green : T.red}` }}>
-                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
-                                    <div style={{ display: "flex", gap: 8 }}>
-                                        <Badge color={s.sentiment === 'positive' ? T.green : T.red}>
-                                            {s.sentiment.toUpperCase()}
+                            <Card key={s.id} glow style={{ borderLeft: `8px solid ${s.sentiment === 'positive' ? T.green : T.red}`, padding: 24 }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
+                                    <div style={{ display: "flex", gap: 10 }}>
+                                        <Badge color={s.sentiment === 'positive' ? T.green : T.red} style={{ background: s.sentiment === 'positive' ? `${T.green}11` : `${T.red}11`, fontWeight: 800 }}>
+                                            {s.sentiment.toUpperCase()} FORECAST
                                         </Badge>
-                                        <Badge color={T.blue}>{s.agency}</Badge>
+                                        <Badge color={T.blue} style={{ background: `${T.blue}11`, fontWeight: 800 }}>{s.agency?.toUpperCase()}</Badge>
                                     </div>
-                                    <span style={{ fontSize: 12, color: T.mute }}>{s.date}</span>
+                                    <span style={{ fontSize: 11, color: T.mute, fontWeight: 900, letterSpacing: 1 }}>{s.date?.toUpperCase()}</span>
                                 </div>
-                                <h3 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: 0, marginBottom: 8 }}>{s.title}</h3>
-                                <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.6, padding: "12px", background: T.panel, borderRadius: "6px" }}>{s.description}</div>
-                                <div style={{ display: "flex", gap: 6, marginTop: 12 }}>
-                                    {s.tags.map(t => <Badge key={t} color={T.shade}>{t}</Badge>)}
+                                <h3 style={{ fontSize: 20, fontWeight: 900, color: T.text, margin: 0, marginBottom: 12, fontFamily: "Outfit", lineHeight: 1.4 }}>{s.title}</h3>
+                                <div style={{ fontSize: 14, color: T.sub, lineHeight: 1.7, padding: "20px", background: "rgba(255,255,255,0.02)", borderRadius: 16, border: `1px solid ${T.glassBorder}` }}>{s.description}</div>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 16 }}>
+                                    {s.tags.map(t => <Badge key={t} color={T.blue} style={{ background: `${T.blue}08`, textTransform: "none" }}>#{t}</Badge>)}
                                 </div>
-                                <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 16, paddingTop: 16, borderTop: `1px solid ${T.border}` }}>
-                                    <Btn variant="ghost" size="sm">Regulatory Analysis</Btn>
-                                    <Btn variant="primary" size="sm">Draft Rebuttal/Support</Btn>
+                                <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24, paddingTop: 24, borderTop: `1px solid ${T.glassBorder}` }}>
+                                    <Btn variant="primary">Executive Summary</Btn>
                                     {onAdd && (
                                         <TrackBtn onTrack={() => {
                                             onAdd({
@@ -68,7 +67,7 @@ export const PolicySentinel = ({ onAdd }) => {
                                                 category: "Policy Signal",
                                                 createdAt: new Date().toISOString()
                                             });
-                                        }} defaultLabel="+ Track Signal" size="sm" />
+                                        }} label="+ Track Signal" />
                                     )}
                                 </div>
                             </Card>
