@@ -1,5 +1,39 @@
-import React from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { T } from './globals';
+
+// ─── SPEECH RECOGNITION HOOK ──────────────────────────────────────────────
+export const useSpeechRecognition = (onAppend) => {
+    const [isListening, setIsListening] = useState(false);
+    const recognitionRef = useRef(null);
+
+    const toggle = useCallback(() => {
+        if (isListening) {
+            recognitionRef.current?.stop();
+            setIsListening(false);
+            return;
+        }
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            alert("Speech recognition is not supported in this browser. Try Chrome/Edge.");
+            return;
+        }
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onresult = (e) => {
+            const transcript = e.results[0][0].transcript;
+            if (transcript) onAppend(transcript);
+        };
+        recognition.onstart = () => setIsListening(true);
+        recognition.onend = () => setIsListening(false);
+        recognition.onerror = () => setIsListening(false);
+
+        try { recognition.start(); recognitionRef.current = recognition; } catch (e) { setIsListening(false); }
+    }, [isListening, onAppend]);
+
+    return { isListening, toggle };
+};
 
 /* ─── Global keyframes injected once ──────────────────────────────────────── */
 if (typeof document !== 'undefined' && !document.getElementById('ui-keyframes')) {
@@ -98,23 +132,45 @@ export const Badge = ({ children, color = T.blue, style, onClick }) => (
     </span>
 );
 
-export const Input = ({ label, style, ...props }) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
-        {label && <label style={{ fontSize: 11, color: T.sub, fontWeight: 700, letterSpacing: 0.5 }}>{label}</label>}
-        <input
-            style={{
-                padding: '11px 15px', background: 'rgba(255,255,255,0.03)',
-                border: `1px solid ${T.glassBorder}`,
-                borderRadius: 10, color: T.text, fontSize: 14, outline: 'none',
-                transition: 'border-color 0.2s, box-shadow 0.2s',
-                ...style
-            }}
-            onFocus={e => { e.currentTarget.style.borderColor = T.amber; e.currentTarget.style.boxShadow = `0 0 0 3px ${T.amber}18`; }}
-            onBlur={e => { e.currentTarget.style.borderColor = T.glassBorder; e.currentTarget.style.boxShadow = 'none'; }}
-            {...props}
-        />
-    </div>
-);
+export const Input = ({ label, style, dictate, value, onChange, ...props }) => {
+    const { isListening, toggle } = useSpeechRecognition((transcript) => {
+        if (onChange) {
+            const currentVal = value || '';
+            const space = currentVal.length > 0 && !currentVal.endsWith(' ') ? ' ' : '';
+            onChange({ target: { value: currentVal + space + transcript } });
+        }
+    });
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%', position: 'relative' }}>
+            {label && <label style={{ fontSize: 11, color: T.sub, fontWeight: 700, letterSpacing: 0.5 }}>{label}</label>}
+            <input
+                value={value}
+                onChange={onChange}
+                style={{
+                    padding: '11px 15px', paddingRight: dictate ? 40 : 15, background: 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${T.glassBorder}`,
+                    borderRadius: 10, color: T.text, fontSize: 14, outline: 'none',
+                    transition: 'border-color 0.2s, box-shadow 0.2s',
+                    ...style
+                }}
+                onFocus={e => { e.currentTarget.style.borderColor = T.amber; e.currentTarget.style.boxShadow = `0 0 0 3px ${T.amber}18`; }}
+                onBlur={e => { e.currentTarget.style.borderColor = T.glassBorder; e.currentTarget.style.boxShadow = 'none'; }}
+                {...props}
+            />
+            {dictate && (
+                <button type="button" onClick={toggle} title="Dictate" style={{
+                    position: 'absolute', right: 8, bottom: 9, background: 'transparent', border: 'none',
+                    color: isListening ? T.red : T.mute, cursor: 'pointer', fontSize: 16,
+                    animation: isListening ? 'pulseRing 1.5s infinite' : 'none', borderRadius: '50%',
+                    padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                    {isListening ? "🔴" : "🎤"}
+                </button>
+            )}
+        </div>
+    );
+};
 
 export const Select = ({ label, options = [], style, ...props }) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
@@ -302,23 +358,45 @@ export const SkeletonCard = ({ lines = 3, style }) => (
     </Card>
 );
 
-export const TextArea = ({ label, style, ...props }) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%', marginBottom: 12 }}>
-        {label && <label style={{ fontSize: 11, color: T.sub, fontWeight: 700, letterSpacing: 0.5 }}>{label}</label>}
-        <textarea
-            style={{
-                padding: '11px 15px', background: 'rgba(255,255,255,0.03)',
-                border: `1px solid ${T.glassBorder}`,
-                borderRadius: 10, color: T.text, fontSize: 14, outline: 'none',
-                transition: 'border-color 0.2s, box-shadow 0.2s', minHeight: 100,
-                resize: 'vertical', fontFamily: 'inherit', ...style
-            }}
-            onFocus={e => { e.currentTarget.style.borderColor = T.amber; e.currentTarget.style.boxShadow = `0 0 0 3px ${T.amber}18`; }}
-            onBlur={e => { e.currentTarget.style.borderColor = T.glassBorder; e.currentTarget.style.boxShadow = 'none'; }}
-            {...props}
-        />
-    </div>
-);
+export const TextArea = ({ label, style, dictate, value, onChange, ...props }) => {
+    const { isListening, toggle } = useSpeechRecognition((transcript) => {
+        if (onChange) {
+            const currentVal = value || '';
+            const space = currentVal.length > 0 && !currentVal.endsWith(' ') && !currentVal.endsWith('\n') ? ' ' : '';
+            onChange({ target: { value: currentVal + space + transcript } });
+        }
+    });
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%', marginBottom: 12, position: 'relative' }}>
+            {label && <label style={{ fontSize: 11, color: T.sub, fontWeight: 700, letterSpacing: 0.5 }}>{label}</label>}
+            <textarea
+                value={value}
+                onChange={onChange}
+                style={{
+                    padding: '11px 15px', paddingRight: dictate ? 40 : 15, background: 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${T.glassBorder}`,
+                    borderRadius: 10, color: T.text, fontSize: 14, outline: 'none',
+                    transition: 'border-color 0.2s, box-shadow 0.2s', minHeight: 100,
+                    resize: 'vertical', fontFamily: 'inherit', ...style
+                }}
+                onFocus={e => { e.currentTarget.style.borderColor = T.amber; e.currentTarget.style.boxShadow = `0 0 0 3px ${T.amber}18`; }}
+                onBlur={e => { e.currentTarget.style.borderColor = T.glassBorder; e.currentTarget.style.boxShadow = 'none'; }}
+                {...props}
+            />
+            {dictate && (
+                <button type="button" onClick={toggle} title="Dictate" style={{
+                    position: 'absolute', right: 8, top: 28, background: 'transparent', border: 'none',
+                    color: isListening ? T.red : T.mute, cursor: 'pointer', fontSize: 16,
+                    animation: isListening ? 'pulseRing 1.5s infinite' : 'none', borderRadius: '50%',
+                    padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                    {isListening ? "🔴" : "🎤"}
+                </button>
+            )}
+        </div>
+    );
+};
 
 export const MagicBtn = ({ onClick, loading, label = 'Magic Draft', style }) => (
     <button

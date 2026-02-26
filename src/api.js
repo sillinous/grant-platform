@@ -73,11 +73,17 @@ export function buildGrantContext(grantId) {
         ["awarded", "active"].includes(x.stage)
     );
 
-    // ≡ƒùä∩╕Å VAULT INTELLIGENCE: Find relevant, final, and recent documents
-    const relevantVaultDocs = vault
-        .filter(d => (g.agency && d.name?.includes(g.agency)) || (g.title && d.name?.includes(g.title.slice(0, 10))))
-        .sort((a, b) => (b.status === "final" ? 1 : 0) - (a.status === "final" ? 1 : 0) || new Date(b.updatedAt) - new Date(a.updatedAt))
-        .slice(0, 3);
+    // 🧠 INTELLIGENT KNOWLEDGE BASE (Vault RAG): Find relevant documents
+    let relevantVaultDocs = vault
+        .filter(d => d.content && ((g.agency && d.title?.includes(g.agency)) || (g.title && d.title?.includes(g.title.slice(0, 10)))))
+        .sort((a, b) => (b.status === "final" ? 1 : 0) - (a.status === "final" ? 1 : 0) || new Date(b.updatedAt) - new Date(a.updatedAt));
+
+    // Fallback to recent docs if no strict matches
+    if (relevantVaultDocs.length === 0) {
+        relevantVaultDocs = vault.filter(d => d.content).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)).slice(0, 3);
+    } else {
+        relevantVaultDocs = relevantVaultDocs.slice(0, 3);
+    }
 
     // Also look for sections in the library that might be relevant to this grant or agency
     const relevantSections = library.filter(s =>
@@ -93,7 +99,7 @@ export function buildGrantContext(grantId) {
 - Associated Tasks: ${tasks.map(t => `${t.title} (${t.status}): ${t.notes || "No notes"}`).join("; ")}
 - Budget Items: ${budget.items.map(i => `${i.description} (${fmt(i.amount * i.quantity)}): ${i.justification || "No justification"}`).join("; ")}
 - Agency Success Intelligence: ${agencySuccesses.length > 0 ? agencySuccesses.map(s => `${s.title} (${fmt(s.amount)})`).join("; ") : "No prior wins with this agency."}
-- Relevant Vault Documents: ${relevantVaultDocs.map(d => `${d.name} (${d.type})`).join("; ")}
+- Relevant Vault Content (RAG): ${relevantVaultDocs.length > 0 ? '\n' + relevantVaultDocs.map(d => `[Source: ${d.title}]\n${d.content.slice(0, 4000)}...`).join("\n\n") : "None."}
 - Previously Drafted/Finalized Sections: ${relevantSections.map(s => `[${s.title}]: ${s.content.slice(0, 300)}...`).join("\n")}
 - Contact Info: Sponsor ID ${g.relationships?.sponsorContactId || 'None'}, Internal Lead ${g.relationships?.internalLeadId || 'None'}
 - Raw Grant Details: ${JSON.stringify(g)}`;
@@ -1620,7 +1626,9 @@ export const API = {
         if (!providerConfig) return { error: `Unknown AI provider: ${provider.id}` };
 
         const apiKey = import.meta.env[providerConfig.envKey] || LS.get(providerConfig.lsKey);
-        if (!apiKey) return { error: `No ${providerConfig.name} API key configured. Add one in Settings ΓåÆ AI Config.` };
+        if (!apiKey) {
+            return { error: `No ${providerConfig.name} API key configured. Get a FREE key in seconds at console.groq.com or openrouter.ai.` };
+        }
 
         const model = LS.get("ai_model") || providerConfig.models[0].id;
 

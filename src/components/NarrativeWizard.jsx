@@ -15,6 +15,7 @@ export const NarrativeWizard = ({ onComplete, onCancel, activeGrantId, navigate 
     demographics: ""
   });
   const [results, setResults] = useState(null);
+  const [error, setError] = useState(null);
 
   const TOTAL = 4;
 
@@ -113,7 +114,7 @@ ${citationText}
         setResults({ founder: "Failed to parse AI output. Please try again.", need: "", impact: "" });
       }
     } else {
-      alert(`Wizard generation failed: ${res.error}`);
+      setError(res.error);
     }
     setLoading(false);
   };
@@ -126,8 +127,8 @@ ${citationText}
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10000, backdropFilter: "blur(4px)" }}>
-      <Card style={{ maxWidth: 600, width: "95%", borderColor: T.amber + "33" }} glow>
+    <div style={{ padding: 16, display: "flex", justifyContent: "center" }}>
+      <Card style={{ maxWidth: 800, width: "100%", borderColor: T.amber + "33" }} glow>
         <div style={{ padding: "16px 24px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ fontSize: 16, fontWeight: 700, color: T.amber }}>🪄 Narrative Strategy Wizard</div>
           <Btn variant="ghost" size="xs" onClick={onCancel}>✕</Btn>
@@ -141,11 +142,12 @@ ${citationText}
             <div style={{ fontSize: 13, color: T.sub }}>{current.desc}</div>
           </div>
 
-          {step < 4 ? (
+          {step < 4 && current.field !== 'generation' ? (
             <div style={{ flex: 1 }}>
               <TextArea 
-                value={inputs[current.field]} 
-                onChange={v => setInputs({ ...inputs, [current.field]: v })}
+                dictate={true}
+                value={inputs[current.field] || ""}
+                onChange={e => setInputs({ ...inputs, [current.field]: e.target.value })}
                 rows={8}
                 placeholder={current.placeholder}
                 style={{ fontSize: 13, lineHeight: 1.6 }}
@@ -154,11 +156,18 @@ ${citationText}
           ) : (
             <div style={{ flex: 1 }}>
               {loading ? (
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: 16 }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 200, gap: 16 }}>
                   <div style={{ fontSize: 32, animation: "spin 2s linear infinite" }}>✨</div>
                   <div style={{ fontSize: 14, color: T.amber }}>AI is weaving your narratives...</div>
                 </div>
-              ) : results && (
+                ) : error ? (
+                  <div style={{ padding: 16, background: `${T.red}11`, border: `1px solid ${T.red}44`, borderRadius: 8 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: T.red, marginBottom: 4 }}>⚠️ Generation Failed</div>
+                    <div style={{ fontSize: 12, color: T.sub, marginBottom: 12 }}>{error}</div>
+                    <div style={{ fontSize: 11, color: T.mute }}>Add an AI API key in Settings → AI Config to enable AI narrative generation. You can still manually write your brief and proceed.</div>
+                    <Btn variant="ghost" size="sm" style={{ marginTop: 12 }} onClick={() => { setError(null); setStep(3); }}>← Edit Inputs</Btn>
+                  </div>
+                ) : results ? (
                 <div style={{ gap: 12, display: "flex", flexDirection: "column" }}>
                   <div style={{ padding: 10, background: T.panel, borderRadius: 8 }}>
                     <Badge color={T.purple} style={{ marginBottom: 4 }}>Founder Story</Badge>
@@ -173,7 +182,7 @@ ${citationText}
                     <div style={{ fontSize: 12, color: T.text }}>{results.impact}</div>
                   </div>
                 </div>
-              )}
+                ) : null}
             </div>
           )}
 
@@ -182,7 +191,9 @@ ${citationText}
             <div style={{ display: "flex", gap: 8 }}>
               {step > 1 && <Btn variant="ghost" onClick={() => setStep(step - 1)} disabled={loading}>← Back</Btn>}
               {step < TOTAL ? (
-                <Btn variant="primary" onClick={handleNext} disabled={!inputs[current.field]?.trim()}>Generate →</Btn>
+                <Btn variant="primary" onClick={handleNext} disabled={!String(inputs[current.field] ?? '').trim()}>
+                  {step === 3 ? 'Generate →' : 'Next →'}
+                </Btn>
               ) : (
                   <div style={{ display: "flex", gap: 8 }}>
                     <Btn variant="ghost" onClick={applyNarratives} disabled={loading || !results}>💾 Save Brief</Btn>

@@ -10,13 +10,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@netlify/blobs": "^10.6.0",
+    "@netlify/blobs": "^10.7.0",
     "@netlify/functions": "^5.1.2",
     "lucide-react": "^0.468.0",
     "netlify-identity-widget": "^1.9.2",
+    "pdfjs-dist": "^5.4.624",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.1.5",
+    "recharts": "^3.7.0",
     "zustand": "^5.0.3"
   },
   "devDependencies": {

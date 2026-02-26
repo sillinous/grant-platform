@@ -120,6 +120,8 @@ export const GrantWritingStudio = () => {
                     <currentTab.component
                         activeGrantId={activeGrantId}
                         navigate={setActiveTab}
+                        onComplete={() => setActiveTab('workbench')}
+                        onCancel={() => setActiveTab('workbench')}
                     />
                 </div>
             </div>

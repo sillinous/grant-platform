@@ -8,13 +8,49 @@ export const useStore = create(
   persist(
     (set, get) => ({
       // State
-      grants: [], // { id, title, amount, agency, stage, meta: { riskScore, alignmentScore }, compliance: { reportingFreq, matchRequired }, financials: { drawnDown, balance }, relationships: { internalLeadId, subGrantees: [], vaultDocs: [] } }
-      vaultDocs: [], // { id, name, type, docType, validUntil, linkedGrants: [], tags: [] }
+      grants: [
+        {
+          id: "grant-hud-01",
+          title: "HUD Rural Broadband Expansion",
+          agency: "HUD",
+          deadline: "2026-06-15",
+          amount: 250000,
+          focus: ["Infrastructure", "Rural"],
+          status: "Discovery",
+          description: "Support for expanding high-speed internet access to underserved rural housing complexes."
+        },
+        {
+          id: "grant-nsf-02",
+          title: "NSF STEM Outreach Initiative",
+          agency: "NSF",
+          deadline: "2026-04-20",
+          amount: 75000,
+          focus: ["Education", "STEM"],
+          status: "Pipeline",
+          description: "Funding for community-led STEM workshops for K-12 students."
+        }
+      ],
+      vaultDocs: [
+        {
+          id: "doc-01",
+          title: "Organization Mission Statement",
+          content: "Our organization is dedicated to bridging the digital divide by providing infrastructure and training to underserved communities. We believe access to high-speed internet is a fundamental right that enables economic mobility and educational equity.",
+          type: "narrative",
+          lastModified: new Date().toISOString()
+        }
+      ],
       contacts: [], // { id, name, role, influenceScore, associatedGrants: [], lastInteraction }
       events: [],
       sidebarCollapsed: {},
       onboardingComplete: false,
-      sectionLibrary: [],
+      sectionLibrary: [
+        {
+          id: "sec-about-us",
+          title: "About Our Organization",
+          content: "Founded in 2015, we have served over 50,000 residents across 12 states, deploying broadband infrastructure and providing digital literacy training to over 5,000 seniors.",
+          category: "Narrative"
+        }
+      ],
       savedFunders: [],
       scoreHistory: [],
       draftSnapshots: [],

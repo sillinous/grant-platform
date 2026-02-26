@@ -86,7 +86,7 @@ export const DocumentAssembler = ({ activeGrantId, navigate }) => {
     URL.revokeObjectURL(url);
   };
 
-  const wordCount = sections.filter(s => s.included).reduce((sum, s) => sum + (s.content?.split(/\s+/).filter(Boolean).length || 0), 0);
+  const wordCount = sections.filter(s => s.included).reduce((sum, s) => sum + ((s.content || "").split(/\s+/).filter(Boolean).length), 0);
   const completeSections = sections.filter(s => s.included && s.content && s.content.length > 50).length;
   const totalSections = sections.filter(s => s.included).length;
 
@@ -143,12 +143,12 @@ export const DocumentAssembler = ({ activeGrantId, navigate }) => {
                     </div>
                   </div>
                   <TextArea value={s.content || ""} onChange={v => updateSection(s.id, { content: v })} rows={4} placeholder={`Write or paste your ${s.label} content here...`} />
-                  <div style={{ fontSize: 10, color: T.dim, marginTop: 4 }}>{s.content?.split(/\s+/).filter(Boolean).length || 0} words</div>
+                  <div style={{ fontSize: 10, color: T.dim, marginTop: 4 }}>{(s.content || "").split(/\s+/).filter(Boolean).length} words</div>
                 </Card>
               ))}
               <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
                 <Btn variant="primary" onClick={assemble}>📦 Assemble Full Application</Btn>
-                <Btn variant="ghost" onClick={autoDraft} disabled={drafting || !selectedGrant}>🪄 {drafting ? "Drafting..." : "Auto-Draft Missing"}</Btn>
+                <Btn variant="ghost" onClick={autoDraft} disabled={drafting || !activeGrantId}>🪄 {drafting ? "Drafting..." : "Auto-Draft Missing"}</Btn>
                 <Btn variant="ghost" onClick={() => setSections([])}>🗑️ Clear All</Btn>
               </div>
             </div>
@@ -162,7 +162,7 @@ export const DocumentAssembler = ({ activeGrantId, navigate }) => {
                   <Btn size="sm" variant="success" onClick={downloadAsFile}>💾 Export (.txt)</Btn>
                   <Btn size="sm" variant="ghost" onClick={() => navigator.clipboard?.writeText(assembled)}>📋 Copy All</Btn>
                   {setVaultDocs && <Btn size="sm" variant="ghost" onClick={() => {
-                    const grant = grants.find(g => g.id === selectedGrant);
+                    const grant = grants.find(g => g.id === activeGrantId);
                     const doc = { id: uid(), title: `${grant?.title || "Application"} — Assembled`, content: assembled, category: "assembler", source: "assembler", createdAt: new Date().toISOString() };
                     setVaultDocs(prev => [...prev, doc]);
                   }}>📁 Save to Vault</Btn>}

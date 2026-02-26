@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, Stat, Btn, Progress, Badge, MiniBar, Icon } from '../ui';
 import { T, fmt, STAGE_MAP } from '../globals';
 import { useStore } from '../store';
 import { StrategyModeler } from './StrategyModeler';
 import { OpportunityConcierge } from './OpportunityConcierge';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis } from 'recharts';
 
 export const ExecutiveDashboard = () => {
   const { grants } = useStore();
@@ -31,6 +32,17 @@ export const ExecutiveDashboard = () => {
     const win = grants.filter(g => g.agency === a && g.stage === "awarded").length;
     return { name: a, total, win };
   }).sort((a, b) => b.total - a.total).slice(0, 5);
+
+  const pipelineData = useMemo(() => {
+    const counts = grants.reduce((acc, g) => {
+      if (g.stage !== "closeout" && g.stage !== "declined") {
+        const label = STAGE_MAP[g.stage]?.label || g.stage;
+        acc[label] = { value: (acc[label]?.value || 0) + 1, color: STAGE_MAP[g.stage]?.color || T.blue };
+      }
+      return acc;
+    }, {});
+    return Object.entries(counts).map(([name, data]) => ({ name, value: data.value, color: data.color }));
+  }, [grants]);
 
   if (boardReady) {
     return (
@@ -144,27 +156,33 @@ export const ExecutiveDashboard = () => {
               </Card>
 
               <Card>
-                <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 12 }}>🚨 Compliance & Risk</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div style={{ background: highRiskCount > 0 ? T.red + "22" : T.bg, padding: 12, borderRadius: 8, border: `1px solid ${highRiskCount > 0 ? T.red + "44" : T.border}` }}>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: highRiskCount > 0 ? T.red : T.text }}>{highRiskCount}</div>
-                    <div style={{ fontSize: 10, color: T.sub }}>High Risk Grants</div>
-                  </div>
-                  <div style={{ background: matchRequiredCount > 0 ? T.amber + "15" : T.bg, padding: 12, borderRadius: 8, border: `1px solid ${matchRequiredCount > 0 ? T.amber + "33" : T.border}` }}>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: matchRequiredCount > 0 ? T.amber : T.text }}>{matchRequiredCount}</div>
-                    <div style={{ fontSize: 10, color: T.sub }}>Matching Required</div>
-                  </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 2 }}>📊 Pipeline Distribution</div>
+                <div style={{ fontSize: 10, color: T.sub, marginBottom: 8 }}>Active Pursuits by Stage</div>
+                <div style={{ height: 120 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={pipelineData} innerRadius={35} outerRadius={55} paddingAngle={4} dataKey="value">
+                        {pipelineData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                      </Pie>
+                      <RechartsTooltip contentStyle={{ background: T.panel, border: `1px solid ${T.glassBorder}`, borderRadius: 8, fontSize: 12 }} itemStyle={{ color: T.text }} />
+                    </PieChart>
+                  </ResponsiveContainer>
                 </div>
               </Card>
 
               <Card>
-                <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 12 }}>🤝 Strategic Alliances</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 16, height: "calc(100% - 28px)" }}>
-                  <div style={{ fontSize: 32 }}>🌍</div>
-                  <div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: T.purple }}>0 Active Sub-Grantees</div>
-                    <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>Expand your reach by linking partner organizations in the CRM.</div>
-                  </div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 12 }}>🏛️ Top Funding Agencies</div>
+                <div style={{ height: 130 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={agencyData} layout="vertical" margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                      <XAxis type="number" hide />
+                      <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fill: T.sub, fontSize: 10 }} width={80} />
+                      <RechartsTooltip formatter={(val) => fmt(val)} contentStyle={{ background: T.panel, border: `1px solid ${T.glassBorder}`, borderRadius: 8, fontSize: 12 }} />
+                      <Bar dataKey="total" fill={T.amber} radius={[0, 4, 4, 0]} barSize={12}>
+                        {agencyData.map((entry, index) => <Cell key={`cell-${index}`} fill={T.amber} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </Card>
             </div>
@@ -233,18 +251,31 @@ export const ExecutiveDashboard = () => {
                 </div>
               </Card>
 
-              {/* Agency Distribution */}
+              {/* Compliance & Risk Snapshot */}
               <Card>
-                <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 12 }}>🏛️ Top Funding Agencies</div>
-                {agencyData.map((a, i) => (
-                  <div key={i} style={{ marginBottom: 12 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 4 }}>
-                      <span style={{ color: T.sub, fontWeight: 500 }}>{a.name}</span>
-                      <span style={{ color: T.text, fontWeight: 700 }}>{fmt(a.total)}</span>
-                    </div>
-                    <Progress value={a.total} max={totalAwarded || 1} color={T.amber} height={4} />
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 12 }}>🚨 Compliance & Risk Dashboard</div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 16 }}>
+                  <div style={{ background: highRiskCount > 0 ? T.red + "22" : T.bg, padding: 12, borderRadius: 8, border: `1px solid ${highRiskCount > 0 ? T.red + "44" : T.border}` }}>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: highRiskCount > 0 ? T.red : T.text }}>{highRiskCount}</div>
+                    <div style={{ fontSize: 10, color: T.sub }}>High Risk Grants</div>
                   </div>
-                ))}
+                  <div style={{ background: matchRequiredCount > 0 ? T.amber + "15" : T.bg, padding: 12, borderRadius: 8, border: `1px solid ${matchRequiredCount > 0 ? T.amber + "33" : T.border}` }}>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: matchRequiredCount > 0 ? T.amber : T.text }}>{matchRequiredCount}</div>
+                    <div style={{ fontSize: 10, color: T.sub }}>Matching Required</div>
+                  </div>
+                </div>
+
+                <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: T.text, marginBottom: 8 }}>🤝 Strategic Alliances</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ fontSize: 24 }}>🌍</div>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: T.purple }}>0 Active Sub-Grantees</div>
+                      <div style={{ fontSize: 10, color: T.sub }}>Expand your reach by linking partners in CRM.</div>
+                    </div>
+                  </div>
+                </div>
               </Card>
             </div>
 

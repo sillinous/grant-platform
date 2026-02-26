@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import netlifyIdentity from 'netlify-identity-widget';
 import { T, LS, PROFILE, saveProfile, DEFAULT_PROFILE } from '../globals';
 import { Card, Btn, Input, TextArea, Select, Badge, Empty, Modal, MagicBtn } from '../ui';
 import { API } from '../api';
-import { AI_PROVIDERS as AI_PROVIDERS_LIST, getActiveProvider, getProviderKey as getProviderKeyFn } from '../ai-config';
+import { AI_PROVIDERS as AI_PROVIDERS_LIST, getActiveProvider, getProviderKey as getProviderKeyFn, hasAnyKey } from '../ai-config';
 import { NarrativeWizard } from './NarrativeWizard';
 
 export const Settings = ({ showToast }) => {
@@ -17,6 +18,68 @@ export const Settings = ({ showToast }) => {
   const [newTag, setNewTag] = useState("");
   const [profileSaved, setProfileSaved] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
+
+  // Cloud Sync State
+  const [user, setUser] = useState(null);
+  const [syncing, setSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState(() => LS.get("last_cloud_sync", null));
+
+  useEffect(() => {
+    netlifyIdentity.init();
+    setUser(netlifyIdentity.currentUser());
+    netlifyIdentity.on('login', user => setUser(user));
+    netlifyIdentity.on('logout', () => setUser(null));
+  }, []);
+
+  const handleCloudSync = async (direction) => {
+    if (!user) return netlifyIdentity.open();
+    setSyncing(true);
+    try {
+      const token = await user.jwt();
+      if (direction === 'push') {
+        const data = { profile: PROFILE, grants: LS.get("grants", []), vault_docs: LS.get("vault_docs", []), contacts: LS.get("contacts", []), events: LS.get("events", []), tasks: LS.get("tasks", []), section_library: LS.get("section_library", []), budgets: LS.get("budgets", {}) };
+        const res = await fetch('/api/sync', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error("Push failed");
+        if (showToast) showToast("Successfully backed up to UNLESS Cloud ✓", "success");
+        const now = new Date().toISOString();
+        setLastSync(now);
+        LS.set("last_cloud_sync", now);
+      } else {
+        const res = await fetch('/api/sync', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error("Pull failed");
+        const data = await res.json();
+
+        if (Object.keys(data).length === 0) {
+          if (showToast) showToast("No cloud data found.", "error");
+          setSyncing(false);
+          return;
+        }
+
+        if (confirm("WARNING: This will overwrite your current local data. Continue?")) {
+          if (data.grants) LS.set("grants", data.grants);
+          if (data.vault_docs) LS.set("vault_docs", data.vault_docs);
+          if (data.contacts) LS.set("contacts", data.contacts);
+          if (data.events) LS.set("events", data.events);
+          if (data.tasks) LS.set("tasks", data.tasks);
+          if (data.section_library) LS.set("section_library", data.section_library);
+          if (data.budgets) LS.set("budgets", data.budgets);
+          if (data.profile) saveProfile(data.profile);
+
+          if (showToast) showToast("Data restored from Cloud! Reloading...", "success");
+          setTimeout(() => location.reload(), 1500);
+        }
+      }
+    } catch (err) {
+      if (showToast) showToast("Cloud Sync Error: " + err.message, "error");
+    }
+    setSyncing(false);
+  };
 
   // AI State
   const [aiProvider, setAiProvider] = useState(() => LS.get("ai_provider", ""));
@@ -221,6 +284,7 @@ export const Settings = ({ showToast }) => {
           { id: "narratives", label: "📝 Narratives" },
           { id: "ai", label: "🔑 AI Config" },
           { id: "data", label: "💾 Data" },
+          { id: "cloud", label: "☁️ Cloud Sync" },
         ].map(t => (
           <Btn key={t.id} variant={tab === t.id ? "primary" : "ghost"} size="sm" onClick={() => setTab(t.id)}>{t.label}</Btn>
         ))}
@@ -427,23 +491,43 @@ export const Settings = ({ showToast }) => {
       {tab === "ai" && (
         <div>
           {/* Active Provider Selector */}
-          <Card style={{ marginBottom: 16, borderColor: T.amber + "44" }} glow>
-            <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 8 }}>🧠 Active AI Provider</div>
-            <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>Select which AI provider to use. OpenRouter is recommended — it gives you access to all major models with a single key.</div>
-            <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-              <Btn size="sm" variant={!aiProvider ? "primary" : "ghost"} onClick={() => { LS.del("ai_provider"); setAiProvider(""); }}>
-                🔄 Auto-detect
-              </Btn>
-              {Object.values(AI_PROVIDERS_LIST).map(p => (
+          <Card style={{ marginBottom: 16, borderColor: T.green + "44" }} glow>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: T.text }}>🧠 AI Brain Configuration</div>
+              <Badge color={T.green} style={{ fontSize: 10 }}>Free-First Architecture</Badge>
+            </div>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>
+              The platform is optimized for <strong>Free AI</strong>. Groq and OpenRouter Free models are lightning-fast and cost $0.
+              {!hasAnyKey() && <span style={{ color: T.amber, fontWeight: 600 }}> ΓåÆ You haven't added a key yet. Start with Groq!</span>}
+            </div>
+
+            <div style={{ fontSize: 10, color: T.mute, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Recommended Free Providers</div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+              {Object.values(AI_PROVIDERS_LIST).filter(p => p.free).map(p => (
                 <Btn key={p.id} size="sm" variant={aiProvider === p.id ? "primary" : "ghost"} onClick={() => { LS.set("ai_provider", p.id); setAiProvider(p.id); }}
                   style={aiProvider === p.id ? { borderColor: p.color, boxShadow: `0 0 8px ${p.color}44` } : {}}>
-                  {p.icon} {p.name} {getProviderKeyFn(p.id) ? "✅" : ""}
+                  {p.icon} {p.name} {getProviderKeyFn(p.id) ? "Γ£à" : "Γ£¿"}
                 </Btn>
               ))}
             </div>
-            <div style={{ fontSize: 11, color: T.mute, padding: "6px 10px", borderRadius: 6, background: T.panel }}>
+
+            <div style={{ fontSize: 10, color: T.mute, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>All Providers (Auto-detect active)</div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+              <Btn size="sm" variant={!aiProvider ? "primary" : "ghost"} onClick={() => { LS.del("ai_provider"); setAiProvider(""); }}>
+                ≡ƒôä Auto-detect (Prefers Free)
+              </Btn>
+              {Object.values(AI_PROVIDERS_LIST).filter(p => !p.free).map(p => (
+                <Btn key={p.id} size="sm" variant={aiProvider === p.id ? "primary" : "ghost"} onClick={() => { LS.set("ai_provider", p.id); setAiProvider(p.id); }}
+                  style={aiProvider === p.id ? { borderColor: p.color } : {}}>
+                  {p.icon} {p.name} {getProviderKeyFn(p.id) ? "Γ£à" : ""}
+                </Btn>
+              ))}
+            </div>
+
+            <div style={{ fontSize: 11, color: T.mute, padding: "8px 12px", borderRadius: 8, background: T.panel, border: `1px solid ${T.border}` }}>
               Currently active: <strong style={{ color: activeProvider?.color || T.text }}>{activeProvider?.icon} {activeProvider?.name}</strong>
-              {activeModel && <span> · Model: <strong>{AI_PROVIDERS_LIST[activeProvider?.id]?.models.find(m => m.id === activeModel)?.label || activeModel}</strong></span>}
+              {activeModel && <span> ┬╜ Model: <strong>{AI_PROVIDERS_LIST[activeProvider?.id]?.models.find(m => m.id === activeModel)?.label || activeModel}</strong></span>}
+              {!getProviderKeyFn(activeProvider?.id) && <div style={{ color: T.red, marginTop: 4, fontWeight: 600 }}>ΓÜá∩╕Å Missing API Key: Using local stub or failing. Add a key below.</div>}
             </div>
           </Card>
 
@@ -478,25 +562,27 @@ export const Settings = ({ showToast }) => {
 
           {/* Per-Provider API Keys */}
           <Card style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 12 }}>🔑 API Keys</div>
-            <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>Configure keys for each provider. Keys are stored locally in your browser only.</div>
-            {Object.values(AI_PROVIDERS_LIST).map(p => {
+            <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 4 }}>🔑 API Keys</div>
+            <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>Keys are stored only in your browser's local storage.</div>
+
+            <div style={{ fontSize: 10, color: T.green, fontWeight: 600, marginBottom: 8, textTransform: "uppercase" }}>Free Tiers (Zero Cost)</div>
+            {Object.values(AI_PROVIDERS_LIST).filter(p => p.free).map(p => {
               const currentKey = providerKeys[p.id] || "";
               const hasKey = !!getProviderKeyFn(p.id);
               return (
-                <div key={p.id} style={{ marginBottom: 16, padding: 12, borderRadius: 8, background: T.panel, border: `1px solid ${T.border}` }}>
+                <div key={p.id} style={{ marginBottom: 12, padding: "10px 12px", borderRadius: 8, background: T.panel, border: `1px solid ${hasKey ? T.green + "44" : T.border}` }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <span style={{ fontSize: 16 }}>{p.icon}</span>
                       <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{p.name}</span>
-                      {hasKey && <span style={{ fontSize: 10, color: T.green }}>✅ configured</span>}
+                      {hasKey && <Badge color={T.green} size="xs">ACTIVE</Badge>}
                     </div>
-                    <a href={p.keyUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: T.blue, textDecoration: "none" }}>Get key →</a>
+                    <a href={p.keyUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: T.blue, fontWeight: 600 }}>Get Free Key →</a>
                   </div>
-                  <div style={{ fontSize: 10, color: T.mute, marginBottom: 6 }}>{p.description}</div>
+                  <div style={{ fontSize: 10, color: T.mute, marginBottom: 8 }}>{p.description}</div>
                   <div style={{ display: "flex", gap: 8 }}>
                     <Input type="password" value={currentKey} onChange={v => setProviderKeys(prev => ({ ...prev, [p.id]: v }))} placeholder={`${p.keyPrefix}...`} style={{ flex: 1 }} />
-                    <Btn size="sm" variant="primary" onClick={() => {
+                    <Btn size="sm" variant={hasKey ? "ghost" : "primary"} onClick={() => {
                       if (currentKey.trim()) {
                         LS.set(p.lsKey, currentKey.trim());
                       } else {
@@ -504,7 +590,38 @@ export const Settings = ({ showToast }) => {
                       }
                       setSaved(true); setTimeout(() => setSaved(false), 2000);
                       showToast?.(`${p.name} key ${currentKey.trim() ? "saved" : "cleared"}`, "success");
-                    }}>💾</Btn>
+                    }}>{hasKey ? "Update" : "Save"}</Btn>
+                  </div>
+                </div>
+              );
+            })}
+
+            <div style={{ fontSize: 10, color: T.mute, fontWeight: 600, marginBottom: 8, marginTop: 16, textTransform: "uppercase" }}>Premium / Paid Providers</div>
+            {Object.values(AI_PROVIDERS_LIST).filter(p => !p.free).map(p => {
+              const currentKey = providerKeys[p.id] || "";
+              const hasKey = !!getProviderKeyFn(p.id);
+              return (
+                <div key={p.id} style={{ marginBottom: 12, padding: "10px 12px", borderRadius: 8, background: T.panel, border: `1px solid ${hasKey ? T.blue + "44" : T.border}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontSize: 16 }}>{p.icon}</span>
+                      <span style={{ fontSize: 13, fontWeight: 610, color: T.text }}>{p.name}</span>
+                      {hasKey && <Badge color={T.blue} size="xs">ACTIVE</Badge>}
+                    </div>
+                    <a href={p.keyUrl} target="_blank" rel="noopener noreferrer" style={{ fontSize: 10, color: T.blue }}>Get Key →</a>
+                  </div>
+                  <div style={{ fontSize: 10, color: T.mute, marginBottom: 8 }}>{p.description}</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <Input type="password" value={currentKey} onChange={v => setProviderKeys(prev => ({ ...prev, [p.id]: v }))} placeholder={`${p.keyPrefix}...`} style={{ flex: 1 }} />
+                    <Btn size="sm" variant="ghost" onClick={() => {
+                      if (currentKey.trim()) {
+                        LS.set(p.lsKey, currentKey.trim());
+                      } else {
+                        LS.del(p.lsKey);
+                      }
+                      setSaved(true); setTimeout(() => setSaved(false), 2000);
+                      showToast?.(`${p.name} key ${currentKey.trim() ? "saved" : "cleared"}`, "success");
+                    }}>Save</Btn>
                   </div>
                 </div>
               );
@@ -609,6 +726,68 @@ export const Settings = ({ showToast }) => {
           </Card>
         </div>
       )}
+
+      {/* ─── CLOUD SYNC TAB ─── */}
+      {tab === "cloud" && (
+        <div style={{ maxWidth: 600 }}>
+          <Card style={{ marginBottom: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: T.text, marginBottom: 4 }}>☁️ UNLESS Cloud Sync</div>
+                <div style={{ fontSize: 12, color: T.sub }}>Securely back up your data to Netlify Blobs.</div>
+              </div>
+              {user ? (
+                <Btn variant="ghost" size="sm" onClick={() => netlifyIdentity.logout()}>Sign Out</Btn>
+              ) : null}
+            </div>
+
+            {!user ? (
+              <div style={{ padding: 32, textAlign: "center", background: T.panel, borderRadius: 8, border: `1px dashed ${T.border}` }}>
+                <div style={{ fontSize: 32, marginBottom: 12 }}>🔐</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 8 }}>Log in to Enable Cloud Sync</div>
+                <div style={{ fontSize: 12, color: T.sub, marginBottom: 16, maxWidth: 350, margin: "0 auto 16px" }}>Use your account to securely store your workspace data.</div>
+                <Btn variant="primary" onClick={() => netlifyIdentity.open()}>Sign In / Register</Btn>
+              </div>
+            ) : (
+              <div>
+                <div style={{ padding: 16, background: T.green + "11", borderRadius: 8, border: `1px solid ${T.green}44`, marginBottom: 24 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: T.green }} />
+                    <span style={{ fontSize: 13, fontWeight: 600, color: T.green }}>Connected as {user.email}</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: T.mute, marginLeft: 16 }}>
+                    Last Synced: {lastSync ? new Date(lastSync).toLocaleString() : "Never"}
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                  <Card style={{ background: T.panel }}>
+                    <div style={{ fontSize: 24, marginBottom: 8 }}>📤</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 4 }}>Push to Cloud</div>
+                    <div style={{ fontSize: 11, color: T.sub, marginBottom: 16, minHeight: 40 }}>Overwrite your cloud backup with your current local browser data.</div>
+                    <Btn variant="primary" style={{ width: "100%" }} onClick={() => handleCloudSync('push')} disabled={syncing}>
+                      {syncing ? "Syncing..." : "Backup Data"}
+                    </Btn>
+                  </Card>
+                  <Card style={{ background: T.panel }}>
+                    <div style={{ fontSize: 24, marginBottom: 8 }}>📥</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: T.text, marginBottom: 4 }}>Pull from Cloud</div>
+                    <div style={{ fontSize: 11, color: T.sub, marginBottom: 16, minHeight: 40 }}>Restore data from the cloud. Warning: This overwrites local data.</div>
+                    <Btn variant="danger" style={{ width: "100%" }} onClick={() => handleCloudSync('pull')} disabled={syncing}>
+                      {syncing ? "Syncing..." : "Restore Data"}
+                    </Btn>
+                  </Card>
+                </div>
+              </div>
+            )}
+
+            <div style={{ fontSize: 10, color: T.mute, marginTop: 24, textAlign: "center", lineHeight: 1.6 }}>
+              UNLESS Cloud Sync uses zero-trust principles. Only you can access your Blob storage container. <br />Ensure your API keys (AI Config) are NOT embedded in narratives before pushing to shared teams.
+            </div>
+          </Card>
+        </div>
+      )}
+
       {showWizard && (
         <NarrativeWizard
           onCancel={() => setShowWizard(false)}

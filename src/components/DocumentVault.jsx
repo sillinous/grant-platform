@@ -12,6 +12,45 @@ export const DocumentVault = () => {
     const [filter, setFilter] = useState("all");
     const [newDoc, setNewDoc] = useState({ title: "", category: "narrative", content: "", tags: [], grantIds: [], version: 1, status: "draft" });
     const [redacting, setRedacting] = useState(false);
+    const [parsing, setParsing] = useState(false);
+
+    const handleFileUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setParsing(true);
+        try {
+            let text = "";
+            if (file.type === "application/pdf") {
+                const pdfjsLib = await import('pdfjs-dist');
+                pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const content = await page.getTextContent();
+                    text += content.items.map(item => item.str).join(" ") + "\n";
+                }
+            } else {
+                text = await file.text();
+            }
+
+            const title = file.name.replace(/\.[^/.]+$/, "");
+            setNewDoc(prev => ({
+                ...prev,
+                title: prev.title || title,
+                content: prev.content + (prev.content ? "\n\n" : "") + text
+            }));
+        } catch (err) {
+            console.error(err);
+            alert("Error parsing file. " + err.message);
+        } finally {
+            setParsing(false);
+            e.target.value = null;
+        }
+    };
 
     const redactPII = async () => {
         if (!selected) return;
@@ -164,6 +203,16 @@ export const DocumentVault = () => {
             {/* Add Document Modal */}
             <Modal open={showAdd} onClose={() => setShowAdd(false)} title="New Document">
                 <div style={{ display: "grid", gap: 12 }}>
+                    <div style={{ display: "flex", gap: 12, alignItems: "center", padding: 12, borderRadius: 8, background: T.panel, border: `1px dashed ${T.glassBorder}` }}>
+                        <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 4 }}>🧠 Extract Text from File</div>
+                            <div style={{ fontSize: 11, color: T.sub }}>Upload a PDF or TXT to automatically extract text for the intelligent knowledge base.</div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <input type="file" accept=".pdf,.txt,.md,.csv" onChange={handleFileUpload} style={{ width: 100, fontSize: 12, color: T.mute }} />
+                            {parsing && <span style={{ fontSize: 16, animation: "spin 2s linear infinite" }}>🔄</span>}
+                        </div>
+                    </div>
                     <Input value={newDoc.title} onChange={v => setNewDoc({ ...newDoc, title: v })} placeholder="Document title" />
                     <Select value={newDoc.category} onChange={v => setNewDoc({ ...newDoc, category: v })} options={CATEGORIES.map(c => ({ value: c.id, label: c.label }))} />
                     <TextArea value={newDoc.content} onChange={v => setNewDoc({ ...newDoc, content: v })} rows={8} placeholder="Document content..." />

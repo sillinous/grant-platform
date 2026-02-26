@@ -8,7 +8,83 @@ export const OrgProfile = () => {
     const { activeContext, isPersonal } = useOrganization();
     const { alliances = [] } = useStore();
 
-    if (isPersonal) return null;
+
+    if (isPersonal) return (
+        <div style={{ display: "flex", flexDirection: "column", gap: 24, paddingBottom: 40 }}>
+            <div style={{ background: `linear-gradient(135deg, ${T.panel}, ${T.bg})`, border: `1px solid ${T.border}`, borderRadius: 16, padding: 32, display: "flex", alignItems: "center", gap: 24 }}>
+                <div style={{ width: 80, height: 80, borderRadius: 20, background: T.amber, color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 40, boxShadow: `0 10px 30px ${T.amber}44` }}>
+                    🏢
+                </div>
+                <div>
+                    <h1 style={{ fontSize: 28, fontWeight: 800, color: T.text, margin: 0, marginBottom: 8 }}>{PROFILE.name || "Your Organization"}</h1>
+                    <div style={{ display: "flex", gap: 12 }}>
+                        <Badge color={T.amber}>PERSONAL WORKSPACE</Badge>
+                        <Badge color={T.blue}>{PROFILE.loc || "Location TBD"}</Badge>
+                    </div>
+                </div>
+                <Btn variant="outline" style={{ marginLeft: "auto" }} onClick={() => window.location.href = "/settings"}>⚙️ Edit in Settings</Btn>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24 }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                    <Card>
+                        <h3 style={{ fontSize: 16, fontWeight: 700, color: T.text, marginBottom: 16 }}>Organization Profile</h3>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                            <div>
+                                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 6 }}>ORGANIZATION NAME</label>
+                                <Input value={PROFILE.name || "—"} readOnly />
+                            </div>
+                            <div>
+                                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 6 }}>LOCATION</label>
+                                <Input value={PROFILE.loc || "—"} readOnly />
+                            </div>
+                            <div>
+                                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 6 }}>RURAL STATUS</label>
+                                <Input value={PROFILE.rural ? "Rural (Eligible)" : "Urban/Suburban"} readOnly />
+                            </div>
+                            <div>
+                                <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 6 }}>DISABILITY-OWNED</label>
+                                <Input value={PROFILE.disabled ? "Yes (DBE Certified)" : "Not Specified"} readOnly />
+                            </div>
+                        </div>
+                    </Card>
+                    <Card>
+                        <h3 style={{ fontSize: 16, fontWeight: 700, color: T.text, marginBottom: 16 }}>Strategic Focus Areas</h3>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                            {(PROFILE.focus || ["Technology", "Workforce", "Community"]).map((f, i) => (
+                                <Badge key={i} color={T.blue}>{f}</Badge>
+                            ))}
+                        </div>
+                    </Card>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                    <Card style={{ background: `linear-gradient(to bottom, ${T.panel}, ${T.bg})` }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 8 }}>ORGANIZATION HEALTH</div>
+                        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
+                            <span style={{ fontSize: 24, fontWeight: 900, color: T.green }}>92%</span>
+                            <span style={{ fontSize: 12, color: T.green }}>profile complete</span>
+                        </div>
+                        <Progress value={92} color={T.green} style={{ height: 6 }} />
+                    </Card>
+                    <Card>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 8 }}>IMPACT TARGETS</div>
+                        <Stat label="Jobs Created" value={PROFILE.impactMetrics?.jobsCreated || "N/A"} color={T.green} size="sm" />
+                        <div style={{ marginTop: 12 }}>
+                            <Stat label="Demographic Focus" value={PROFILE.impactMetrics?.demographicFocus || "Broad"} color={T.blue} size="sm" />
+                        </div>
+                    </Card>
+                    <Card>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 8 }}>STRATEGIC ALLIANCES ({alliances.length})</div>
+                        {alliances.length === 0
+                            ? <div style={{ fontSize: 12, color: T.mute, fontStyle: "italic" }}>No alliances tracked yet.</div>
+                            : alliances.slice(0, 3).map(a => (
+                                <div key={a.id} style={{ padding: "6px 8px", background: T.panel, borderRadius: 6, marginBottom: 4, fontSize: 12, color: T.text }}>{a.name}</div>
+                            ))
+                        }
+                    </Card>
+                </div>
+            </div>
+        </div>
+    );
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 24, paddingBottom: 40 }}>
