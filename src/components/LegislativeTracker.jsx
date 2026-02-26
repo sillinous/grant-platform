@@ -5,12 +5,20 @@ import { API } from '../api';
 import { useStore } from '../store';
 
 export const LegislativeTracker = ({ onAdd: propOnAdd }) => {
-  const { addGrant: storeOnAdd } = useStore();
+  const { addGrant: storeOnAdd, events, setEvents } = useStore();
   const onAdd = propOnAdd || storeOnAdd;
   const [query, setQuery] = useState("");
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedBill, setSelectedBill] = useState(null);
+  const [sponsorIntel, setSponsorIntel] = useState({});
+
+  const lookupSponsor = async (sponsorName) => {
+    if (!sponsorName || sponsorIntel[sponsorName]) return;
+    const results = await API.searchFecInfluence(sponsorName);
+    const top = Array.isArray(results) ? results[0] : null;
+    if (top) setSponsorIntel(prev => ({ ...prev, [sponsorName]: top }));
+  };
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -56,7 +64,7 @@ export const LegislativeTracker = ({ onAdd: propOnAdd }) => {
         <div style={{ display: "flex", gap: 8 }}>
           <Input 
             value={query} 
-            onChange={setQuery} 
+            onChange={e => setQuery(e.target.value)} 
             placeholder="Search bills... (e.g. 'agriculture', 'broadband', 'healthcare')" 
             style={{ flex: 1 }}
             onKeyDown={e => e.key === "Enter" && handleSearch()}
@@ -83,8 +91,34 @@ export const LegislativeTracker = ({ onAdd: propOnAdd }) => {
                     <div style={{ fontSize: 12, color: T.sub, marginTop: 4, fontWeight: 700, letterSpacing: 0.5 }}>
                       {b.number?.toUpperCase()} • {b.type?.toUpperCase()} • ACTION: {fmtDate(b.latestAction?.actionDate)}
                     </div>
+                    {b.sponsor?.name && (
+                      <div style={{ marginTop: 6 }}>
+                        <span
+                          style={{ fontSize: 11, color: T.blue, cursor: "pointer", textDecoration: "underline" }}
+                          onClick={() => lookupSponsor(b.sponsor.name)}
+                        >
+                          Sponsor: {b.sponsor.name} {sponsorIntel[b.sponsor.name] ? `— ${(sponsorIntel[b.sponsor.name].party || "?")} / $${((sponsorIntel[b.sponsor.name].totalReceipts || 0) / 1000000).toFixed(1)}M raised` : "📊 FEC"}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  <Btn size="xs" variant="primary" onClick={() => predictImpact(b)} disabled={loading}>🧠 Run Forecast</Btn>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {events?.some(e => e.title.includes(b.number)) ? (
+                      <Btn size="xs" variant="ghost" disabled style={{ color: T.green }}>✓ Scheduled</Btn>
+                    ) : (
+                      <Btn size="xs" variant="ghost" onClick={() => {
+                        setEvents([...(events || []), {
+                          id: uid(),
+                          title: `Legis: ${b.number} - ${b.title.slice(0, 30)}...`,
+                          date: b.latestAction?.actionDate || new Date().toISOString(),
+                          type: "milestone",
+                          color: T.blue,
+                          notes: `Legislative Action: ${b.latestAction?.text}`
+                        }]);
+                      }}>📅 Add to Calendar</Btn>
+                    )}
+                    <Btn size="xs" variant="primary" onClick={() => predictImpact(b)} disabled={loading}>🧠 Run Forecast</Btn>
+                  </div>
                 </div>
                 <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.5 }}>{b.latestAction?.text}</div>
               </div>

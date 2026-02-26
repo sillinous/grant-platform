@@ -38,6 +38,53 @@ export const ReadinessAssessment = () => {
     const activeBiz = PROFILE.businesses?.filter(b=>b.st==="active") || [];
     if (activeBiz.length > 0) checks.push({ cat:"Profile", item:"Active Business", status:true });
     else checks.push({ cat:"Profile", item:"Active Business", status:false, fix:"Add business details in Settings" });
+    // HUD FMR Calibration
+    try {
+      const hud = await API.getHUDFairMarketRents(PROFILE.zip || "60601");
+      if (hud && !hud._error) {
+        checks.push({ cat: "Intelligence", item: "HUD FMR Baseline", status: true });
+      }
+    } catch { }
+
+    // SBA Size Standard
+    try {
+      const sba = await API.getSBASizeStandards("541511");
+      if (sba && !sba._error) {
+        checks.push({ cat: "Intelligence", item: "SBA Compliance", status: true });
+      }
+    } catch { }
+
+    // Justice40 / EPA CEJST Community Status
+    try {
+      const j40 = await API.checkJustice40Status(PROFILE.zip || "60601");
+      if (j40.qualified) {
+        checks.push({ cat: "Priority Status", item: "✅ Justice40 Designated Community — PRIORITY SCORING", status: true });
+      } else {
+        checks.push({ cat: "Priority Status", item: "Justice40 Community (Disadvantaged)", status: false, fix: j40.note || "Your ZIP is not in a Justice40 designated community." });
+      }
+    } catch { }
+
+    // HUD Opportunity Zone
+    try {
+      const oz = await API.checkHUDOpportunityZone(PROFILE.zip || "60601");
+      if (oz.qualified) {
+        checks.push({ cat: "Priority Status", item: "✅ HUD Opportunity Zone — Federal Tax Incentive Eligible", status: true });
+      } else {
+        checks.push({ cat: "Priority Status", item: "HUD Opportunity Zone", status: false, fix: "Not in a designated Opportunity Zone." });
+      }
+    } catch { }
+
+    // IRS 501(c)(3) Live Verification
+    if (PROFILE.ein) {
+      try {
+        const irs = await API.verifyIRSStatus(PROFILE.ein);
+        if (irs.status === "active" && !irs.revoked) {
+          checks.push({ cat: "Legal", item: `IRS 501(c)(3) Active — ${irs.name || PROFILE.name}`, status: true });
+        } else if (irs.status === "not_found") {
+          checks.push({ cat: "Legal", item: "IRS 501(c)(3) Status", status: false, fix: "EIN not found in IRS database. Verify your EIN is correct." });
+        }
+      } catch { }
+    }
 
     // Fintech Integration
     const fortunaLinked = API.fortuna.isLinked();

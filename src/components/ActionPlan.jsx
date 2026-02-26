@@ -12,7 +12,9 @@ export const ActionPlan = () => {
     setMagicLoading(true);
     const draft = await API.generateMagicDraft("task notes and execution guide", {
       taskTitle: newTask.title,
-      grant: grant || "No specific grant context"
+      grant: grant || "No specific grant context",
+      complianceRules: grant?.compliance || "N/A",
+      financials: grant?.financials || "N/A"
     });
     setNewTask({ ...newTask, notes: draft });
     setMagicLoading(false);
@@ -88,6 +90,7 @@ export const ActionPlan = () => {
                     {grant && <Badge color={T.blue}>{grant.title?.slice(0, 20)}</Badge>}
                     <Badge color={PRIORITIES[t.priority]?.color || T.mute}>{t.priority}</Badge>
                     {t.status !== "todo" && t.status !== "done" && <Badge color={STATUSES[t.status]?.color}>{STATUSES[t.status]?.label}</Badge>}
+                    {grant?.compliance?.matchingFundsRequired && <Badge color={T.amber} style={{ background: `${T.amber}22` }}>Match Required</Badge>}
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 4, alignItems: "center" }}>

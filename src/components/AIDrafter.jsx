@@ -79,6 +79,15 @@ Return a 3-sentence "Voice Blueprint" that can be used to guide future AI drafti
       const context = buildPortfolioContext(grants, vaultDocs, []);
       const selectedVoice = VOICES.find(v => v.id === voice);
 
+    // Inject Grant Compliance & Budget Context
+    const grantConstraints = grant ? `
+TARGET GRANT COMPLIANCE RULES:
+- Agency: ${grant.agency || "N/A"}
+- Focus Areas: ${(grant.focus || []).join(", ") || "N/A"}
+- Compliance Requirements: ${JSON.stringify(grant.compliance || {})}
+- Budget Constraints: ${JSON.stringify(grant.budget || {})}
+        ` : "";
+
       // Inject Organization Context
       const orgContext = activeOrg ? `
 ORGANIZATION CONTEXT:
@@ -91,11 +100,13 @@ Region: ${activeOrg.region || "Not specified"}
       const sys = `You are an expert grant writer. ${context}
         
 ${orgContext}
+${grantConstraints}
 
 VOICE STYLE: ${selectedVoice.tone}
 ${voicePersona ? `ORGANIZATION PERSONA OVERRIDE: ${voicePersona}` : ""}
 
-os: Write in a professional, compelling tone. Use specific data and evidence. Make claims measurable. Structure with clear headers if needed.`;
+os: Write in a professional, compelling tone. Use specific data and evidence. Make claims measurable. Structure with clear headers if needed.
+IMPORTANT: You MUST respect the TARGET GRANT COMPLIANCE RULES provided above. If word counts or specific inclusions are mentioned in compliance, follow them strictly.`;
 
       const userMsg = `Draft a ${docType} section${grant ? ` for "${grant.title}"` : ""}:\n\n${prompt}`;
       const result = await API.callAI([{ role: "user", content: userMsg }], sys);

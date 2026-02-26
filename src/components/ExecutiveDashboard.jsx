@@ -3,6 +3,7 @@ import { Card, Stat, Btn, Progress, Badge, MiniBar, Icon } from '../ui';
 import { T, fmt, STAGE_MAP } from '../globals';
 import { useStore } from '../store';
 import { StrategyModeler } from './StrategyModeler';
+import { OpportunityConcierge } from './OpportunityConcierge';
 
 export const ExecutiveDashboard = () => {
   const { grants } = useStore();
@@ -16,6 +17,13 @@ export const ExecutiveDashboard = () => {
     const decided = grants.filter(g => ["awarded", "declined"].includes(g.stage));
     return decided.length > 0 ? (grants.filter(g => g.stage === "awarded").length / decided.length) * 100 : 0;
   })();
+
+  // Comprehensive Meta-Model Aggregate Metrics
+  const activeGrants = grants.filter(g => !["declined", "closeout"].includes(g.stage));
+  const totalDrawnDown = awarded.reduce((s, g) => s + (g.financials?.drawnDown || 0), 0);
+  const totalRemaining = awarded.reduce((s, g) => s + (g.financials?.balance || g.amount || 0), 0);
+  const highRiskCount = activeGrants.filter(g => g.meta?.riskScore > 30).length;
+  const matchRequiredCount = activeGrants.filter(g => g.compliance?.matchingFundsRequired).length;
 
   const agencies = [...new Set(grants.map(g => g.agency))].filter(Boolean);
   const agencyData = agencies.map(a => {
@@ -110,6 +118,54 @@ export const ExecutiveDashboard = () => {
               <Card>
                 <Stat label="Agency Penetration" value={agencies.length} color={T.green} />
                 <div style={{ fontSize: 10, color: T.sub, marginTop: 4 }}>Active relationships</div>
+              </Card>
+            </div>
+
+            {/* AI-Powered Opportunity Concierge (Strategic Hub) */}
+            <div style={{ margin: "16px 0" }}>
+              <OpportunityConcierge onAdd={useStore.getState().addGrant} />
+            </div>
+
+            {/* Comprehensive Meta-Model Visualization: Health & Compliance */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+              <Card>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 12 }}>🛡️ Financial Drawdown</div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 8 }}>
+                  <div>
+                    <div style={{ fontSize: 24, fontWeight: 800, color: T.green }}>{fmt(totalRemaining)}</div>
+                    <div style={{ fontSize: 10, color: T.sub }}>Available Balance</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: T.amber }}>{fmt(totalDrawnDown)}</div>
+                    <div style={{ fontSize: 10, color: T.sub }}>Drawn Down</div>
+                  </div>
+                </div>
+                <Progress value={totalDrawnDown} max={totalAwarded || 1} color={T.green} height={6} />
+              </Card>
+
+              <Card>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 12 }}>🚨 Compliance & Risk</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div style={{ background: highRiskCount > 0 ? T.red + "22" : T.bg, padding: 12, borderRadius: 8, border: `1px solid ${highRiskCount > 0 ? T.red + "44" : T.border}` }}>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: highRiskCount > 0 ? T.red : T.text }}>{highRiskCount}</div>
+                    <div style={{ fontSize: 10, color: T.sub }}>High Risk Grants</div>
+                  </div>
+                  <div style={{ background: matchRequiredCount > 0 ? T.amber + "15" : T.bg, padding: 12, borderRadius: 8, border: `1px solid ${matchRequiredCount > 0 ? T.amber + "33" : T.border}` }}>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: matchRequiredCount > 0 ? T.amber : T.text }}>{matchRequiredCount}</div>
+                    <div style={{ fontSize: 10, color: T.sub }}>Matching Required</div>
+                  </div>
+                </div>
+              </Card>
+
+              <Card>
+                <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 12 }}>🤝 Strategic Alliances</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 16, height: "calc(100% - 28px)" }}>
+                  <div style={{ fontSize: 32 }}>🌍</div>
+                  <div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: T.purple }}>0 Active Sub-Grantees</div>
+                    <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>Expand your reach by linking partner organizations in the CRM.</div>
+                  </div>
+                </div>
               </Card>
             </div>
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { T, LS } from '../globals';
 import { Btn, Badge } from '../ui';
 import { API, buildPortfolioContext } from '../api';
@@ -62,7 +62,7 @@ export const AIChatBar = ({ grants, vaultDocs, contacts }) => {
       position: "fixed", bottom: 20, right: 20, width: 52, height: 52, borderRadius: "50%",
       background: T.amber, border: "none", cursor: "pointer", fontSize: 22, display: "flex",
       alignItems: "center", justifyContent: "center", boxShadow: `0 4px 20px ${T.amber}44`, zIndex: 999,
-    }}>🧠</button>
+    }}>≡ƒºá</button>
   );
 
   return (
@@ -73,7 +73,7 @@ export const AIChatBar = ({ grants, vaultDocs, contacts }) => {
     }}>
       <div style={{ padding: "12px 16px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>🧠 AI Assistant</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>≡ƒºá AI Assistant</span>
           <Badge size="xs" style={{ background: (activeP.color || T.amber) + "22", color: activeP.color || T.amber, border: `1px solid ${activeP.color}44` }}>
             {activeP.icon} {activeP.name}
           </Badge>
@@ -85,10 +85,10 @@ export const AIChatBar = ({ grants, vaultDocs, contacts }) => {
               padding: "2px 6px", borderRadius: 4, transition: "color 0.2s",
             }} onMouseEnter={e => e.target.style.color = T.red}
               onMouseLeave={e => e.target.style.color = T.mute}>
-              🗑️
+              ≡ƒùæ∩╕Å
             </button>
           )}
-          <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", color: T.mute, cursor: "pointer" }}>✕</button>
+          <button onClick={() => setOpen(false)} style={{ background: "none", border: "none", color: T.mute, cursor: "pointer" }}>Γ£ò</button>
         </div>
       </div>
       <div ref={chatRef} style={{ flex: 1, overflow: "auto", padding: 12 }}>
@@ -109,13 +109,13 @@ export const AIChatBar = ({ grants, vaultDocs, contacts }) => {
             }}>{m.content}</div>
           </div>
         ))}
-        {loading && <div style={{ fontSize: 12, color: T.mute, textAlign: "center" }}>⏳ Thinking...</div>}
+        {loading && <div style={{ fontSize: 12, color: T.mute, textAlign: "center" }}>ΓÅ│ Thinking...</div>}
       </div>
       <div style={{ padding: 8, borderTop: `1px solid ${T.border}`, display: "flex", gap: 8 }}>
         <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && send()}
           placeholder="Ask about your grants..."
           style={{ flex: 1, background: T.card, border: `1px solid ${T.border}`, borderRadius: 6, padding: "8px 12px", color: T.text, outline: "none" }} />
-        <Btn size="sm" variant="primary" onClick={send} disabled={loading}>→</Btn>
+        <Btn size="sm" variant="primary" onClick={send} disabled={loading}>ΓåÆ</Btn>
       </div>
     </div>
   );

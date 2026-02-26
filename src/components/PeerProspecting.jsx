@@ -5,13 +5,12 @@ import { API } from '../api';
 import { useStore } from '../store';
 
 export const PeerProspecting = () => {
+  const { contacts, setContacts, savedFunders = [], setSavedFunders } = useStore();
+  const savedPeers = savedFunders.filter(f => f.type === "Peer");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState(null); // { id, text }
-  const [savedPeers, setSavedPeers] = useState(() => LS.get("peers", []));
-
-  useEffect(() => { LS.set("peers", savedPeers); }, [savedPeers]);
 
   const searchRecipients = async () => {
     if (!query.trim()) return;
@@ -55,10 +54,15 @@ Return a structured professional report.`;
   };
 
   const savePeer = (peer) => {
-    if (savedPeers.some(p => p.name === peer.recipient_name)) return;
-    setSavedPeers(prev => [...prev, {
-      id: uid(), name: peer.recipient_name, amount: peer.amount || 0,
-      agency: peer.agency || "", notes: "", savedAt: new Date().toISOString(),
+    if (contacts.some(p => p.name === peer.recipient_name)) return;
+    setContacts([...(contacts || []), {
+      id: uid(),
+      name: peer.recipient_name,
+      role: "Peer Organization",
+      influenceScore: 50,
+      associatedGrants: [],
+      lastInteraction: new Date().toISOString(),
+      meta: { federalAwardTotal: peer.amount || 0, primaryAgency: peer.agency || "" }
     }]);
   };
 
@@ -68,7 +72,7 @@ Return a structured professional report.`;
         <div style={{ fontSize:13, fontWeight:600, color:T.text, marginBottom:8 }}>🔎 Peer Prospecting</div>
         <div style={{ fontSize:12, color:T.sub, marginBottom:12 }}>Find organizations similar to yours that have received federal funding. Learn from their strategies and identify potential partners or competitors.</div>
         <div style={{ display:"flex", gap:8, marginBottom:8 }}>
-          <Input value={query} onChange={setQuery} placeholder="Search recipients... (e.g., technology, disability services, Newton IL)" style={{ flex:1 }} />
+          <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search recipients... (e.g., technology, disability services, Newton IL)" style={{ flex: 1 }} />
           <Btn variant="primary" onClick={searchRecipients} disabled={loading}>🔍 Recipients</Btn>
           <Btn onClick={searchSpending} disabled={loading}>💰 Awards</Btn>
         </div>
@@ -97,7 +101,11 @@ Return a structured professional report.`;
                   <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>{r.recipient_name}</div>
                   <div style={{ fontSize: 11, color: T.sub, marginTop: 4, fontWeight: 600 }}>{r.agency || r.uei || "N/A"} {r.amount ? ` • ${fmt(r.amount)}` : ""}</div>
                 </div>
-                <Btn size="sm" variant="ghost" onClick={() => savePeer(r)}>💾 Track Peer</Btn>
+                {contacts.some(p => p.name === r.recipient_name) ? (
+                  <Btn size="sm" variant="ghost" disabled style={{ color: T.green }}>✓ In CRM</Btn>
+                ) : (
+                    <Btn size="sm" variant="ghost" onClick={() => savePeer(r)}>💾 Track Peer</Btn>
+                )}
               </div>
             ))}
           </div>

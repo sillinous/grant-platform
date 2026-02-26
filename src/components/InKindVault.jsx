@@ -5,7 +5,7 @@ import { API } from '../api';
 import { useStore } from '../store';
 
 export const InKindVault = ({ onAdd: propOnAdd }) => {
-    const { addGrant: storeOnAdd } = useStore();
+    const { addGrant: storeOnAdd, alliances = [] } = useStore();
     const onAdd = propOnAdd || storeOnAdd;
     const [credits, setCredits] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -17,11 +17,13 @@ export const InKindVault = ({ onAdd: propOnAdd }) => {
         });
     }, []);
 
+    const [filterCat, setFilterCat] = useState("All");
+
     let totalOffset = credits.reduce((acc, c) => acc + c.value, 0);
 
     return (
         <div style={{ padding: 20, animation: "fadeIn 0.4s" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
                 <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                     <div style={{ fontSize: 24, padding: "8px", background: `${T.teal}11`, borderRadius: "8px" }}>💳</div>
                     <div>
@@ -35,12 +37,23 @@ export const InKindVault = ({ onAdd: propOnAdd }) => {
                 </div>
             </div>
 
+            <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
+                {["All", "Cloud Credits", "CRM Licenses", "Legal Services", "Capacity Building", "Hardware"].map(cat => (
+                    <button key={cat} onClick={() => setFilterCat(cat)} style={{ padding: "4px 12px", borderRadius: 20, border: `1px solid ${filterCat === cat ? T.teal : T.border}`, background: filterCat === cat ? `${T.teal}22` : "transparent", color: filterCat === cat ? T.teal : T.sub, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>{cat}</button>
+                ))}
+            </div>
+
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
                 {loading ? <div style={{ display: "contents" }}><SkeletonCard lines={6} /><SkeletonCard lines={6} /></div> :
-                    credits.length === 0 ? <div style={{ gridColumn: "1 / -1" }}><Empty icon="💳" title="No Available Credits" sub="Check back later for new high-value operational subsidies." /></div> :
-                    credits.map(c => (
-                        <Card key={c.id} glow style={{ borderTop: `6px solid ${T.teal}`, padding: 24 }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, alignItems: "center" }}>
+                    credits.filter(c => filterCat === "All" || c.type === filterCat).length === 0 ? <div style={{ gridColumn: "1 / -1" }}><Empty icon="💳" title="No Credits in This Category" sub="Select a different category or check back later." /></div> :
+                        credits.filter(c => filterCat === "All" || c.type === filterCat).map(c => (
+                            <Card key={c.id} glow style={{ borderTop: `6px solid ${T.teal}`, padding: 24, position: "relative" }}>
+                                {alliances.some(a => a.name.toLowerCase().includes(c.provider?.toLowerCase())) && (
+                                    <div style={{ position: "absolute", top: -14, left: 16 }}>
+                                        <Badge color={T.purple} style={{ fontWeight: 900, boxShadow: `0 4px 12px ${T.purple}44` }}>🤝 EXISTING ALLIANCE</Badge>
+                                    </div>
+                                )}
+                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20, alignItems: "center", marginTop: alliances.some(a => a.name.toLowerCase().includes(c.provider?.toLowerCase())) ? 12 : 0 }}>
                                 <Badge color={T.teal} style={{ background: `${T.teal}11`, fontWeight: 800 }}>{c.type?.toUpperCase()}</Badge>
                                 <Badge color={T.sub} style={{ background: "rgba(255,255,255,0.03)", fontSize: 10, letterSpacing: 1, fontWeight: 900 }}>MATCH DIFFICULTY: {c.claimDifficulty?.toUpperCase()}</Badge>
                             </div>
@@ -66,6 +79,7 @@ export const InKindVault = ({ onAdd: propOnAdd }) => {
                                             stage: "discovered",
                                             description: `Difficulty: ${c.claimDifficulty}. ${c.impact}`,
                                             category: "In-Kind Subsidy",
+                                            meta: { riskScore: c.claimDifficulty?.toLowerCase() === "high" ? 60 : 30, alignmentScore: 90 },
                                             createdAt: new Date().toISOString()
                                         });
                                     }} label="+ Track Value" />

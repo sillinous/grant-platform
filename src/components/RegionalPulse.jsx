@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn, Empty, TrackBtn, SkeletonCard } from '../ui';
-import { T, PROFILE, getProfileState } from '../globals';
+import { T, PROFILE, getProfileState, fmt, uid } from '../globals';
 import { API } from '../api';
 import { useStore } from '../store';
-
 export const RegionalPulse = ({ onAdd: propOnAdd }) => {
-    const { addGrant: storeOnAdd } = useStore();
+    const { addGrant: storeOnAdd, savedFunders = [], setSavedFunders } = useStore();
     const onAdd = propOnAdd || storeOnAdd;
     const [foundations, setFoundations] = useState([]);
     const [incentives, setIncentives] = useState([]);
     const [signals, setSignals] = useState([]);
     const [charities, setCharities] = useState([]);
     const [loading, setLoading] = useState(false);
-    const state = getProfileState().abbr;
+    // Extract 2-letter state abbreviation from "City, ST" format in PROFILE.loc
+    const state = (PROFILE.loc || "").split(",").pop()?.trim().slice(0, 2).toUpperCase() || "IL";
 
     useEffect(() => {
         loadRegionalData();
@@ -59,7 +59,15 @@ export const RegionalPulse = ({ onAdd: propOnAdd }) => {
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${T.glassBorder}`, paddingTop: 16 }}>
                                         <div style={{ fontSize: 18, fontWeight: 900, color: T.text }}>{fmt(f.amount)}</div>
                                         <div style={{ display: "flex", gap: 8 }}>
-                                            <Btn size="xs" variant="ghost">IRS-990</Btn>
+                                            {savedFunders?.some(sf => sf.name === f.agency) ? (
+                                                <Btn size="xs" variant="ghost" disabled style={{ color: T.green }}>✓ Saved</Btn>
+                                            ) : (
+                                                <Btn size="xs" variant="ghost" onClick={() => {
+                                                    setSavedFunders([...(savedFunders || []), {
+                                                        id: uid(), name: f.agency, type: "Philanthropy", tags: [f.type], addedAt: new Date().toISOString()
+                                                    }]);
+                                                }}>🏛️ Save to Funders</Btn>
+                                            )}
                                             {onAdd && (
                                                 <TrackBtn onTrack={() => {
                                                     onAdd({
@@ -71,6 +79,8 @@ export const RegionalPulse = ({ onAdd: propOnAdd }) => {
                                                         stage: "discovered",
                                                         description: f.description,
                                                         category: f.type,
+                                                        meta: { riskScore: 30, alignmentScore: f.affinity || 50 },
+                                                        compliance: { reportingFrequency: "Annual Narrative" },
                                                         createdAt: new Date().toISOString()
                                                     });
                                                 }} label="+ Track" size="xs" />
@@ -98,6 +108,7 @@ export const RegionalPulse = ({ onAdd: propOnAdd }) => {
                                     {onAdd && (
                                         <TrackBtn onTrack={() => onAdd({
                                             id: uid(), title: i.title, agency: i.agency, stage: "discovered", description: i.description, category: i.type,
+                                            meta: { riskScore: 15, alignmentScore: 85 }, compliance: { reportingFrequency: "Job Creation Audit" },
                                             createdAt: new Date().toISOString()
                                         })} label="+ Track" />
                                     )}
@@ -129,6 +140,7 @@ export const RegionalPulse = ({ onAdd: propOnAdd }) => {
                                 {onAdd && (
                                     <TrackBtn onTrack={() => onAdd({
                                         id: uid(), title: s.title, agency: s.agency, stage: "discovered", description: `Confidence: ${Math.round(s.probability * 100)}% - ${s.description}`, category: s.type,
+                                        meta: { riskScore: 60, alignmentScore: 70 }, compliance: { analysisRequired: true },
                                         createdAt: new Date().toISOString()
                                     })} label="+ Track Signal" />
                                 )}
@@ -150,12 +162,24 @@ export const RegionalPulse = ({ onAdd: propOnAdd }) => {
                                     <span style={{ fontSize: 20, fontWeight: 900, color: T.text }}>{fmt(c.amount)}</span>
                                     <Badge color={T.green} style={{ background: `${T.green}11` }}>PRIVATE FUND</Badge>
                                 </div>
-                                {onAdd && (
-                                    <TrackBtn onTrack={() => onAdd({
-                                        id: uid(), title: c.title, agency: c.agency, amount: c.amount, stage: "discovered", description: c.description, category: c.type,
-                                        createdAt: new Date().toISOString()
-                                    })} label="+ Track Fund" />
-                                )}
+                                <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+                                    {savedFunders?.some(sf => sf.name === c.title) ? (
+                                        <Btn size="xs" variant="ghost" disabled style={{ color: T.green }}>✓ Saved</Btn>
+                                    ) : (
+                                        <Btn size="xs" variant="ghost" onClick={() => {
+                                            setSavedFunders([...(savedFunders || []), {
+                                                id: uid(), name: c.title, type: "Giving Circle", tags: ["Consortium"], addedAt: new Date().toISOString()
+                                            }]);
+                                        }}>🏛️ Save to Funders</Btn>
+                                    )}
+                                    {onAdd && (
+                                        <TrackBtn onTrack={() => onAdd({
+                                            id: uid(), title: c.title, agency: c.agency, amount: c.amount, stage: "discovered", description: c.description, category: c.type,
+                                            meta: { riskScore: 25, alignmentScore: 80 }, compliance: { reportingFrequency: "Bi-Annual" },
+                                            createdAt: new Date().toISOString()
+                                        })} label="+ Track Fund" />
+                                    )}
+                                </div>
                             </Card>
                         ))}
                     </div>

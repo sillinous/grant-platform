@@ -55,22 +55,48 @@ export const NarrativeWizard = ({ onComplete, onCancel }) => {
 
   const generateAll = async () => {
     setLoading(true);
+
+    // Pull OpenAlex research + BLS wage benchmarks in parallel
+    const [research, wages] = await Promise.all([
+      API.searchOpenAlexResearch(inputs.challenges.slice(0, 100) || PROFILE.focus?.[0] || "community development"),
+      API.getBLSWageData()
+    ]);
+
+    const citationText = Array.isArray(research) && research.length > 0
+      ? research.slice(0, 3).map(r => `- "${r.title}" (${r.year}, ${r.citations} citations)`).join("\n")
+      : "No citations found.";
+
+    const wageText = wages?.benchmarks
+      ? Object.values(wages.benchmarks).map(w => `${w.title}: $${w.annualWage.toLocaleString()} (${w.source})`).join(", ")
+      : "";
+
     const context = `
       Passions: ${inputs.passions}
       Challenges: ${inputs.challenges}
       Goals: ${inputs.goals}
       Profile Name: ${PROFILE.name}
       Location: ${PROFILE.loc}
+      Macro Impact Target (Primary Demographic): ${PROFILE.impactMetrics?.demographicFocus || "Broad"}
+      Macro Impact Target (Jobs Created): ${PROFILE.impactMetrics?.jobsCreated || "N/A"}
+      Local Poverty Rate: ${PROFILE.impactMetrics?.localPovertyRate || "N/A"}%
+      Local Broadband Access: ${PROFILE.impactMetrics?.broadbandAccess || "N/A"}%
+
+      EVIDENCE BASE (peer-reviewed research on this topic):
+${citationText}
+
+      LOCAL WAGE BENCHMARKS (BLS OES 2024):
+      ${wageText}
     `;
 
-    const sys = "You are a Professional Grant Strategy Consultant. Based on the raw inputs provided, draft three polished narratives for the organization's profile.";
+    const sys = `You are a Professional Grant Strategy Consultant. Based on the raw inputs, draft three polished narratives.
+    IMPORTANT: Weave in the peer-reviewed evidence and local data provided in the context to make narratives highly compelling and data-driven.`;
     const prompt = `
       Context: ${context}
       
       Tasks:
       1. Draft a 2-3 sentence 'Founder Story' (Third person).
-      2. Draft a 2-3 sentence 'Statement of Need' (Third person).
-      3. Draft a 2-3 sentence 'Impact Vision' (Third person).
+      2. Draft a 2-3 sentence 'Statement of Need' (Third person). Cite at least one piece of research evidence.
+      3. Draft a 2-3 sentence 'Impact Vision' (Third person). Mention the demographic focus and jobs.
       
       Return as JSON with keys: 'founder', 'need', 'impact'.
     `;
@@ -79,15 +105,10 @@ export const NarrativeWizard = ({ onComplete, onCancel }) => {
     
     if (!res.error) {
       try {
-        const data = JSON.parse(res.text);
-        setResults(data);
+        const data = JSON.parse(res.text.replace(/```json\n?|```/g, "").trim());
+        setResults({ ...data, _evidence: research, _wages: wages?.benchmarks });
       } catch (e) {
-        // Fallback if JSON parse fails
-        setResults({
-          founder: "Failed to parse AI output. Please try again.",
-          need: "",
-          impact: ""
-        });
+        setResults({ founder: "Failed to parse AI output. Please try again.", need: "", impact: "" });
       }
     } else {
       alert(`Wizard generation failed: ${res.error}`);

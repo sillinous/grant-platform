@@ -143,7 +143,7 @@ Return ONLY JSON:
             : "Use AI to discover private foundations, community funds, and corporate giving programs matching your mission."}
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <Input value={query} onChange={setQuery} placeholder={mode === "federal" ? "Search entities... (e.g., Illinois Housing Authority)" : "Mission or keyword... (e.g., Rural STEM education)"} style={{ flex: 1 }} onKeyDown={e => e.key === "Enter" && handleSearch()} />
+          <Input value={query} onChange={e => setQuery(e.target.value)} placeholder={mode === "federal" ? "Search entities... (e.g., Illinois Housing Authority)" : "Mission or keyword... (e.g., Rural STEM education)"} style={{ flex: 1 }} onKeyDown={e => e.key === "Enter" && handleSearch()} />
           <Btn variant="primary" onClick={handleSearch} disabled={loading}>{loading ? "⏳" : "🔍"} Search</Btn>
           <Btn variant="ghost" onClick={generateProvisions} disabled={genLoading}>{genLoading ? "⏳" : "🧠 Optimize Query"}</Btn>
         </div>

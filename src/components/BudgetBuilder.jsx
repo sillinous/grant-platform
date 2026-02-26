@@ -10,11 +10,15 @@ export const BudgetBuilder = () => {
   const [showResult, setShowResult] = useState(false);
   const [magicLoading, setMagicLoading] = useState(false);
   const [hudIntel, setHudIntel] = useState(null);
+  const [blsIntel, setBlsIntel] = useState(null);
 
   useEffect(() => {
     if (PROFILE.zip) {
       API.getHUDFairMarketRents(PROFILE.zip).then(d => {
         if (d && !d._error) setHudIntel(d);
+      });
+      API.getBLSWageData("Project Manager").then(d => {
+        if (d && !d._error) setBlsIntel(d);
       });
     }
   }, [PROFILE.zip]);
@@ -82,8 +86,10 @@ export const BudgetBuilder = () => {
   })).filter(c => c.items.length > 0 || c.id === "indirect");
 
   const grant = grants.find(g => g.id === selectedGrant);
-  const burnRate = spentTotal / (grant?.amount || 1);
+  const actualDrawnDown = grant?.financials?.drawnDown || spentTotal; // Fallback to localized spent if global not synced
+  const burnRate = actualDrawnDown / Math.max(grant?.amount || 1, grandTotal || 1);
   const remainingPercent = 1 - burnRate;
+  const matchRequired = grant?.compliance?.matchingFundsRequired || false;
 
   const mockSync = () => {
     if (!selectedGrant) return;
@@ -153,9 +159,34 @@ Return a professional, structured narrative.`;
             <Card><Stat label="Direct Costs" value={fmt(directTotal)} color={T.blue} /></Card>
             <Card><Stat label={`Indirect (${indirectRate}%)`} value={fmt(indirectTotal)} color={T.purple} /></Card>
             <Card glow><Stat label="Grand Total" value={fmt(grandTotal)} color={T.amber} /></Card>
-            <Card><Stat label="Cost Share" value={fmt(costShareTotal)} color={T.green} /></Card>
-            <Card><Stat label="Federal Ask" value={fmt(federalShare)} color={T.cyan} /></Card>
+            <Card><Stat label="Total Federal Ask" value={fmt(federalShare)} color={T.cyan} /></Card>
+            <Card style={{ borderLeft: matchRequired && costShareTotal === 0 ? `4px solid ${T.red}` : `4px solid ${T.green}` }}>
+              <Stat label="Cost Share / Match" value={fmt(costShareTotal)} color={matchRequired && costShareTotal === 0 ? T.red : T.green} />
+              {matchRequired && <div style={{ fontSize: 10, color: T.amber, marginTop: 4 }}>⚠️ Matching Funds Required by Funder</div>}
+            </Card>
           </div>
+
+          {matchRequired && costShareTotal === 0 && (
+            <Card style={{ marginBottom: 16, background: `${T.amber}0d`, border: `1px solid ${T.amber}33` }}>
+              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                <div style={{ fontSize: 20 }}>🤝</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: T.amber, marginBottom: 4 }}>STRATEGIC MATCHING INTELLIGENCE</div>
+                  <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.5 }}>
+                    This grant requires matching funds. Consider reaching out to your existing alliances for cash or in-kind support:
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                      {(() => {
+                        const { alliances = [] } = useStore();
+                        return alliances.length > 0 ? alliances.slice(0, 4).map(a => (
+                          <Badge key={a.id} color={T.purple} style={{ fontSize: 9 }}>{a.name}</Badge>
+                        )) : <span style={{ fontStyle: "italic", opacity: 0.6 }}>No alliances recorded. Go to Ecosystem to add partners.</span>;
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
 
           {(() => {
             const grant = grants.find(g => g.id === selectedGrant);
@@ -176,11 +207,11 @@ Return a professional, structured narrative.`;
                     <div>
                       <div style={{ fontSize: 11, color: T.mute, marginBottom: 4 }}>📈 Burn Rate Velocity</div>
                       <div style={{ fontSize: 16, fontWeight: 800, color: T.text }}>{(burnRate * 100).toFixed(1)}%</div>
-                      <div style={{ fontSize: 9, color: T.sub }}>of total funding exhausted</div>
+                      <div style={{ fontSize: 9, color: T.sub }}>of {fmt(Math.max(grant?.amount || 0, grandTotal || 0))} exhausted ({fmt(actualDrawnDown)} drawn)</div>
                     </div>
                     <div>
                       <div style={{ fontSize: 11, color: T.mute, marginBottom: 4 }}>⌛ Est. Runway</div>
-                      <div style={{ fontSize: 16, fontWeight: 800, color: T.green }}>{Math.ceil(remainingPercent * 12)} Months</div>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: burnRate > 0.8 ? T.red : T.green }}>{Math.max(0, Math.ceil(remainingPercent * 12))} Months</div>
                       <div style={{ fontSize: 9, color: T.sub }}>based on current trajectory</div>
                     </div>
                   </div>
@@ -273,6 +304,19 @@ Return a professional, structured narrative.`;
                 <span>3-BR: <b>{fmt(hudIntel.fmr_3br || 0)}</b></span>
               </div>
               <div style={{ fontSize: 9, color: T.mute, marginTop: 4 }}>Use these local benchmarks to justify cost-of-living differentials in your personnel narrative.</div>
+            </div>
+          )}
+          {(blsIntel && (newItem.category === "personnel" || newItem.category === "fringe")) && (
+            <div style={{ padding: 10, background: T.amber + "11", borderRadius: 8, border: `1px solid ${T.amber}33`, fontSize: 11, marginTop: 8 }}>
+              <div style={{ fontWeight: 700, color: T.amber, marginBottom: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                📊 BLS Wage Intelligence (National Median)
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", color: T.sub }}>
+                <span>Median: <b>{fmt(blsIntel.median || 65000)}</b></span>
+                <span>Low (10th): <b>{fmt(blsIntel.low || 45000)}</b></span>
+                <span>High (90th): <b>{fmt(blsIntel.high || 95000)}</b></span>
+              </div>
+              <div style={{ fontSize: 9, color: T.mute, marginTop: 4 }}>BLS Benchmark for "{blsIntel.label || "Manager"}" roles. Use for cost-reasonableness justification.</div>
             </div>
           )}
           <div><label style={{ fontSize: 10, color: T.mute }}>Cost Share (if any)</label><Input type="number" value={newItem.costShare} onChange={v => setNewItem({ ...newItem, costShare: Number(v) })} /></div>

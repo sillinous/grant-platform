@@ -13,6 +13,9 @@ import { Concierge } from './components/Concierge';
 import { ExecutiveDashboard } from './components/ExecutiveDashboard';
 import { ContextSwitcher } from './components/ContextSwitcher';
 import { Toast } from './components/Toast';
+import { OnboardingWizard } from './components/OnboardingWizard';
+import { AIChatBar } from './components/AIChatBar';
+import { GrantWritingStudio } from './components/GrantWritingStudio';
 
 const NAV = [
     {
@@ -25,6 +28,7 @@ const NAV = [
     {
         group: "Operations", items: [
             { id: "discovery", label: "Discovery Hub", icon: "🔭" },
+            { id: "studio", label: "Grant Studio", icon: "🖋️" },
             { id: "pipeline", label: "Grant Pipeline", icon: "🚀" },
             { id: "impact", label: "Impact Portfolios", icon: "🌍" },
         ]
@@ -41,7 +45,8 @@ export const App = () => {
     const [page, setPage] = useState("dashboard");
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [sidebarCollapsed, setSidebarCollapsed] = useState({});
-    const { user, organization } = useStore();
+    const [onboardingComplete, setOnboardingComplete] = useState(() => localStorage.getItem("gp_onboarded") === "1");
+    const { user, organization, grants, vaultDocs, contacts } = useStore();
 
     const currentNav = NAV.flatMap(g => g.items).find(n => n.id === page);
 
@@ -125,6 +130,7 @@ export const App = () => {
                 <main style={{ flex: 1, overflowY: "auto", padding: 32 }} className="scrollbar-hide">
                     {page === "dashboard" && <ExecutiveDashboard />}
                     {page === "discovery" && <Discovery />}
+                    {page === "studio" && <GrantWritingStudio />}
                     {page === "pipeline" && <Pipeline />}
                     {page === "impact" && <ImpactMapper />}
                     {page === "profile" && <OrgProfile />}
@@ -133,6 +139,15 @@ export const App = () => {
                     {page === "concierge" && <Concierge />}
                 </main>
             </div>
+            {!onboardingComplete && (
+                <OnboardingWizard onComplete={(profile) => {
+                    if (profile) {
+                        try { localStorage.setItem('gp_profile', JSON.stringify(profile)); } catch (e) { }
+                    }
+                    setOnboardingComplete(true);
+                }} />
+            )}
+            <AIChatBar grants={grants} vaultDocs={vaultDocs} contacts={contacts} />
             <Toast />
         </div>
     );

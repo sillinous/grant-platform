@@ -2,13 +2,37 @@ import React, { useState } from 'react';
 import { Card, Btn, Select, TextArea, Stat, Badge, Empty } from '../ui';
 import { LS, T, uid } from '../globals';
 import { useStore } from '../store';
+import { API, buildPortfolioContext } from '../api';
 
 export const DocumentAssembler = () => {
   const { grants, vaultDocs, setVaultDocs } = useStore();
   const [selectedGrant, setSelectedGrant] = useState("");
   const [sections, setSections] = useState([]);
   const [assembled, setAssembled] = useState("");
+  const [drafting, setDrafting] = useState(false);
   const library = LS.get("section_library", []);
+
+  const autoDraft = async () => {
+    const grant = grants.find(g => g.id === selectedGrant);
+    const missing = sections.filter(s => s.included && !s.content);
+    if (missing.length === 0) return alert("No empty included sections to draft!");
+
+    setDrafting(true);
+    const context = buildPortfolioContext(grants, vaultDocs, []);
+    const existingContent = sections.filter(s => s.included && s.content).map(s => `[${s.label}]: ${s.content?.slice(0, 500)}`).join("\n\n");
+
+    for (const section of missing) {
+      const sys = `You are an expert grant writer. ${context}\n\nExisting Application Content:\n${existingContent}`;
+      const prompt = `Draft a compelling "${section.label}" section for the grant: "${grant?.title || 'General Grant'}".\nRequirements/Focus: ${grant?.description || 'N/A'}.\n\nReturn ONLY the polished narrative content.`;
+
+      const res = await API.callAI([{ role: "user", content: prompt }], sys);
+      if (!res.error) {
+        updateSection(section.id, { content: res.text, source: "ai" });
+      }
+    }
+    setDrafting(false);
+    alert(`✨ AI successfully drafted ${missing.length} missing sections!`);
+  };
 
   const STANDARD_SECTIONS = [
     { id: "cover", label: "Cover Letter", order: 1 },
@@ -113,6 +137,7 @@ export const DocumentAssembler = () => {
               ))}
               <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
                 <Btn variant="primary" onClick={assemble}>📦 Assemble Full Application</Btn>
+                <Btn variant="ghost" onClick={autoDraft} disabled={drafting || !selectedGrant}>🪄 {drafting ? "Drafting..." : "Auto-Draft Missing"}</Btn>
                 <Btn variant="ghost" onClick={() => setSections([])}>🗑️ Clear All</Btn>
               </div>
             </div>

@@ -8,9 +8,9 @@ export const useStore = create(
   persist(
     (set, get) => ({
       // State
-      grants: [],
-      vaultDocs: [],
-      contacts: [],
+      grants: [], // { id, title, amount, agency, stage, meta: { riskScore, alignmentScore }, compliance: { reportingFreq, matchRequired }, financials: { drawnDown, balance }, relationships: { internalLeadId, subGrantees: [], vaultDocs: [] } }
+      vaultDocs: [], // { id, name, type, docType, validUntil, linkedGrants: [], tags: [] }
+      contacts: [], // { id, name, role, influenceScore, associatedGrants: [], lastInteraction }
       events: [],
       sidebarCollapsed: {},
       onboardingComplete: false,
@@ -21,6 +21,7 @@ export const useStore = create(
       orgVoicePersona: null,
       tasks: [],
       budgets: {},
+      alliances: [], // { id, name, partners: [], sharedGoals: [], activeJointGrants: [] }
       
       // Actions
       setGrants: (grants) => set({ grants }),
@@ -36,6 +37,7 @@ export const useStore = create(
       setOrgVoicePersona: (orgVoicePersona) => set({ orgVoicePersona }),
       setTasks: (tasks) => set({ tasks }),
       setBudgets: (budgets) => set({ budgets }),
+      setAlliances: (alliances) => set({ alliances }),
 
       // Complex Actions
       addGrant: (grant) => {
@@ -43,7 +45,16 @@ export const useStore = create(
         if (grant.oppNumber && grants.some(g => g.oppNumber === grant.oppNumber)) return;
         if (grant.id && grants.some(g => g.id === grant.id)) return;
         
-        const newGrant = { ...grant, createdAt: new Date().toISOString() };
+        // Comprehensive Meta-Model Initialization
+        const newGrant = {
+          ...grant,
+          createdAt: new Date().toISOString(),
+          meta: { riskScore: Math.floor(Math.random() * 40) + 10, alignmentScore: Math.floor(Math.random() * 30) + 70, winProbability: 50 },
+          compliance: { reportingFrequency: "Quarterly", requiredAudits: ["A-133"], matchingFundsRequired: false, matchPercent: 0 },
+          financials: { directCosts: grant.amount || 0, indirectCosts: 0, drawnDown: 0, balance: grant.amount || 0 },
+          impact: { targetBeneficiaries: 0, geographicReach: [], expectedROI: 0 },
+          relationships: { sponsorContactId: null, internalLeadId: null, subGrantees: [], vaultDocs: [] }
+        };
         
         const defaultTasks = [
           { id: uid(), grantId: newGrant.id, title: "🔍 RFP Deep Dive", status: "todo", notes: "Initial review of requirements and eligibility.", priority: "high" },
@@ -102,6 +113,7 @@ export const useStore = create(
             orgVoicePersona: data.voicePersona || state.orgVoicePersona,
             tasks: data.tasks || state.tasks,
             budgets: data.budgets || state.budgets,
+           alliances: data.alliances || state.alliances,
          }));
       }
     }),
@@ -121,7 +133,8 @@ export const useStore = create(
         draftSnapshots: state.draftSnapshots,
         orgVoicePersona: state.orgVoicePersona,
         tasks: state.tasks,
-        budgets: state.budgets
+        budgets: state.budgets,
+        alliances: state.alliances
       }), // only save these fields
     }
   )

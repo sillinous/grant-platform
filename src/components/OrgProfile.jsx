@@ -1,10 +1,12 @@
 import React from 'react';
 import { useOrganization } from '../context/OrganizationContext.jsx';
-import { T } from '../globals';
-import { Card, Btn, Input, Badge, Progress } from '../ui';
+import { T, PROFILE } from '../globals';
+import { Card, Btn, Input, Badge, Progress, Stat } from '../ui';
+import { useStore } from '../store';
 
 export const OrgProfile = () => {
     const { activeContext, isPersonal } = useOrganization();
+    const { alliances = [] } = useStore();
 
     if (isPersonal) return null;
 
@@ -107,6 +109,36 @@ export const OrgProfile = () => {
                              <span style={{ fontSize: 12, color: T.green }}>setup complete</span>
                          </div>
                          <Progress value={98} color={T.green} style={{ height: 6 }} />
+                    </Card>
+
+                    {/* Meta-Model Injection: Strategic Impact & Alliances */}
+                    <Card style={{ borderLeft: `4px solid ${T.purple}` }}>
+                        <h3 style={{ fontSize: 16, fontWeight: 700, color: T.text, marginBottom: 16 }}>🌍 Impact & Ecosystem</h3>
+                        <div style={{ display: "grid", gap: 16 }}>
+                            <div>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 4 }}>MACRO IMPACT TARGETS</div>
+                                <div style={{ display: "flex", gap: 12 }}>
+                                    <Stat label="Jobs Created" value={PROFILE.impactMetrics?.jobsCreated || 0} color={T.green} size="sm" />
+                                    <Stat label="Key Demographic" value={PROFILE.impactMetrics?.demographicFocus || "Broad"} color={T.blue} size="sm" />
+                                </div>
+                            </div>
+
+                            <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, marginBottom: 8 }}>STRATEGIC ALLIANCES ({alliances.length})</div>
+                                {alliances.length === 0 ? (
+                                    <div style={{ fontSize: 12, color: T.mute, fontStyle: "italic" }}>No active JVs or alliances tracked in CRM yet.</div>
+                                ) : (
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                                        {alliances.map(a => (
+                                            <div key={a.id} style={{ padding: 8, background: T.panel, borderRadius: 6, display: "flex", justifyContent: "space-between" }}>
+                                                <span style={{ fontSize: 13, color: T.text }}>{a.name}</span>
+                                                <Badge size="xs" color={T.purple}>{a.activeJointGrants?.length || 0} Shared Pursuits</Badge>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </Card>
                 </div>
             </div>

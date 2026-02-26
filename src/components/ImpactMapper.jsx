@@ -48,13 +48,18 @@ export const ImpactMapper = ({ grants }) => {
             const count = Math.floor((seed / 100) * 10) + 2;
             const total = awards.length > 0 ? (awards[idx % awards.length]?.amount || 50000) * (idx + 1) : idx * 75000 + 40000;
 
+            // Integrating new Meta-Model Impact Targets
+            const baseImpactScore = 60 + (seed % 35);
+            const extraImpact = (PROFILE.impactMetrics?.jobsCreated || 0) > 1000 ? 15 : 0;
+            const appliedImpactScore = Math.min(100, baseImpactScore + extraImpact);
+
             return {
                 zip,
                 count,
                 total,
                 pop: Math.floor(seed * 400 + 15000),
                 povertyRate: (10 + (seed % 15)).toFixed(1),
-                impactScore: 60 + (seed % 35),
+                impactScore: appliedImpactScore,
                 velocity: 45 + (seed % 45),
                 healthIndex: 55 + (seed % 40),
                 equityGap: 15 + (seed % 35),
@@ -101,7 +106,9 @@ export const ImpactMapper = ({ grants }) => {
                         <div style={{ fontSize: 13, color: T.sub, fontWeight: 600, marginTop: 2 }}>
                             <span style={{ color: T.green }}>● Active Engine</span>
                             <span style={{ margin: "0 8px", opacity: 0.3 }}>|</span>
-                            {fmt(stats.totalImpact)} Total Allocated Capital
+                            {fmt(stats.totalImpact)} Allocated
+                            <span style={{ margin: "0 8px", opacity: 0.3 }}>|</span>
+                            Focus: {PROFILE.impactMetrics?.demographicFocus || "Broad"}
                         </div>
                     </div>
                 </div>

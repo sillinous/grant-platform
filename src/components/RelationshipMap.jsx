@@ -142,22 +142,29 @@ Provide the 'Most Strategic Path' to secure a meeting with a Program Officer. Me
       {view === "contacts" && (
         <div>
           {contactList.length === 0 ? <Empty icon="👥" title="No contacts yet" sub="Add program officers, partners, and mentors" action={<Btn variant="primary" size="sm" onClick={() => setShowAddContact(true)}>+ Add Contact</Btn>} /> :
-            contactList.map(c => (
-              <Card key={c.id} style={{ marginBottom: 8 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{c.name}</div>
-                    <div style={{ fontSize: 11, color: T.mute }}>{c.org}{c.role ? ` · ${c.role}` : ""}</div>
-                    {c.email && <div style={{ fontSize: 11, color: T.blue, marginTop: 2 }}>{c.email}</div>}
-                    {c.notes && <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>{c.notes}</div>}
+            contactList.map(c => {
+              const { alliances = [] } = useStore();
+              const isAlliancePartner = alliances.some(a => a.name?.toLowerCase().trim() === c.org?.toLowerCase().trim());
+              return (
+                <Card key={c.id} style={{ marginBottom: 8, borderLeft: isAlliancePartner ? `4px solid ${T.purple}` : "none" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>{c.name}</div>
+                        {isAlliancePartner && <Badge color={T.purple} style={{ fontWeight: 900, fontSize: 9 }}>🤝 ALLIANCE PARTNER</Badge>}
+                      </div>
+                      <div style={{ fontSize: 11, color: T.mute }}>{c.org}{c.role ? ` · ${c.role}` : ""}</div>
+                      {c.email && <div style={{ fontSize: 11, color: T.blue, marginTop: 2 }}>{c.email}</div>}
+                      {c.notes && <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>{c.notes}</div>}
+                    </div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <Badge color={typeMap[c.type]?.color || T.mute}>{typeMap[c.type]?.label || c.type}</Badge>
+                      <button onClick={() => deleteContact(c.id)} style={{ background: "none", border: "none", color: T.red, cursor: "pointer", fontSize: 14 }}>✕</button>
+                    </div>
                   </div>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <Badge color={typeMap[c.type]?.color || T.mute}>{typeMap[c.type]?.label || c.type}</Badge>
-                    <button onClick={() => deleteContact(c.id)} style={{ background: "none", border: "none", color: T.red, cursor: "pointer", fontSize: 14 }}>✕</button>
-                  </div>
-                </div>
-              </Card>
-            ))
+                </Card>
+              );
+            })
           }
         </div>
       )}

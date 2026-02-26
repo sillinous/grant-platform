@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Btn, Badge, Progress, Empty } from '../ui';
-import { T, LS, uid, PROFILE, fmt } from '../globals';
+import { T, LS, uid, PROFILE, fmt, saveProfile, getProfileState } from '../globals';
 import { API } from '../api';
 import { useStore } from '../store';
 
@@ -49,6 +49,24 @@ Return ONLY a JSON array of opportunities:
     setTimeout(() => { setScanning(false); setProgress(0); }, 1000);
   };
 
+  const calibrateOrgRisk = async () => {
+    setScanning(true);
+    setProgress(30);
+    const riskProfile = await API.getDisasterRiskProfile(getProfileState().abbr);
+    setProgress(70);
+    const highRisk = riskProfile.filter(r => r.risk > 50).map(r => r.type);
+    const p = { ...getProfileState() };
+    p.meta = {
+      ...p.meta,
+      disasterRisks: highRisk,
+      orgRiskScore: Math.min(100, riskProfile.reduce((s, r) => s + r.count, 0))
+    };
+    saveProfile(p);
+    setScanning(false);
+    setProgress(0);
+    alert(`Risk Calibrated: System has identified ${highRisk.length} active environmental threats for ${p.loc}. Baseline risk updated.`);
+  };
+
   // Simulate periodic background scanning if active
   useEffect(() => {
     let interval;
@@ -73,9 +91,12 @@ Return ONLY a JSON array of opportunities:
               {active ? "Scanning global ecosystem for mission-aligned opportunities..." : "Sentinel is paused. Active monitoring disabled."}
             </div>
           </div>
-          <Btn variant={active ? "danger" : "primary"} size="sm" onClick={() => setActive(!active)}>
-            {active ? "Stop Monitor" : "Activate Sentinel"}
-          </Btn>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Btn variant="ghost" size="sm" onClick={calibrateOrgRisk} disabled={scanning} style={{ border: `1px dashed ${T.red}` }}>🌋 Calibrate Org Risk</Btn>
+            <Btn variant={active ? "danger" : "primary"} size="sm" onClick={() => setActive(!active)}>
+              {active ? "Stop Monitor" : "Activate Sentinel"}
+            </Btn>
+          </div>
         </div>
 
         {scanning && (

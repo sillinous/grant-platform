@@ -58,20 +58,21 @@ export const Settings = ({ showToast }) => {
 
   const addBusiness = () => {
     if (!newBiz.n) return;
-    setProfile(prev => ({ ...prev, businesses: [...prev.businesses, { ...newBiz }] }));
+    setProfile(prev => ({ ...prev, businesses: [...(prev.businesses || []), { ...newBiz }] }));
     setNewBiz({ n: "", d: "", st: "active", sec: "", monthly: 0 });
     setShowAddBiz(false);
   };
 
   const updateBusiness = (idx, updates) => {
     setProfile(prev => ({
-      ...prev, businesses: prev.businesses.map((b, i) => i === idx ? { ...b, ...updates } : b),
+      ...prev, businesses: (prev.businesses || []).map((b, i) => i === idx ? { ...b, ...updates } : b),
     }));
   };
 
   const generateBusinessDescription = async (idx) => {
     setLoading(true);
-    const b = profile.businesses[idx];
+    const b = (profile.businesses || [])[idx];
+    if (!b) { setLoading(false); return; }
     const sys = "You are a Business Consultant and Grant Writer. Draft a concise, high-impact description for a grant-seeking organization.";
     const content = `Business Name: ${b.n}\nSector: ${b.sec}\nMonthly Revenue: ${b.monthly}\nOther Context: ${profile.name} (Owner), ${profile.loc} (Location).\n\nTask: Write a professional 1-sentence description that explains what this business does and its value proposition.`;
     const res = await API.callAI([{ role: "user", content }], sys);
@@ -84,7 +85,7 @@ export const Settings = ({ showToast }) => {
   };
 
   const removeBusiness = (idx) => {
-    setProfile(prev => ({ ...prev, businesses: prev.businesses.filter((_, i) => i !== idx) }));
+    setProfile(prev => ({ ...prev, businesses: (prev.businesses || []).filter((_, i) => i !== idx) }));
   };
 
   const saveProfileData = () => {
@@ -311,9 +312,9 @@ export const Settings = ({ showToast }) => {
               <Btn variant="primary" size="sm" onClick={() => setShowAddBiz(true)}>+ Add Business</Btn>
             </div>
 
-            {profile.businesses.length === 0 ? (
+            {(profile.businesses || []).length === 0 ? (
               <Empty icon="🏢" title="No businesses added" sub="Add your businesses to improve grant matching and AI-generated content" action={<Btn variant="primary" size="sm" onClick={() => setShowAddBiz(true)}>+ Add First Business</Btn>} />
-            ) : profile.businesses.map((b, idx) => (
+            ) : (profile.businesses || []).map((b, idx) => (
               <Card key={idx} style={{ marginBottom: 8 }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 120px 100px 40px", gap: 8, alignItems: "center" }}>
                   <div>

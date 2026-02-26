@@ -5,7 +5,7 @@ import { API } from '../api';
 import { useStore } from '../store';
 
 export const FamilyOfficeProspector = ({ onAdd: propOnAdd }) => {
-    const { addGrant: storeOnAdd } = useStore();
+    const { addGrant: storeOnAdd, savedFunders, setSavedFunders } = useStore();
     const onAdd = propOnAdd || storeOnAdd;
     const [signals, setSignals] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -48,7 +48,20 @@ export const FamilyOfficeProspector = ({ onAdd: propOnAdd }) => {
                             <div style={{ fontSize: 11, color: T.mute, marginBottom: 24, fontWeight: 800, letterSpacing: 1 }}>SOURCE: {s.source?.toUpperCase()}</div>
 
                             <div style={{ display: "flex", gap: 12, borderTop: `1px solid ${T.glassBorder}`, paddingTop: 24 }}>
-                                <Btn variant="primary" style={{ flex: 1 }}>Connection Strategy</Btn>
+                                    {savedFunders?.some(f => f.name === s.name) ? (
+                                        <Btn variant="ghost" disabled style={{ color: T.green, flex: 1 }}>✓ In CRM</Btn>
+                                    ) : (
+                                        <Btn variant="primary" style={{ flex: 1 }} onClick={() => {
+                                            setSavedFunders([...(savedFunders || []), {
+                                                id: uid(),
+                                                name: s.name,
+                                                type: "Family Office",
+                                                tags: ["UHNW", s.source],
+                                                addedAt: new Date().toISOString(),
+                                                meta: { intent: s.intent }
+                                            }]);
+                                        }}>🏛️ Save to Funders</Btn>
+                                    )}
                                 {onAdd && (
                                     <TrackBtn onTrack={() => {
                                         onAdd({

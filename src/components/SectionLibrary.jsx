@@ -220,7 +220,7 @@ Return the adapted content only.`;
       )}
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        <Input value={search} onChange={setSearch} placeholder="Filter by keyword..." style={{ flex: 1 }} />
+        <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Filter by keyword..." style={{ flex: 1 }} />
         <Btn variant="primary" onClick={() => setShowAdd(true)}>+ Add Section</Btn>
       </div>
 

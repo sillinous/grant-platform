@@ -81,7 +81,7 @@ export const DocumentVault = () => {
     return (
         <div>
             <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-                <Input value={search} onChange={setSearch} placeholder="Search documents..." style={{ flex: 1 }} />
+                <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search documents..." style={{ flex: 1 }} />
                 <Btn variant="primary" onClick={() => setShowAdd(true)}>+ New Document</Btn>
             </div>
 

@@ -45,8 +45,15 @@ export const Pipeline = () => {
                             </div>
 
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                                <div style={{ fontSize: 16, fontWeight: 800, color: T.green }}>{fmt(g.amount || 0)}</div>
+                                <div style={{ fontSize: 16, fontWeight: 800, color: T.green }}>{fmt(g.financials?.balance || g.amount || 0)}</div>
                                 <div style={{ fontSize: 10, color: T.sub }}>{g.deadline ? `Due: ${fmtDate(g.deadline)}` : "No deadline"}</div>
+                            </div>
+
+                            {/* Comprehensive Meta-Model Badges */}
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+                                {g.meta?.riskScore > 30 && <Badge size="xs" color={T.red}>High Risk</Badge>}
+                                {g.meta?.alignmentScore && <Badge size="xs" color={T.blue}>Alignment: {g.meta.alignmentScore}%</Badge>}
+                                {g.compliance?.matchingFundsRequired && <Badge size="xs" color={T.amber}>Match Req</Badge>}
                             </div>
 
                             <div style={{ display: "flex", gap: 4 }}>
@@ -75,9 +82,22 @@ export const Pipeline = () => {
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                             <Card style={{ background: T.panel }}>
                                 <Stat label="Amount" value={fmt(selectedGrant.amount || 0)} color={T.green} />
+                                <div style={{ fontSize: 10, color: T.sub, marginTop: 4 }}>Balance: {fmt(selectedGrant.financials?.balance || selectedGrant.amount)}</div>
                             </Card>
                             <Card style={{ background: T.panel }}>
                                 <Stat label="Days Remaining" value={selectedGrant.deadline ? daysUntil(selectedGrant.deadline) : "N/A"} color={T.amber} />
+                            </Card>
+
+                            {/* Meta-Model Integrations inside Modal */}
+                            <Card style={{ background: T.panel, gridColumn: "span 2" }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                                    <Stat label="Risk Score" value={selectedGrant.meta?.riskScore || "N/A"} color={selectedGrant.meta?.riskScore > 30 ? T.red : T.text} />
+                                    <Stat label="Strategic Alignment" value={`${selectedGrant.meta?.alignmentScore || 0}%`} color={T.blue} />
+                                    <Stat label="Fin drawdown" value={fmt(selectedGrant.financials?.drawnDown || 0)} color={T.teal} />
+                                </div>
+                                <div style={{ fontSize: 11, color: T.mute, marginTop: 12, borderTop: `1px solid ${T.border}`, paddingTop: 12 }}>
+                                    <strong>Compliance:</strong> Reporting: {selectedGrant.compliance?.reportingFrequency || "N/A"} | Match Required: {selectedGrant.compliance?.matchingFundsRequired ? "Yes" : "No"} | Audits: {(selectedGrant.compliance?.requiredAudits || []).join(", ") || "None"}
+                                </div>
                             </Card>
                         </div>
                         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>

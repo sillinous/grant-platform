@@ -1,7 +1,7 @@
 ﻿import React, { useState } from 'react';
 import { Card, Btn, Select } from '../ui';
 import { API } from '../api';
-import { T, getProfileState } from '../globals';
+import { T, getProfileState, saveProfile } from '../globals';
 
 export const CensusNarrative = () => {
   const [loading, setLoading] = useState(false);
@@ -30,6 +30,19 @@ export const CensusNarrative = () => {
       }
     } catch (e) { setData({ error: e.message }); }
     setLoading(false);
+  };
+
+  const calibrateProfile = () => {
+    if (!data) return;
+    const p = { ...getProfileState() };
+    p.impactMetrics = {
+      ...p.impactMetrics,
+      localPovertyRate: parseFloat(data.S1701_C03_001E) || 0,
+      educationLevel: `${data.S1501_C02_019E}% Bachelors+`,
+      broadbandAccess: parseFloat(data.S2801_C01_001E) || 0
+    };
+    saveProfile(p);
+    alert("Meta-Model Calibrated: Local Census data injected into Organizational Profile.");
   };
 
   const generateNarrative = (censusData) => {
@@ -63,10 +76,11 @@ These intersecting challenges — poverty, unemployment, digital exclusion, and 
       <Card style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 8 }}>📊 Census-Powered Narrative Generator</div>
         <div style={{ fontSize: 12, color: T.sub, marginBottom: 12 }}>Generates a data-backed Statement of Need using live Census ACS data. Ready to paste into grant applications.</div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
           <Select value={customArea} onChange={setCustomArea} options={STATES.map(s => ({ value: s.fips, label: s.name }))} style={{ flex: 1 }} />
           <Btn variant="primary" onClick={loadCensusData} disabled={loading}>{loading ? "⏳ Loading..." : "📊 Generate Narrative"}</Btn>
         </div>
+        {data && <Btn size="sm" variant="ghost" onClick={calibrateProfile} style={{ width: "100%", border: `1px dashed ${T.amber}` }}>🎯 Calibrate Meta-Model with this Data</Btn>}
       </Card>
 
       {data && !data.error && (

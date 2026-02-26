@@ -1,11 +1,18 @@
 import React, { useMemo } from "react";
 import { daysUntil, fmtDate, T, LS } from "../globals";
 import { Card, Stat, Empty, Badge } from "../ui";
+import { useStore } from "../store";
 
 // ════════════════════════════════════════════════════════════════════════
 // MODULE: INTELLIGENCE FEED (Cross-Module)
 // ════════════════════════════════════════════════════════════════════════
-export const IntelligenceFeed = ({ grants, vaultDocs, contacts, events }) => {
+export const IntelligenceFeed = (props) => {
+  const store = useStore();
+  // Accept explicit props OR fall back to store — never crash on undefined
+  const grants = props.grants ?? store.grants ?? [];
+  const vaultDocs = props.vaultDocs ?? store.vaultDocs ?? [];
+  const contacts = props.contacts ?? store.contacts ?? [];
+  const events = props.events ?? store.events ?? [];
   const insights = useMemo(() => {
     const items = [];
     const now = new Date();

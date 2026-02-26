@@ -5,7 +5,7 @@ import { API } from '../api';
 import { useStore } from '../store';
 
 export const FoundationScout990 = ({ onAdd: propOnAdd }) => {
-    const { addGrant: storeOnAdd } = useStore();
+    const { addGrant: storeOnAdd, contacts, setContacts } = useStore();
     const onAdd = propOnAdd || storeOnAdd;
     const [search, setSearch] = useState("");
     const [data, setData] = useState(null);
@@ -41,7 +41,7 @@ export const FoundationScout990 = ({ onAdd: propOnAdd }) => {
 
             <Card style={{ marginBottom: 20, background: T.panel }}>
                 <div style={{ display: "flex", gap: 12 }}>
-                    <Input value={search} onChange={setSearch} placeholder="Enter foundation name or EIN (e.g. Gates Foundation)" style={{ flex: 1 }} />
+                    <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Enter foundation name or EIN (e.g. Gates Foundation)" style={{ flex: 1 }} />
                     <Btn variant="primary" onClick={runAnalysis} disabled={loading}>{loading ? "Analyzing..." : "Analyze Filing"}</Btn>
                 </div>
             </Card>
@@ -92,7 +92,24 @@ export const FoundationScout990 = ({ onAdd: propOnAdd }) => {
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                             {data.trusteeNetwork.map((t, i) => (
                                 <div key={i} style={{ padding: 20, background: "rgba(255,255,255,0.02)", borderRadius: 16, border: `1px solid ${T.glassBorder}` }}>
-                                    <div style={{ fontSize: 16, fontWeight: 800, color: T.text, fontFamily: "Outfit" }}>{t.name}</div>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                        <div style={{ fontSize: 16, fontWeight: 800, color: T.text, fontFamily: "Outfit" }}>{t.name}</div>
+                                        {contacts.some(c => c.name === t.name) ? (
+                                            <Badge color={T.green}>✓ LINKED</Badge>
+                                        ) : (
+                                            <Btn size="xs" variant="ghost" onClick={() => {
+                                                setContacts([...(contacts || []), {
+                                                    id: uid(),
+                                                    name: t.name,
+                                                    role: "Foundation Trustee",
+                                                    influenceScore: 90,
+                                                    associatedGrants: [search],
+                                                    lastInteraction: new Date().toISOString(),
+                                                    meta: { affiliations: t.connections }
+                                                }]);
+                                            }}>👤 CRM Sync</Btn>
+                                        )}
+                                    </div>
                                     <div style={{ fontSize: 10, color: T.mute, marginTop: 12, marginBottom: 12, fontWeight: 800, letterSpacing: 1 }}>AFFILIATIONS:</div>
                                     <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                                         {t.connections.map(c => <Badge key={c} color={T.blue} style={{ textTransform: "none", background: `${T.blue}08` }}>{c}</Badge>)}

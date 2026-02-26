@@ -63,7 +63,8 @@ export const DEFAULT_PROFILE = {
     focus: [],
     tags: [],
     businesses: [],
-    narratives: { founder: "", need: "", impact: "" }
+    narratives: { founder: "", need: "", impact: "" },
+    impactMetrics: { jobsCreated: 0, demographicFocus: "Broad" }
 };
 
 export const PROFILE = LS.get("org_profile", {
@@ -79,7 +80,8 @@ export const PROFILE = LS.get("org_profile", {
         { id: "e2", name: "NJ Horizon Ops", type: "LLC", focus: "State" }
     ],
     businesses: [],
-    narratives: { founder: "", need: "", impact: "" }
+    narratives: { founder: "", need: "", impact: "" },
+    impactMetrics: { jobsCreated: 1250, demographicFocus: "Rural Low-Income" }
 });
 
 export const getProfileState = () => PROFILE;
