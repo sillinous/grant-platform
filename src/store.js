@@ -84,6 +84,7 @@ export const useStore = create(
           tasks: [...tasks, ...defaultTasks],
           budgets: newBudgets
         });
+        cloud.schedulePush();
       },
 
       updateGrant: (id, updates) => {
@@ -97,10 +98,12 @@ export const useStore = create(
             return updated;
           })
         }));
+        cloud.schedulePush();
       },
 
       deleteGrant: (id) => {
         set(state => ({ grants: state.grants.filter(x => x.id !== id) }));
+        cloud.schedulePush();
       },
       
       syncFromCloud: (data) => {

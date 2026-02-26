@@ -1,82 +1,102 @@
-
 import { auth } from "./auth.js";
-import { LS, saveProfile, PROFILE } from "./globals.js";
+import { saveProfile } from "./globals.js";
 
 const SYNC_ENDPOINT = "/.netlify/functions/sync";
 
+// Debounce helper
+let _pushTimer = null;
+
 export const cloud = {
-  // Pull data from Cloud -> Local
+  isSyncing: false,
+  lastSynced: null,
+  onStatusChange: null, // callback(status: 'syncing'|'saved'|'error'|'offline')
+
+  _notify(status) {
+    if (this.onStatusChange) this.onStatusChange(status);
+  },
+
+  // Pull data from Cloud → Zustand store
   async pull() {
     const token = await auth.getToken();
-    if (!token) return;
+    if (!token) return null;
 
     try {
+      this._notify('syncing');
       const res = await fetch(SYNC_ENDPOINT, {
         headers: { "Authorization": `Bearer ${token}` }
       });
-      
-      if (!res.ok) throw new Error("Sync failed");
-      
+
+      if (!res.ok) throw new Error(`Sync failed: ${res.status}`);
+
       const remoteData = await res.json();
-      
-      if (Object.keys(remoteData).length === 0) {
-        // First time cloud user? Upload local data.
-        await this.push(); 
-        return;
+
+      if (!remoteData || Object.keys(remoteData).length === 0) {
+        // First-time cloud user — push local data up
+        await this.push();
+        this._notify('saved');
+        return null;
       }
 
-      // Merge Strategy: Remote Overwrites Local (for MVP simplicity)
-      // In a real app, you'd want timestamp-based merging.
-      if (remoteData.grants) LS.set("grants", remoteData.grants);
-      if (remoteData.docs) LS.set("vault_docs", remoteData.docs);
-      if (remoteData.contacts) LS.set("contacts", remoteData.contacts);
-      if (remoteData.profile) saveProfile(remoteData.profile);
-      if (remoteData.events) LS.set("events", remoteData.events);
-      if (remoteData.library) LS.set("section_library", remoteData.library);
-      if (remoteData.scores) LS.set("score_history", remoteData.scores);
-      if (remoteData.funders) LS.set("saved_funders", remoteData.funders);
-      if (remoteData.snapshots) LS.set("draft_snapshots", remoteData.snapshots);
-      if (remoteData.onboarding) LS.set("onboarding_complete", remoteData.onboarding);
-
+      this.lastSynced = new Date();
+      this._notify('saved');
       return remoteData;
     } catch (e) {
       console.error("Cloud Pull Error:", e);
+      this._notify('error');
+      return null;
     }
   },
 
-  // Push data from Local -> Cloud
+  // Push data from Zustand store → Cloud (reads live from store)
   async push() {
     const token = await auth.getToken();
-    console.log("Pushing data...", token ? "Authorized" : "Anonymous");
     if (!token) return;
 
+    // Lazily import the store to avoid circular dependencies
+    const { useStore } = await import("./store.js");
+    const state = useStore.getState();
+
     const payload = {
-      grants: LS.get("grants", []),
-      docs: LS.get("vault_docs", []),
-      contacts: LS.get("contacts", []),
-      profile: PROFILE,
-      events: LS.get("events", []),
-      library: LS.get("section_library", []),
-      scores: LS.get("score_history", []),
-      funders: LS.get("saved_funders", []),
-      snapshots: LS.get("draft_snapshots", []),
-      onboarding: LS.get("onboarding_complete", false),
-      voicePersona: LS.get("org_voice_persona", null),
-      lastSync: new Date().toISOString()
+      grants: state.grants,
+      docs: state.vaultDocs,
+      contacts: state.contacts,
+      events: state.events,
+      library: state.sectionLibrary,
+      scores: state.scoreHistory,
+      funders: state.savedFunders,
+      snapshots: state.draftSnapshots,
+      onboarding: state.onboardingComplete,
+      voicePersona: state.orgVoicePersona,
+      tasks: state.tasks,
+      budgets: state.budgets,
+      alliances: state.alliances,
+      lastSync: new Date().toISOString(),
     };
 
     try {
-      await fetch(SYNC_ENDPOINT, {
+      this._notify('syncing');
+      const res = await fetch(SYNC_ENDPOINT, {
         method: "POST",
-        headers: { 
+        headers: {
           "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
-      console.log("Cloud Saved");
+
+      if (!res.ok) throw new Error(`Push failed: ${res.status}`);
+      this.lastSynced = new Date();
+      this._notify('saved');
     } catch (e) {
       console.error("Cloud Push Error:", e);
+      this._notify('error');
     }
-  }
+  },
+
+  // Debounced push — call after any store mutation
+  // Won't spam the API if many changes happen quickly
+  schedulePush(delayMs = 1500) {
+    clearTimeout(_pushTimer);
+    _pushTimer = setTimeout(() => this.push(), delayMs);
+  },
 };

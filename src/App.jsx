@@ -18,6 +18,7 @@ import { OnboardingWizard } from './components/OnboardingWizard';
 import { AIChatBar } from './components/AIChatBar';
 import { GrantWritingStudio } from './components/GrantWritingStudio';
 import { CommandPalette } from './components/CommandPalette';
+import { AuthBar } from './components/AuthBar';
 
 const NAV = [
     {
@@ -108,12 +109,7 @@ export const App = () => {
                     })}
                 </nav>
 
-                {sidebarOpen && (
-                    <div style={{ padding: 20, borderTop: `1px solid ${T.glassBorder}`, fontSize: 11, color: T.mute, background: "rgba(0,0,0,0.1)" }}>
-                        <div style={{ fontWeight: 700, color: T.text, marginBottom: 4 }}>{PROFILE.name}</div>
-                        <div>{PROFILE.type} · {PROFILE.zip}</div>
-                    </div>
-                )}
+                <AuthBar />
             </div>
 
             <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "radial-gradient(circle at 50% -20%, #1a1a2e 0%, #020203 100%)" }}>

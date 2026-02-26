@@ -3,6 +3,28 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
 import { BrowserRouter } from 'react-router-dom'
+import { auth } from './auth.js'
+import { cloud } from './cloud.js'
+import { useStore } from './store.js'
+
+// ── Boot: Initialize Netlify Identity and cloud sync ──────────────────
+auth.init(async (user) => {
+  // Broadcast auth change so AuthBar and other components can react
+  window.dispatchEvent(new CustomEvent('gp_auth_change', { detail: user }));
+
+  if (user) {
+    // User just logged in — pull their data from Netlify Blobs
+    const remoteData = await cloud.pull();
+    if (remoteData) {
+      useStore.getState().syncFromCloud(remoteData);
+    }
+  }
+});
+
+// Final push before the tab closes (best-effort)
+window.addEventListener('beforeunload', () => {
+  cloud.push();
+});
 
 
 class GlobalErrorBoundary extends React.Component {
