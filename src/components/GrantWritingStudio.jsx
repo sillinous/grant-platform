@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Card, Btn, Badge, T } from '../ui';
+import { Card, Btn, Badge } from '../ui';
+import { T } from '../globals';
 import { NarrativeWizard } from './NarrativeWizard';
 import { AIDrafter } from './AIDrafter';
 import { DocumentAssembler } from './DocumentAssembler';

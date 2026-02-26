@@ -21,6 +21,7 @@ export const useStore = create(
       orgVoicePersona: null,
       tasks: [],
       budgets: {},
+      toast: null,
       alliances: [], // { id, name, partners: [], sharedGoals: [], activeJointGrants: [] }
       
       // Actions
@@ -37,6 +38,10 @@ export const useStore = create(
       setOrgVoicePersona: (orgVoicePersona) => set({ orgVoicePersona }),
       setTasks: (tasks) => set({ tasks }),
       setBudgets: (budgets) => set({ budgets }),
+      showToast: (msg, type = 'success') => {
+        set({ toast: { msg, type, id: Date.now() } });
+        setTimeout(() => set({ toast: null }), 3500);
+      },
       setAlliances: (alliances) => set({ alliances }),
 
       // Complex Actions

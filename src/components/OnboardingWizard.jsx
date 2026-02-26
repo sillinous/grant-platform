@@ -4,27 +4,27 @@ import { T, saveProfile, PROFILE } from '../globals';
 import { API } from '../api';
 
 const ORG_TYPES = [
-  { id: 'nonprofit', icon: '≡ƒÅ¢∩╕Å', label: 'Nonprofit Organization', desc: 'Tax-exempt org (501(c)(3), etc.)' },
-  { id: 'smallbiz', icon: '≡ƒÅó', label: 'Small Business', desc: 'SBIR/STTR eligible' },
-  { id: 'university', icon: '≡ƒÄô', label: 'University / Research', desc: 'Academic institution or lab' },
-  { id: 'govagency', icon: 'ΓÜû∩╕Å', label: 'Government Entity', desc: 'State, local, tribal government' },
-  { id: 'consultant', icon: '≡ƒô¥', label: 'Grant Consultant', desc: 'Write grants for others' },
-  { id: 'individual', icon: '≡ƒæñ', label: 'Individual / Researcher', desc: 'Personal research or project' },
+  { id: 'nonprofit', icon: '🏢', label: 'Nonprofit Organization', desc: 'Tax-exempt org (501(c)(3), etc.)' },
+  { id: 'smallbiz', icon: '🏪', label: 'Small Business', desc: 'SBIR/STTR eligible' },
+  { id: 'university', icon: '🎓', label: 'University / Research', desc: 'Academic institution or lab' },
+  { id: 'govagency', icon: '⚖️', label: 'Government Entity', desc: 'State, local, tribal government' },
+  { id: 'consultant', icon: '💼', label: 'Grant Consultant', desc: 'Write grants for others' },
+  { id: 'individual', icon: '👤', label: 'Individual / Researcher', desc: 'Personal research or project' },
 ];
 
 const FOCUS_AREAS = [
-  { id: 'health', icon: '≡ƒÅÑ', label: 'Health & Human Services' },
-  { id: 'education', icon: '≡ƒôÜ', label: 'Education & Workforce' },
-  { id: 'environment', icon: '≡ƒî┐', label: 'Environment & Energy' },
-  { id: 'technology', icon: '≡ƒÆ╗', label: 'Technology & Innovation' },
-  { id: 'community', icon: '≡ƒÅÿ∩╕Å', label: 'Community Development' },
-  { id: 'agriculture', icon: '≡ƒî╛', label: 'Agriculture & Rural' },
-  { id: 'justice', icon: 'ΓÜû∩╕Å', label: 'Justice & Public Safety' },
-  { id: 'arts', icon: '≡ƒÄ¿', label: 'Arts & Culture' },
-  { id: 'housing', icon: '≡ƒÅá', label: 'Housing & Infrastructure' },
-  { id: 'science', icon: '≡ƒö¼', label: 'Science & Research' },
-  { id: 'international', icon: '≡ƒîì', label: 'International Development' },
-  { id: 'defense', icon: '≡ƒ¢í∩╕Å', label: 'Defense & Security' },
+  { id: 'health', icon: '🏥', label: 'Health & Human Services' },
+  { id: 'education', icon: '📚', label: 'Education & Workforce' },
+  { id: 'environment', icon: '🌿', label: 'Environment & Energy' },
+  { id: 'technology', icon: '💻', label: 'Technology & Innovation' },
+  { id: 'community', icon: '🏘️', label: 'Community Development' },
+  { id: 'agriculture', icon: '🌾', label: 'Agriculture & Rural' },
+  { id: 'justice', icon: '⚖️', label: 'Justice & Public Safety' },
+  { id: 'arts', icon: '🎨', label: 'Arts & Culture' },
+  { id: 'housing', icon: '🏠', label: 'Housing & Infrastructure' },
+  { id: 'science', icon: '🔬', label: 'Science & Research' },
+  { id: 'international', icon: '🌍', label: 'International Development' },
+  { id: 'defense', icon: '🛡️', label: 'Defense & Security' },
 ];
 
 const STATES = [
@@ -85,7 +85,7 @@ const GrantPreview = ({ grant }) => {
             {grant.title}
           </div>
           <div style={{ fontSize: 11, color: T.sub, marginTop: 3 }}>
-            {grant.agencyCode || grant.agency || 'Federal'} ┬╖ {grant.number || ''}
+            {grant.agencyCode || grant.agency || 'Federal'} · {grant.number || ''}
           </div>
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -215,24 +215,24 @@ export const OnboardingWizard = ({ onComplete }) => {
       case 3:
         return (<>
           <div style={S.title}>What areas do you focus on?</div>
-          <div style={S.desc}>Select all that apply ΓÇö we'll search for matching grants in the next step.</div>
+          <div style={S.desc}>Select all that apply — we'll search for matching grants in the next step.</div>
           <ChoiceGrid options={FOCUS_AREAS} selected={focusAreas} onSelect={setFocusAreas} multi cols={3} />
         </>);
       case 4:
         return (<>
           <div style={S.title}>
-            {searchLoading ? 'ΓÜí Searching federal databases...' :
-              searchCount > 0 ? `≡ƒÄ» ${searchCount.toLocaleString()} grants match your profile` :
+            {searchLoading ? '⏳ Searching federal databases...' :
+              searchCount > 0 ? `🎉 ${searchCount.toLocaleString()} grants match your profile` :
                 'Searching for opportunities...'}
           </div>
           <div style={S.desc}>
             {searchLoading ? 'Querying Grants.gov for opportunities matching your focus areas...' :
               searchCount > 0 ? 'Here are some current opportunities. You can explore thousands more in the Discovery module.' :
-                'We searched for grants but didn\'t find exact matches right now. The Discovery module has 23+ data sources to search.'}
+                "We searched for grants but didn't find exact matches right now. The Discovery module has 23+ data sources to search."}
           </div>
           {searchLoading ? (
             <div style={{ textAlign: 'center', padding: '32px 0' }}>
-              <div style={{ fontSize: 36, marginBottom: 12 }}>≡ƒöì</div>
+              <div style={{ fontSize: 36, marginBottom: 12 }}>🔍</div>
               <div style={{ fontSize: 12, color: T.sub }}>Searching Grants.gov...</div>
             </div>
           ) : (
@@ -240,7 +240,7 @@ export const OnboardingWizard = ({ onComplete }) => {
               {searchResults.slice(0, 5).map((g, i) => <GrantPreview key={i} grant={g} />)}
               {searchCount > 6 && (
                 <div style={{ textAlign: 'center', padding: '12px 0', fontSize: 12, color: T.amber, fontWeight: 600 }}>
-                  + {(searchCount - 6).toLocaleString()} more matching opportunities ΓåÆ
+                    + {(searchCount - 6).toLocaleString()} more matching opportunities →
                 </div>
               )}
             </div>
@@ -249,17 +249,17 @@ export const OnboardingWizard = ({ onComplete }) => {
       case 5:
         return (
           <div style={{ textAlign: 'center', padding: '12px 0' }}>
-            <div style={{ fontSize: 56, marginBottom: 16 }}>≡ƒÜÇ</div>
+            <div style={{ fontSize: 56, marginBottom: 16 }}>🚀</div>
             <div style={S.title}>You're all set{orgName ? `, ${orgName}` : ''}!</div>
             <div style={{ ...S.desc, maxWidth: 420, margin: '0 auto' }}>
               Your profile is configured. Here's your quick-start guide:
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, textAlign: 'left', marginTop: 16 }}>
               {[
-                { icon: '≡ƒöì', title: 'Discover Grants', desc: 'Search 23+ federal data sources for matching opportunities', color: T.blue },
-                { icon: 'Γ£ì∩╕Å', title: 'AI Grant Writer', desc: 'Draft narratives with AI that understands grant language', color: T.amber },
-                { icon: '≡ƒôè', title: 'Track Your Pipeline', desc: 'Manage applications through 12 lifecycle stages', color: T.green },
-                { icon: '≡ƒºá', title: 'Intelligence Suite', desc: '15+ tools for research, analysis, and strategy', color: T.purple },
+                { icon: '🔍', title: 'Discover Grants', desc: 'Search 23+ federal data sources for matching opportunities', color: T.blue },
+                { icon: '✍️', title: 'AI Grant Writer', desc: 'Draft narratives with AI that understands grant language', color: T.amber },
+                { icon: '📋', title: 'Track Your Pipeline', desc: 'Manage applications through 12 lifecycle stages', color: T.green },
+                { icon: '🧠', title: 'Intelligence Suite', desc: '15+ tools for research, analysis, and strategy', color: T.purple },
               ].map(({ icon, title, desc, color }) => (
                 <div key={title} style={{
                   background: T.panel, border: `1px solid ${T.border}`,
@@ -286,22 +286,22 @@ export const OnboardingWizard = ({ onComplete }) => {
             <div style={{ fontSize: 11, color: T.mute, fontWeight: 600, letterSpacing: 0.5 }}>
               STEP {step} OF {TOTAL}
             </div>
-            <button style={S.skip} onClick={finish}>Skip setup ΓåÆ</button>
+            <button style={S.skip} onClick={finish}>Skip setup →</button>
           </div>
         </div>
         <div style={S.body}>
           {renderStep()}
           <div style={S.footer}>
             {step > 1 ? (
-              <Btn variant="ghost" size="sm" onClick={() => setStep(step - 1)}>ΓåÉ Back</Btn>
+              <Btn variant="ghost" size="sm" onClick={() => setStep(step - 1)}>← Back</Btn>
             ) : <div />}
             {step < TOTAL ? (
               <Btn variant="primary" size="sm" onClick={() => setStep(step + 1)}
                 disabled={!canAdvance()}>
-                {step === 3 ? '≡ƒöì Search Grants ΓåÆ' : 'Next ΓåÆ'}
+                {step === 3 ? '🔍 Search Grants →' : 'Next →'}
               </Btn>
             ) : (
-              <Btn variant="primary" onClick={finish}>≡ƒÜÇ Launch Dashboard</Btn>
+                <Btn variant="primary" onClick={finish}>🚀 Launch Dashboard</Btn>
             )}
           </div>
         </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useStore } from './store';
 import { OrganizationProvider } from './context/OrganizationContext';
 import { T, LS, uid, PROFILE, sanitizeInput } from './globals';
@@ -16,6 +17,7 @@ import { Toast } from './components/Toast';
 import { OnboardingWizard } from './components/OnboardingWizard';
 import { AIChatBar } from './components/AIChatBar';
 import { GrantWritingStudio } from './components/GrantWritingStudio';
+import { CommandPalette } from './components/CommandPalette';
 
 const NAV = [
     {
@@ -42,7 +44,10 @@ const NAV = [
 ];
 
 export const App = () => {
-    const [page, setPage] = useState("dashboard");
+    const navigate = useNavigate();
+    const location = useLocation();
+    const page = location.pathname === '/' ? 'dashboard' : location.pathname.substring(1);
+
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [sidebarCollapsed, setSidebarCollapsed] = useState({});
     const [onboardingComplete, setOnboardingComplete] = useState(() => localStorage.getItem("gp_onboarded") === "1");
@@ -80,7 +85,7 @@ export const App = () => {
                                 {(!isCollapsed || !sidebarOpen) && items.map(n => (
                                     <button
                                         key={n.id}
-                                        onClick={() => setPage(n.id)}
+                                        onClick={() => navigate(`/${n.id}`)}
                                         style={{
                                             width: "calc(100% - 16px)", margin: "2px 8px", padding: sidebarOpen ? "10px 12px" : "10px",
                                             border: "none", borderRadius: 10, cursor: "pointer",
@@ -125,18 +130,34 @@ export const App = () => {
                         </button>
                         <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: T.text, fontFamily: "Outfit", letterSpacing: "-0.03em" }}>{currentNav?.icon} {currentNav?.label}</h2>
                     </div>
+                    <button
+                        onClick={() => {
+                            // Trigger command palette via keyboard event
+                            window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }));
+                        }}
+                        style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.glassBorder}`, borderRadius: 8, padding: '6px 12px', color: T.mute, cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 8 }}
+                        title="Open Command Palette (Ctrl+K)"
+                    >
+                        <span>🔍</span>
+                        <span>Search</span>
+                        <kbd style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 4, padding: '1px 5px', fontSize: 10 }}>Ctrl+K</kbd>
+                    </button>
                 </header>
 
                 <main style={{ flex: 1, overflowY: "auto", padding: 32 }} className="scrollbar-hide">
-                    {page === "dashboard" && <ExecutiveDashboard />}
-                    {page === "discovery" && <Discovery />}
-                    {page === "studio" && <GrantWritingStudio />}
-                    {page === "pipeline" && <Pipeline />}
-                    {page === "impact" && <ImpactMapper />}
-                    {page === "profile" && <OrgProfile />}
-                    {page === "settings" && <Settings />}
-                    {page === "intelligence" && <IntelligenceFeed />}
-                    {page === "concierge" && <Concierge />}
+                    <Routes>
+                        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                        <Route path="/dashboard" element={<ExecutiveDashboard />} />
+                        <Route path="/discovery" element={<Discovery />} />
+                        <Route path="/studio" element={<GrantWritingStudio />} />
+                        <Route path="/pipeline" element={<Pipeline />} />
+                        <Route path="/impact" element={<ImpactMapper />} />
+                        <Route path="/profile" element={<OrgProfile />} />
+                        <Route path="/settings" element={<Settings />} />
+                        <Route path="/intelligence" element={<IntelligenceFeed />} />
+                        <Route path="/concierge" element={<Concierge />} />
+                        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                    </Routes>
                 </main>
             </div>
             {!onboardingComplete && (
@@ -147,8 +168,9 @@ export const App = () => {
                     setOnboardingComplete(true);
                 }} />
             )}
-            <AIChatBar grants={grants} vaultDocs={vaultDocs} contacts={contacts} />
+            <AIChatBar />
             <Toast />
+            <CommandPalette />
         </div>
     );
 };

@@ -1,11 +1,12 @@
 import React from 'react';
 import { Card, Stat, Btn, Progress, Badge, MiniBar, Icon } from '../ui';
-import { T, fmt, fmtDate, STAGES, PROFILE } from '../globals';
+import { T, fmt, fmtDate, daysUntil, STAGES, PROFILE } from '../globals';
 import { useStore } from '../store';
+import { useNavigate } from 'react-router-dom';
 
-export const Dashboard = ({ grants: propsGrants, navigate }) => {
-    const { grants: storeGrants, tasks, budgets, events } = useStore();
-    const grants = propsGrants || storeGrants;
+export const Dashboard = () => {
+    const navigate = useNavigate();
+    const { grants, tasks, budgets, events } = useStore();
 
     const active = grants.filter(g => !["awarded", "declined", "closeout", "archived"].includes(g.stage));
     const awarded = grants.filter(g => ["awarded", "active", "closeout"].includes(g.stage));
@@ -29,8 +30,8 @@ export const Dashboard = ({ grants: propsGrants, navigate }) => {
                     </div>
                 </div>
                 <div style={{ display: "flex", gap: 10 }}>
-                    <Btn variant="primary" onClick={() => navigate?.("discovery")}>🔍 Find Grants</Btn>
-                    <Btn variant="ghost" onClick={() => navigate?.("pipeline")}>📋 View Pipeline</Btn>
+                    <Btn variant="primary" onClick={() => navigate("/discovery")}>🔍 Find Grants</Btn>
+                    <Btn variant="ghost" onClick={() => navigate("/pipeline")}>📋 View Pipeline</Btn>
                 </div>
             </div>
 
@@ -85,7 +86,6 @@ export const Dashboard = ({ grants: propsGrants, navigate }) => {
                         )}
                     </Card>
 
-                    {/* AI Insights (Mocked) */}
                     <Card style={{ background: `linear-gradient(135deg, ${T.panel}, ${T.purple}05)`, border: `1px solid ${T.purple}33` }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
                             <span style={{ fontSize: 18 }}>✨</span>
@@ -93,15 +93,19 @@ export const Dashboard = ({ grants: propsGrants, navigate }) => {
                         </div>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                             <div style={{ padding: 12, background: T.bg, borderRadius: 8, borderLeft: `3px solid ${T.blue}` }}>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: T.blue, marginBottom: 6 }}>OPPORTUNITY MATCH</div>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: T.blue, marginBottom: 6 }}>PIPELINE HEALTH</div>
                                 <div style={{ fontSize: 13, color: T.text, lineHeight: 1.5 }}>
-                                    Found 3 new state grants in <b>{PROFILE.loc || "Illinois"}</b> matching your "Workforce Development" track.
+                                    {active.length > 0
+                                        ? `${active.length} active pursuits with ${fmt(totalPipeline)} in pipeline. ${awarded.length} grants awarded.`
+                                        : "No active grants yet. Visit the Discovery Hub to find matching opportunities."}
                                 </div>
                             </div>
                             <div style={{ padding: 12, background: T.bg, borderRadius: 8, borderLeft: `3px solid ${T.amber}` }}>
-                                <div style={{ fontSize: 11, fontWeight: 700, color: T.amber, marginBottom: 6 }}>COMPLIANCE WATCH</div>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: T.amber, marginBottom: 6 }}>DEADLINE WATCH</div>
                                 <div style={{ fontSize: 13, color: T.text, lineHeight: 1.5 }}>
-                                    SAM.gov registration expires in 42 days. Renewal typically takes 14 days. Suggest starting now.
+                                    {upcomingDeadlines.length > 0
+                                        ? `${upcomingDeadlines[0].title.slice(0, 30)}... due in ${daysUntil(upcomingDeadlines[0].deadline)} days. ${upcomingDeadlines.length} total upcoming.`
+                                        : "No upcoming deadlines. Add grant deadlines to get alerts."}
                                 </div>
                             </div>
                         </div>
