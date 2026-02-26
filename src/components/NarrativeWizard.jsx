@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { Card, Btn, Progress, TextArea, Badge } from '../ui';
 import { T, PROFILE } from '../globals';
 import { API } from '../api';
+import { useStore } from '../store';
 
-export const NarrativeWizard = ({ onComplete, onCancel }) => {
+export const NarrativeWizard = ({ onComplete, onCancel, activeGrantId, navigate }) => {
+  const { setWorkflowBrief } = useStore();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [inputs, setInputs] = useState({
@@ -117,7 +119,10 @@ ${citationText}
   };
 
   const applyNarratives = () => {
-    onComplete(results);
+    if (activeGrantId) {
+      setWorkflowBrief(activeGrantId, results);
+    }
+    if (onComplete) onComplete(results);
   };
 
   return (
@@ -179,7 +184,10 @@ ${citationText}
               {step < TOTAL ? (
                 <Btn variant="primary" onClick={handleNext} disabled={!inputs[current.field]?.trim()}>Generate →</Btn>
               ) : (
-                <Btn variant="primary" onClick={applyNarratives} disabled={loading || !results}>✨ Use These Narratives</Btn>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <Btn variant="ghost" onClick={applyNarratives} disabled={loading || !results}>💾 Save Brief</Btn>
+                    <Btn variant="primary" onClick={() => { applyNarratives(); navigate('workbench'); }} disabled={loading || !results}>✨ Go to Workbench →</Btn>
+                  </div>
               )}
             </div>
           </div>

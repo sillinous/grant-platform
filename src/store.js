@@ -22,7 +22,9 @@ export const useStore = create(
       tasks: [],
       budgets: {},
       toast: null,
-      alliances: [], // { id, name, partners: [], sharedGoals: [], activeJointGrants: [] }
+      activeGrantId: null,
+      workflowBriefs: {}, // { [grantId]: { founder, need, impact } }
+      alliances: [], 
       
       // Actions
       setGrants: (grants) => set({ grants }),
@@ -42,6 +44,10 @@ export const useStore = create(
         set({ toast: { msg, type, id: Date.now() } });
         setTimeout(() => set({ toast: null }), 3500);
       },
+      setActiveGrantId: (activeGrantId) => set({ activeGrantId }),
+      setWorkflowBrief: (grantId, brief) => set(state => ({
+        workflowBriefs: { ...state.workflowBriefs, [grantId]: brief }
+      })),
       setAlliances: (alliances) => set({ alliances }),
 
       // Complex Actions
@@ -142,8 +148,10 @@ export const useStore = create(
         orgVoicePersona: state.orgVoicePersona,
         tasks: state.tasks,
         budgets: state.budgets,
-        alliances: state.alliances
-      }), // only save these fields
+        alliances: state.alliances,
+        activeGrantId: state.activeGrantId,
+        workflowBriefs: state.workflowBriefs
+      }), 
     }
   )
 );

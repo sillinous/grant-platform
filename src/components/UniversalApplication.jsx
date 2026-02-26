@@ -2,8 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn, Progress } from '../ui';
 import { T, fmt, PROFILE, uid } from '../globals';
 import { API } from '../api';
+import { useStore } from '../store';
 
-export const UniversalApplication = ({ opportunity, onClose }) => {
+export const UniversalApplication = ({ activeGrantId, navigate }) => {
+    const { grants } = useStore();
+    const opportunity = grants.find(g => g.id === activeGrantId);
+    const onClose = () => navigate('bindery');
     const [analyzing, setAnalyzing] = useState(true);
     const [mapping, setMapping] = useState(null);
     const [step, setStep] = useState(1);

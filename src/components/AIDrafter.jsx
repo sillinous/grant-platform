@@ -5,11 +5,12 @@ import { T, LS, uid, fmtDate } from '../globals';
 import { useOrganization } from '../context/OrganizationContext.jsx';
 import { useStore } from '../store';
 
-export const AIDrafter = () => {
+export const AIDrafter = ({ navigate }) => {
   const {
     grants, vaultDocs, draftSnapshots: snapshots, setDraftSnapshots: setSnapshots,
     orgVoicePersona: voicePersona, setOrgVoicePersona: setVoicePersona,
-    sectionLibrary: sections, setSectionLibrary: setSections
+    sectionLibrary: sections, setSectionLibrary: setSections,
+    activeGrantId, workflowBriefs
   } = useStore();
   const { activeOrg } = useOrganization();
   const [prompt, setPrompt] = useState("");
@@ -17,7 +18,6 @@ export const AIDrafter = () => {
   const [displayedOutput, setDisplayedOutput] = useState(""); // For typewriter effect
   const [loading, setLoading] = useState(false);
   const [docType, setDocType] = useState("narrative");
-  const [selectedGrant, setSelectedGrant] = useState("");
   const [refinements, setRefinements] = useState([]);
   const [meta, setMeta] = useState(null);
   const [voice, setVoice] = useState("brand_balanced");
@@ -75,9 +75,10 @@ Return a 3-sentence "Voice Blueprint" that can be used to guide future AI drafti
       setTypingIndex(0);
       setDisplayedOutput("");
 
-      const grant = grants.find(g => g.id === selectedGrant);
+    const grant = grants.find(g => g.id === activeGrantId);
       const context = buildPortfolioContext(grants, vaultDocs, []);
       const selectedVoice = VOICES.find(v => v.id === voice);
+    const brief = workflowBriefs[activeGrantId];
 
     // Inject Grant Compliance & Budget Context
     const grantConstraints = grant ? `
@@ -86,6 +87,9 @@ TARGET GRANT COMPLIANCE RULES:
 - Focus Areas: ${(grant.focus || []).join(", ") || "N/A"}
 - Compliance Requirements: ${JSON.stringify(grant.compliance || {})}
 - Budget Constraints: ${JSON.stringify(grant.budget || {})}
+
+STRATEGIC BRIEF (User Approved):
+${brief ? `Founder Story: ${brief.founder}\nStatement of Need: ${brief.need}\nImpact Vision: ${brief.impact}` : "No brief provided."}
         ` : "";
 
       // Inject Organization Context
@@ -122,7 +126,7 @@ IMPORTANT: You MUST respect the TARGET GRANT COMPLIANCE RULES provided above. If
     };
 
   const autoAssemble = async () => {
-    const grant = grants.find(g => g.id === selectedGrant);
+    const grant = grants.find(g => g.id === activeGrantId);
     if (!grant) return alert("Select a grant first to auto-assemble.");
     setLoading(true);
       setTypingIndex(0);
@@ -177,7 +181,7 @@ Return ONLY a JSON array of section IDs in the optimal sequence for a draft:
   const runAudit = async () => {
     if (!output) return;
     setAuditing(true);
-    const result = await API.auditSection(output, docType, selectedGrant);
+    const result = await API.auditSection(output, docType, activeGrantId);
     if (!result.error) {
       setAudit(result);
     } else {
@@ -250,10 +254,10 @@ Return ONLY a JSON array of section IDs in the optimal sequence for a draft:
                 ]} style={{ width: "100%" }} />
               </div>
               <div>
-                <label style={{ fontSize: 10, color: T.sub, marginBottom: 4, display: "block" }}>Target Grant</label>
-                <Select value={selectedGrant} onChange={setSelectedGrant}
-                  options={[{ value: "", label: "General / Unspecified" }, ...grants.map(g => ({ value: g.id, label: g.title?.slice(0, 30) + "..." }))]}
-                  style={{ width: "100%" }} />
+              <label style={{ fontSize: 10, color: T.sub, marginBottom: 4, display: "block" }}>Target Grant (Locked to Studio Context)</label>
+              <div style={{ fontSize: 12, color: T.text, padding: "8px 12px", background: T.panel, border: `1px solid ${T.border}`, borderRadius: 8 }}>
+                {grants.find(G => G.id === activeGrantId)?.title || "General / Unspecified"}
+              </div>
               </div>
               <div>
                 <label style={{ fontSize: 10, color: T.sub, marginBottom: 4, display: "block" }}>Tone & Voice</label>
@@ -276,9 +280,14 @@ Return ONLY a JSON array of section IDs in the optimal sequence for a draft:
             <Btn variant="primary" onClick={draft} disabled={loading} style={{ marginTop: 12, height: 44, fontSize: 14 }}>
               {loading ? "⏳ Generating..." : "✨ Generate Draft"}
             </Btn>
-            <Btn size="sm" variant="ghost" onClick={autoAssemble} disabled={loading || !selectedGrant} style={{ marginTop: 8 }}>
+          <Btn size="sm" variant="ghost" onClick={autoAssemble} disabled={loading || !activeGrantId} style={{ marginTop: 8 }}>
               ✨ Auto-Assemble from Library
             </Btn>
+          {output && (
+            <Btn size="sm" variant="ghost" onClick={() => navigate('bindery')} style={{ marginTop: 8, borderColor: T.blue, color: T.blue }}>
+              📦 Next: Final Assembly →
+            </Btn>
+          )}
           </div>
         </div>
 

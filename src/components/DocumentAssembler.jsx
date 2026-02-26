@@ -4,16 +4,14 @@ import { LS, T, uid } from '../globals';
 import { useStore } from '../store';
 import { API, buildPortfolioContext } from '../api';
 
-export const DocumentAssembler = () => {
-  const { grants, vaultDocs, setVaultDocs } = useStore();
-  const [selectedGrant, setSelectedGrant] = useState("");
+export const DocumentAssembler = ({ activeGrantId, navigate }) => {
+  const { grants, vaultDocs, setVaultDocs, sectionLibrary: library } = useStore();
   const [sections, setSections] = useState([]);
   const [assembled, setAssembled] = useState("");
   const [drafting, setDrafting] = useState(false);
-  const library = LS.get("section_library", []);
 
   const autoDraft = async () => {
-    const grant = grants.find(g => g.id === selectedGrant);
+    const grant = grants.find(g => g.id === activeGrantId);
     const missing = sections.filter(s => s.included && !s.content);
     if (missing.length === 0) return alert("No empty included sections to draft!");
 
@@ -65,7 +63,7 @@ export const DocumentAssembler = () => {
   const removeSection = (id) => setSections(prev => prev.filter(s => s.id !== id));
 
   const assemble = () => {
-    const grant = grants.find(g => g.id === selectedGrant);
+    const grant = grants.find(g => g.id === activeGrantId);
     const included = sections.filter(s => s.included);
     const doc = included.map(s => {
       const divider = "═".repeat(60);
@@ -74,6 +72,18 @@ export const DocumentAssembler = () => {
 
     const header = `${"═".repeat(60)}\n${grant?.title || "GRANT APPLICATION"}\n${grant?.agency || ""}\nAssembled: ${new Date().toLocaleDateString()}\nSections: ${included.length}\n${"═".repeat(60)}\n\n`;
     setAssembled(header + doc);
+  };
+
+  const downloadAsFile = () => {
+    if (!assembled) return;
+    const blob = new Blob([assembled], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const grant = grants.find(g => g.id === activeGrantId);
+    a.href = url;
+    a.download = `Grant_Application_${grant?.title?.slice(0, 20) || 'Export'}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const wordCount = sections.filter(s => s.included).reduce((sum, s) => sum + (s.content?.split(/\s+/).filter(Boolean).length || 0), 0);
@@ -85,8 +95,9 @@ export const DocumentAssembler = () => {
       <Card style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 8 }}>📦 Application Assembler</div>
         <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>Build a complete grant application by assembling sections from your Document Vault, Section Library, and custom content. Drag sections in order and export the full package.</div>
-        <Select value={selectedGrant} onChange={setSelectedGrant} style={{ marginBottom: 8 }}
-          options={[{ value: "", label: "Select grant to assemble for..." }, ...grants.map(g => ({ value: g.id, label: `${g.title?.slice(0, 50)} — ${g.agency}` }))]} />
+        <div style={{ fontSize: 12, color: T.text, padding: "8px 12px", background: T.panel, border: `1px solid ${T.border}`, borderRadius: 8 }}>
+          Target: {grants.find(G => G.id === activeGrantId)?.title || "General / Unspecified"}
+        </div>
       </Card>
 
       <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 16 }}>
@@ -148,6 +159,7 @@ export const DocumentAssembler = () => {
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
                 <span style={{ fontSize: 13, fontWeight: 600, color: T.text }}>📄 Assembled Application</span>
                 <div style={{ display: "flex", gap: 4 }}>
+                  <Btn size="sm" variant="success" onClick={downloadAsFile}>💾 Export (.txt)</Btn>
                   <Btn size="sm" variant="ghost" onClick={() => navigator.clipboard?.writeText(assembled)}>📋 Copy All</Btn>
                   {setVaultDocs && <Btn size="sm" variant="ghost" onClick={() => {
                     const grant = grants.find(g => g.id === selectedGrant);

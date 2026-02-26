@@ -8,9 +8,8 @@ import { UniversalApplication } from './UniversalApplication';
 import { useStore } from '../store';
 
 export const GrantWritingStudio = () => {
-    const { grants } = useStore();
+    const { grants, activeGrantId, setActiveGrantId } = useStore();
     const [activeTab, setActiveTab] = useState('brief');
-    const [selectedOpportunity, setSelectedOpportunity] = useState(null);
 
     const TABS = [
         { id: 'brief', label: '1. The Brief', icon: '📝', desc: 'Guided Narrative Strategy', component: NarrativeWizard },
@@ -85,21 +84,25 @@ export const GrantWritingStudio = () => {
                         <div style={{ fontSize: 11, color: T.sub, marginBottom: 8 }}>Select a grant to anchor this entire session's context.</div>
                         <select 
                             style={{ width: "100%", background: T.panel, color: T.text, border: `1px solid ${T.border}`, borderRadius: 4, padding: 6, fontSize: 12 }}
-                            value={selectedOpportunity?.id || ""}
-                            onChange={(e) => {
-                                const g = grants.find(g => g.id === e.target.value);
-                                setSelectedOpportunity(g);
-                            }}
+                            value={activeGrantId || ""}
+                            onChange={(e) => setActiveGrantId(e.target.value)}
                         >
                             <option value="">No Active Target</option>
                             {grants.map(g => (
                                 <option key={g.id} value={g.id}>{g.title?.slice(0, 30)}...</option>
                             ))}
                         </select>
-                        {selectedOpportunity && (
+                        {activeGrantId && (
                             <div style={{ marginTop: 12 }}>
-                                <Badge color={T.green} style={{ fontSize: 9 }}>{selectedOpportunity.agency}</Badge>
-                                <div style={{ fontSize: 10, color: T.sub, marginTop: 4 }}>Deadline: {selectedOpportunity.deadline || "TBD"}</div>
+                                {(() => {
+                                    const g = grants.find(x => x.id === activeGrantId);
+                                    return (
+                                        <>
+                                            <Badge color={T.green} style={{ fontSize: 9 }}>{g?.agency}</Badge>
+                                            <div style={{ fontSize: 10, color: T.sub, marginTop: 4 }}>Deadline: {g?.deadline || "TBD"}</div>
+                                        </>
+                                    );
+                                })()}
                             </div>
                         )}
                     </Card>
@@ -114,11 +117,10 @@ export const GrantWritingStudio = () => {
 
                 {/* Sub-Component Render Area */}
                 <div style={{ overflowY: "auto", padding: 24, background: T.bg }}>
-                    {activeTab === 'autopilot' ? (
-                        <UniversalApplication opportunity={selectedOpportunity} onClose={() => setActiveTab('bindery')} />
-                    ) : (
-                        <currentTab.component />
-                    )}
+                    <currentTab.component
+                        activeGrantId={activeGrantId}
+                        navigate={setActiveTab}
+                    />
                 </div>
             </div>
         </div>
