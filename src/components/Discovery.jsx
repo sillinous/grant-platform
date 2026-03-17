@@ -171,6 +171,28 @@ export const Discovery = () => {
         return r;
     }, [results, sortBy, filterSource]);
 
+    const smartScan = async () => {
+        setLoading(true);
+        setResults([]);
+        setSources(null);
+        setVisibleCount(20);
+        // Build an optimized query from the org profile using AI
+        const profile = window.__PROFILE || PROFILE;
+        const focus = (profile.focus || []).join(", ");
+        const tags = (profile.tags || []).join(", ");
+        const loc = profile.loc || "";
+        const type = profile.type || "Non-Profit";
+        const sys = `You are a grant discovery expert. Given this org profile, generate the single best 3-6 word search query to find the most relevant federal grants. Return ONLY the query string, nothing else.`;
+        const msg = `Organization: ${profile.name || "Non-Profit"}, Type: ${type}, Focus: ${focus}, Tags: ${tags}, Location: ${loc}`;
+        const result = await API.callAI([{ role: "user", content: msg }], sys);
+        const smartQuery = result.error ? (focus.split(",")[0] || "community development") : result.text.trim().replace(/["\n]/g, "");
+        setQuery(smartQuery);
+        const data = await API.searchGrantsMultiSource(smartQuery);
+        setResults(data.results || []);
+        setSources(data.sources);
+        setLoading(false);
+    };
+
     const handleSearch = async () => {
         if (!query.trim()) return;
         setLoading(true);
@@ -281,6 +303,11 @@ export const Discovery = () => {
                     <Btn variant="primary" style={{ padding: "0 24px", height: 48, borderRadius: 12, flexShrink: 0 }} onClick={handleSearch} disabled={loading}>
                         {loading ? <><Loader style={{ width: 14, height: 14, display: "inline-block", marginRight: 6, animation: "spin 1s linear infinite" }} />Scanning…</> : "🔍 Search"}
                     </Btn>
+                    {tab === "grants" && (
+                        <Btn variant="ghost" style={{ padding: "0 16px", height: 48, borderRadius: 12, flexShrink: 0, border: `1px solid ${T.amber}40`, color: T.amber, fontSize: 12 }} onClick={smartScan} disabled={loading} title="AI builds optimized query from your org profile">
+                            ✨ Smart Scan
+                        </Btn>
+                    )}
                 </div>
             )}
 
