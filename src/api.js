@@ -702,15 +702,16 @@ export const API = {
         }));
 
         const fromSpending = (spendingResult.value?.results || []).map(r => ({
-            id: uid(),
+            id: r["Award ID"] || uid(),
             title: `[Past Award] ${r["Recipient Name"] || r["Award ID"] || "Contract"}`,
             agency: r["Awarding Agency"] || "",
-            type: r["Contract Award Type"] || "Contract",
+            type: r["Contract Award Type"] || r["Award Type"] || "Contract",
             setAside: "",
             naics: "",
             deadline: r["Start Date"],
             description: r["Description"] || `Federal contract award: $${(r["Award Amount"] || 0).toLocaleString()}`,
             amount: r["Award Amount"] || r["Potential Total Value of Award"] || 0,
+            link: r["Award ID"] ? `https://www.usaspending.gov/award/${r["Award ID"]}` : `https://www.usaspending.gov/search/?query=${encodeURIComponent(query)}`,
             _source: "USASpending",
             _sourceColor: "#f59e0b"
         }));
@@ -776,17 +777,20 @@ export const API = {
                 title: b.title || "Appropriations Bill",
                 sponsor: b.sponsors?.[0]?.fullName || b.latestAction?.text || "Congress",
                 agency: b.committees?.[0] || "Appropriations Committee",
-                amount: 0, // bill level; individual earmarks vary
+                amount: 0,
                 status: b.latestAction?.text || "In Committee",
                 billNumber: (b.type && b.number) ? `${b.type} ${b.number}` : "",
                 latestAction: b.latestAction?.actionDate,
                 congress: b.congress,
+                link: (b.type && b.number && b.congress)
+                    ? `https://www.congress.gov/bill/${b.congress}th-congress/${(b.type||"").toLowerCase().replace(" ", "-")-bill}/${b.number}`
+                    : `https://www.congress.gov/search?q=${encodeURIComponent(query)}`,
                 _source: "Congress.gov",
                 _sourceColor: "#8b5cf6"
             }));
 
         const fromCDS = (cdsResult.value?.results || []).map(r => ({
-            id: uid(),
+            id: r["Award ID"] || uid(),
             title: r["Program Activity Name"] || `[CDS] ${r["Recipient Name"] || "Award"}`,
             sponsor: r["Awarding Agency"] || "Federal",
             agency: r["Awarding Agency"] || "",
@@ -795,6 +799,7 @@ export const API = {
             description: r["Description"] || "Congressionally directed spending award.",
             startDate: r["Start Date"],
             endDate: r["End Date"],
+            link: r["Award ID"] ? `https://www.usaspending.gov/award/${r["Award ID"]}` : `https://www.usaspending.gov/search/?query=${encodeURIComponent(query)}`,
             _source: "USASpending",
             _sourceColor: "#f59e0b"
         }));
@@ -1140,18 +1145,25 @@ export const API = {
                 const matchingTags = tagList.filter(t => text.includes(t.toLowerCase()));
                 const crossTags = tagList.filter(t => !text.includes(t.toLowerCase())).slice(0, 2); // adjacent-sector tags
                 const synergyScore = Math.min(99, 50 + matchingTags.length * 15 + (crossTags.length > 0 ? 10 : 0));
+                const oppNum = h.oppNumber || h.id || "";
                 allHits.push({
-                    id: h.id || uid(),
+                    id: oppNum || uid(),
                     title: h.oppTitle || h.title || "Federal Opportunity",
                     sector: h.categoryExplanation || h.agencyName || tagList[tagIdx] || "Cross-Sector",
                     amount: h.awardCeiling || h.estimatedTotalProgramFunding || 0,
+                    amountFloor: h.awardFloor || 0,
                     matchingTags,
                     synergyScore,
                     deadline: h.closeDate,
                     description: h.synopsisDesc || "",
                     agency: h.agencyName || "",
-                    cfda: h.cfdaList?.[0]?.cfda || "",
-                    _source: "Grants.gov"
+                    cfda: h.cfdaList?.[0]?.cfda || h.cfdaNumbers?.[0] || "",
+                    oppNumber: oppNum,
+                    status: h.oppStatus || "Posted",
+                    link: oppNum ? `https://www.grants.gov/search-results-detail/${oppNum}` : `https://www.grants.gov/search-results?query=${encodeURIComponent(tagList[tagIdx]||"")}`,
+                    _source: "Grants.gov",
+                    _sourceColor: "#22c55e",
+                    _score: synergyScore,
                 });
             });
         });
@@ -1318,6 +1330,7 @@ export const API = {
                 return (data.result?.records || []).map(r => ({
                     id: uid(), title: r.Grant_Title || r.title || "CA Grant", agency: r.Agency_Department_Name || "CA Agency",
                     amount: r.Estimated_Total_Funding || 0, description: r.Purpose_Area || "", _source: "CA Grants Portal", _sourceColor: "#f59e0b",
+                link: r.Grant_URL || r.url || "https://grants.ca.gov",
                 }));
             }
             // Real state portals: TX, NY, FL, WA, CO — fall back to empty if unavailable
@@ -1341,7 +1354,8 @@ export const API = {
                         agency: rec.agency || rec.department || rec.grantor || `${state} State Agency`,
                         amount: parseFloat(rec.amount || rec.award_amount || rec.funding_amount || 0),
                         description: rec.description || rec.purpose || rec.synopsis || "",
-                        _source: `${state} State Portal`, _sourceColor: "#8b5cf6"
+                        _source: `${state} State Portal`, _sourceColor: "#8b5cf6",
+                    link: rec.url || rec.link || null,
                     }));
                 }
             }
@@ -1374,19 +1388,27 @@ export const API = {
             statePortalFetch(), spendingStateFetch(), grantsGovStateFetch()
         ]);
 
-        const fromPortal = portalResult.value || [];
+        const fromPortal = (portalResult.value || []).map(r => ({
+            ...r,
+            link: r.link || r.url || (state === "CA" ? "https://grants.ca.gov" : state === "TX" ? "https://data.texas.gov" : state === "NY" ? "https://data.ny.gov" : state === "FL" ? "https://floridajobs.org" : state === "WA" ? "https://data.wa.gov" : state === "IL" ? "https://grants.illinois.gov" : null),
+        }));
         const fromSpending = (spendingResult.value?.results || []).map(r => ({
-            id: uid(), title: `[Past Award] ${r["Recipient Name"] || r["Award ID"] || "Award"}`,
+            id: r["Award ID"] || uid(),
+            title: `[Past Award] ${r["Recipient Name"] || r["Award ID"] || "Award"}`,
             agency: r["Awarding Agency"] || "Federal Agency",
             amount: r["Award Amount"] || 0,
-            description: (r["Description"] || "Federal award in your state for this topic."),
+            description: r["Description"] || "Federal award in your state for this topic.",
             deadline: r["End Date"] || "Completed",
+            link: r["Award ID"] ? `https://www.usaspending.gov/award/${r["Award ID"]}` : null,
             _source: "USASpending", _sourceColor: "#f59e0b"
         }));
         const fromGrantsGov = (grantsGovResult.value?.oppHits || []).map(g => ({
             id: g.id || uid(), title: g.oppTitle || g.title || "Federal Grant",
             agency: g.agencyName || "", amount: g.awardCeiling || 0,
             deadline: g.closeDate, description: g.synopsisDesc || "",
+            oppNumber: g.oppNumber || "",
+            cfda: g.cfdaNumbers?.[0] || "",
+            link: g.oppNumber ? `https://www.grants.gov/search-results-detail/${g.oppNumber}` : "https://www.grants.gov",
             _source: "Grants.gov", _sourceColor: "#22c55e"
         }));
 
@@ -1532,15 +1554,20 @@ export const API = {
         }).then(r => r.ok ? r.json() : { results: [] }).catch(() => ({ results: [] }));
 
         const data = (r.results || []).filter(a => (a["Award Amount"] || 0) >= 1000000).map(a => ({
-            id: uid(),
+            id: a["Award ID"] || uid(),
             prime: a["Awarding Agency"] || "Federal Agency",
             recipient: a["Recipient Name"] || "Prime Recipient",
             amount: a["Award Amount"] || 0,
             subGrantAlloc: Math.round((a["Award Amount"] || 0) * 0.15),
-            title: a["Description"] || `${a["Awarding Agency"]} Award — ${a["Award ID"]}`,
+            title: a["Description"]?.slice(0, 120) || `${a["Awarding Agency"]} Award — ${a["Award ID"]}`,
+            description: a["Description"] || "",
             requirement: "Contact prime recipient for sub-award opportunities and flow-down requirements.",
             status: "Active Award",
-            deadline: a["End Date"]
+            deadline: a["End Date"],
+            link: a["Award ID"] ? `https://www.usaspending.gov/award/${a["Award ID"]}` : null,
+            url: a["Award ID"] ? `https://www.usaspending.gov/award/${a["Award ID"]}` : null,
+            _source: "USASpending",
+            _sourceColor: "#f59e0b",
         }));
 
         SimpleCache.set(cacheKey, data, 600000);
@@ -1572,8 +1599,11 @@ export const API = {
             city: org.city,
             state: org.state,
             revenue: org.income_amount || 0,
-            logic: `${org.name} (${org.city || org.state}) — private foundation with ${(org.income_amount/1000000).toFixed(1)}M in revenue. Review their 990-PF for grantmaking history and unsolicited inquiry policy.`,
-            _source: "ProPublica"
+            logic: `${org.name} (${org.city || org.state}) — private foundation with ${((org.income_amount||0)/1000000).toFixed(1)}M in revenue. Review their 990-PF for grantmaking history and unsolicited inquiry policy.`,
+            link: org.ein ? `https://projects.propublica.org/nonprofits/organizations/${org.ein}` : null,
+            url: org.ein ? `https://projects.propublica.org/nonprofits/organizations/${org.ein}` : null,
+            _source: "ProPublica",
+            _sourceColor: "#8b5cf6",
         }));
 
         SimpleCache.set(cacheKey, funders, 600000);
@@ -1716,17 +1746,20 @@ export const API = {
             seen.add(o.ein);
             return true;
         }).slice(0, 9).map(org => ({
-            id: uid(),
+            id: org.ein || uid(),
             name: org.name,
-            focus: org.subsection_code ? `NTEE ${org.ntee_code}` : focus,
+            focus: org.ntee_code ? `NTEE ${org.ntee_code}` : focus,
             members: "Varies",
-            pool: Math.round((org.income_amount || 25000) * 0.15), // Estimate 15% as grantable
+            pool: Math.round((org.income_amount || 25000) * 0.15),
             cycle: "Annual",
             votingDate: "Contact org for voting schedule",
             city: org.city,
             state: org.state,
             ein: org.ein,
-            _source: "ProPublica"
+            link: org.ein ? `https://projects.propublica.org/nonprofits/organizations/${org.ein}` : null,
+            url: org.ein ? `https://projects.propublica.org/nonprofits/organizations/${org.ein}` : null,
+            _source: "ProPublica",
+            _sourceColor: "#3b82f6",
         }));
 
         SimpleCache.set(cacheKey, circles, 600000);
@@ -2504,6 +2537,7 @@ export const API = {
                 _source: "World Bank",
                 _sourceColor: "#059669",
                 _score: 88,
+                link: p.id ? `https://projects.worldbank.org/en/projects-operations/project-detail/${p.id}` : "https://projects.worldbank.org/",
                 meta: { country: p.countryname, sector: p.teamleadname }
             }));
         } catch (e) { return []; }
@@ -2526,6 +2560,7 @@ export const API = {
                 _source: "IATI Standard",
                 _sourceColor: "#1e40af",
                 _score: 82,
+                link: p.iati_identifier ? `https://d-portal.org/ctrack.html#view=act&aid=${p.iati_identifier}` : "https://d-portal.org/",
                 meta: { sector: p.sector?.[0]?.vocabulary?.name }
             }));
         } catch (e) { return []; }
@@ -2652,7 +2687,8 @@ export const API = {
             amount: r["Award Amount"] || 0,
             deadline: "Completed",
             description: r["Description"] || `Federal award in ${st}.`,
-            _source: "USASpending", _sourceColor: "#f59e0b", _score: 72
+            _source: "USASpending", _sourceColor: "#f59e0b", _score: 72,
+        link: r["Award ID"] ? `https://www.usaspending.gov/award/${r["Award ID"]}` : null,
         }));
 
         const results = [...fromPortal, ...fromUSA];
@@ -2673,7 +2709,8 @@ export const API = {
                 description: `Campaign finance signals detected for this legislative sponsor.`,
                 _source: "FEC Intel",
                 _sourceColor: "#dc2626",
-                _score: 90
+                _score: 90,
+                link: c.id ? `https://www.fec.gov/data/candidate/${c.id}/` : "https://www.fec.gov/data/",
             }));
         } catch { return []; }
     },
