@@ -1,4 +1,6 @@
-import { toast, fmt} from '../globals';
+import React, { useState, useEffect } from 'react';
+import { OpportunityDrawer } from './OpportunityDrawer';
+import { toast, fmt, uid} from '../globals';
 import { useStore } from '../store';
 
 export const BudgetBuilder = () => {
@@ -148,6 +150,7 @@ Return a professional, structured narrative.`;
 
   return (
     <div>
+      {selectedGrant && <OpportunityDrawer grant={selectedGrant} onClose={() => setSelectedGrant(null)} onAdd={onAdd || (() => {})} isTracked={false} />}
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         <Select value={selectedGrant} onChange={setSelectedGrant} style={{ flex: 1 }}
           options={[{ value: "", label: "Select a grant..." }, ...grants.map(g => ({ value: g.id, label: `${g.title?.slice(0, 50)} (${fmt(g.amount || 0)})` }))]} />

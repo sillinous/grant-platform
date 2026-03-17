@@ -1,3 +1,5 @@
+import React, { useState } from 'react';
+import { OpportunityDrawer } from './OpportunityDrawer';
 import { toast, fmt, fmtDate} from '../globals';
 import { useStore } from '../store';
 
@@ -81,6 +83,7 @@ export const RFPParser = () => {
 
   return (
     <div>
+      {selectedGrant && <OpportunityDrawer grant={selectedGrant} onClose={() => setSelectedGrant(null)} onAdd={onAdd || (() => {})} isTracked={false} />}
       <Card style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 12 }}>📑 AI-Powered RFP Parser</div>
         <div style={{ fontSize: 12, color: T.sub, marginBottom: 8 }}>Paste an RFP, NOFO, or grant announcement below. The AI will extract structured requirements, deadlines, scoring criteria, and required documents.</div>

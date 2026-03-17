@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { OpportunityDrawer } from './OpportunityDrawer';
 import { Card, Badge, Btn } from '../ui';
 import { T, fmt } from '../globals';
 

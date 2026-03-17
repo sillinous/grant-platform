@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { OpportunityDrawer } from './OpportunityDrawer';
 import { Card, Btn, TextArea, Badge, Progress, Empty, Modal, Tab } from '../ui';
 import { LS, T, uid, fmtDate, toast} from '../globals';
 import { API } from '../api';
@@ -60,6 +61,7 @@ Return ONLY JSON:
     if (items.length === 0) return null;
     return (
       <div style={{ marginBottom: 16 }}>
+      {selectedGrant && <OpportunityDrawer grant={selectedGrant} onClose={() => setSelectedGrant(null)} onAdd={onAdd || (() => {})} isTracked={false} />}
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
           <span style={{ fontSize: 16 }}>{icon}</span>
           <span style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{title}</span>

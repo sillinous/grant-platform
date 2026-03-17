@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { OpportunityDrawer } from './OpportunityDrawer';
 import { Card, Badge, Btn, Stat, Progress, Empty, Modal } from '../ui';
 import { T, fmt, fmtDate, daysUntil, STAGE_MAP, uid, toast } from '../globals';
 import { useStore } from '../store';
@@ -193,6 +194,7 @@ Be specific, actionable, and under 150 words total.`;
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {selectedGrant && <OpportunityDrawer grant={selectedGrant} onClose={() => setSelectedGrant(null)} onAdd={onAdd || (() => {})} isTracked={false} />}
 
             {/* ── Stats bar ── */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>

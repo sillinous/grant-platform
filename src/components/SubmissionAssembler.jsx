@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { OpportunityDrawer } from './OpportunityDrawer';
 import { Card, Btn, Badge, Select, Empty, Modal } from '../ui';
 import { T, fmt, fmtDate, LS, uid, toast} from '../globals';
 import { useStore } from '../store';
@@ -45,6 +46,7 @@ export const SubmissionAssembler = () => {
 
     return (
         <div style={{ padding: 20, animation: "fadeIn 0.4s" }}>
+      {selectedGrant && <OpportunityDrawer grant={selectedGrant} onClose={() => setSelectedGrant(null)} onAdd={onAdd || (() => {})} isTracked={false} />}
             <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 24 }}>
                 <div style={{ fontSize: 24, padding: "8px", background: `${T.blue}11`, borderRadius: "8px" }}>📦</div>
                 <div>

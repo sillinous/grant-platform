@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { OpportunityDrawer } from './OpportunityDrawer';
 import { T, uid } from "../globals";
 import { Tab, Input, Select, Card, Badge, Btn, Progress } from "../ui";
 import { API } from "../api";
@@ -60,6 +61,7 @@ export const ComplianceWizard = ({ grants }) => {
 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+      {selectedGrant && <OpportunityDrawer grant={selectedGrant} onClose={() => setSelectedGrant(null)} onAdd={onAdd || (() => {})} isTracked={false} />}
             {/* Header */}
             <div style={{
                 display: "flex", justifyContent: "space-between", alignItems: "center",

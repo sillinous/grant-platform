@@ -1,5 +1,6 @@
 ﻿import React, { useState, useMemo } from 'react';
 import { Card, Btn, Badge, Input, Select, TextArea, Tab, Progress, Empty, Modal } from '../ui';
+import { OpportunityDrawer } from './OpportunityDrawer';
 import { T, uid, fmt, STAGE_MAP, PROFILE, toast} from '../globals';
 import { API } from '../api';
 import { useStore } from '../store';
@@ -76,6 +77,7 @@ Provide the 'Most Strategic Path' to secure a meeting with a Program Officer. Me
 
   return (
     <div style={{ padding: 20, animation: "fadeIn 0.4s" }}>
+      {selectedGrant && <OpportunityDrawer grant={selectedGrant} onClose={() => setSelectedGrant(null)} onAdd={onAdd || (() => {})} isTracked={false} />}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <Tab tabs={[
           { id: "network", icon: "🕸️", label: "Agency Network" },

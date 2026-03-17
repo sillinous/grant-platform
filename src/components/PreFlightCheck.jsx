@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { OpportunityDrawer } from './OpportunityDrawer';
 import { Card, Btn, Badge, Progress, Empty, Select, TextArea } from '../ui';
 import { T, LS, uid, PROFILE } from '../globals';
 import { API } from '../api';
@@ -54,6 +55,7 @@ Return ONLY a JSON object:
 
     return (
         <div>
+      {selectedGrant && <OpportunityDrawer grant={selectedGrant} onClose={() => setSelectedGrant(null)} onAdd={onAdd || (() => {})} isTracked={false} />}
             <Card style={{ marginBottom: 16 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 8 }}>🛡️ Submission Pre-Flight Red Team</div>
                 <div style={{ fontSize: 11, color: T.sub, marginBottom: 16 }}>
