@@ -182,19 +182,41 @@ export const API = {
         const cached = SimpleCache.get(cacheKey);
         if (cached) return cached;
 
-        const normalize = (item, source, color) => ({
-            id: item.id || item.oppNumber || item.contractOpportunityId || uid(),
-            title: item.title || item.oppTitle || item.solicitationTitle || item.opportunityTitle || "Untitled",
-            agency: item.agencyName || item.awardingAgencyName || item.department || item.organizationName || "",
-            amount: item.awardCeiling || item.totalValue || item.estimatedTotalValue || item.Award_Amount || 0,
-            deadline: item.closeDate || item.responseDeadLine || item.archiveDate || "Rolling",
-            description: item.synopsisDesc || item.description || item.solicitationDescription || "",
-            cfda: item.cfdaNumbers?.[0] || item.cfdaList?.[0] || "",
-            oppNumber: item.oppNumber || item.contractOpportunityId || "",
-            _source: source,
-            _sourceColor: color,
-            _score: source === "Grants.gov" ? 100 : source === "SAM.gov" ? 90 : 75,
-        });
+        const normalize = (item, source, color) => {
+            const oppNum = item.oppNumber || item.contractOpportunityId || item.solicitationNumber || item.noticeId || item.project_num || item.award_number || "";
+            const link =
+                item.link || item.url || item.uiLink ||
+                (oppNum && source === "Grants.gov" ? `https://www.grants.gov/search-results-detail/${oppNum}` : null) ||
+                (oppNum && source === "SAM.gov" ? `https://sam.gov/opp/${oppNum}/view` : null) ||
+                (item.project_num && source === "NIH Reporter" ? `https://reporter.nih.gov/search/${item.project_num}` : null) ||
+                (item.id && source === "NSF Awards" ? `https://www.nsf.gov/awardsearch/showAward?AWD_ID=${item.id}` : null) ||
+                (item.id && source === "SBIR.gov" ? `https://www.sbir.gov/sbirsearch/award/all?keywords=${encodeURIComponent(item.project_title || "")}` : null) ||
+                null;
+            return {
+                id: item.id || oppNum || uid(),
+                title: item.title || item.oppTitle || item.solicitationTitle || item.opportunityTitle || item.project_title || "Untitled",
+                agency: item.agencyName || item.awardingAgencyName || item.department || item.organizationName || item.agency_code || "",
+                amount: item.awardCeiling || item.totalValue || item.estimatedTotalValue || item.Award_Amount || item.fundsObligatedAmt || item.total_cost || item.award_amount || 0,
+                amountFloor: item.awardFloor || item.minimumAward || 0,
+                deadline: item.closeDate || item.responseDeadLine || item.archiveDate || item.expDate || "Rolling",
+                description: item.synopsisDesc || item.description || item.solicitationDescription || item.abstractText || item.abstract_text || item.abstract || "",
+                cfda: item.cfdaNumbers?.[0] || item.cfdaList?.[0] || item.cfda || "",
+                category: item.categoryExplanation || item.oppCategory || item.category || item.programArea || "",
+                awardType: item.typeOfAward || item.type || item.grantType || item.award_type || "",
+                setAside: item.typeOfSetAsideDescription || item.typeOfSetAside || item.setAside || "",
+                naics: item.naicsCode || item.naics || "",
+                oppNumber: oppNum,
+                status: item.oppStatus || item.status || (source === "Grants.gov" ? "Posted" : ""),
+                pi: item.pdPIName || item.pi_name || item.contactName || "",
+                org: item.awardeeName || item.recipient_name || item.org_name || "",
+                awardStart: item.date || item.startDate || item.awardDate || item.Start_Date || "",
+                program: item.programTitle || item.fundingOpportunityNumber || item.program || "",
+                link,
+                _source: source,
+                _sourceColor: color,
+                _score: source === "Grants.gov" ? 100 : source === "SAM.gov" ? 90 : 75,
+            };
+        };
 
         // Fan out ALL 6 sources simultaneously — never wait for one before starting another
         const [grantsGovResult, spendingResult, samResult, sbirResult, nihResult, nsfResult, challengeResult] = await Promise.allSettled([
@@ -259,11 +281,15 @@ export const API = {
 
         const fromUSASpending = (spendingResult.value?.results || []).map(r => ({
             ...normalize({
-                title: r["Award ID"] || "Past Award",
+                id: r["Award ID"],
+                title: r["Recipient Name"] ? `[Past Award] ${r["Recipient Name"]}` : (r["Award ID"] || "Past Federal Award"),
                 agencyName: r["Awarding Agency"],
                 Award_Amount: r["Award Amount"],
-                description: r["Description"] || "Federal award matching your criteria.",
-                closeDate: r["End Date"]
+                description: r["Description"] || `Federal award to ${r["Recipient Name"] || "recipient"} from ${r["Awarding Agency"] || "federal agency"}. Award period: ${r["Start Date"] || ""}–${r["End Date"] || ""}.`,
+                closeDate: r["End Date"],
+                startDate: r["Start Date"],
+                recipient_name: r["Recipient Name"],
+                url: r["Award ID"] ? `https://www.usaspending.gov/award/${r["Award ID"]}` : null,
             }, "USASpending", "#f59e0b"),
             _score: 75
         }));
@@ -280,7 +306,12 @@ export const API = {
                 agencyName: s.agency || s.department || "SBIR/STTR",
                 totalValue: parseFloat(s.award_amount || s.funding_amount || 0),
                 description: s.abstract || s.project_description || "",
-                closeDate: s.contract_end_date || s.end_date || ""
+                closeDate: s.contract_end_date || s.end_date || "",
+                pi_name: s.pi_first_name ? `${s.pi_first_name} ${s.pi_last_name || ""}`.trim() : s.principal_investigator || "",
+                awardeeName: s.firm || s.company || s.awardee_name || "",
+                url: s.award_number ? `https://www.sbir.gov/sbirsearch/award/all?keywords=${encodeURIComponent(s.award_number)}` : null,
+                category: s.research_category || s.program || "",
+                awardType: s.award_type || "SBIR/STTR",
             }, "SBIR.gov", "#8b5cf6"),
             _score: 88
         }));
@@ -289,16 +320,33 @@ export const API = {
             ...normalize({
                 id: n.project_num || uid(),
                 title: n.project_title || "NIH Grant",
-                agencyName: `NIH / ${n.agency_code || "NIMH"}`,
+                agencyName: `NIH / ${n.agency_code || "NIH"}`,
                 totalValue: n.total_cost || 0,
-                description: (n.abstract_text || "").slice(0, 400),
-                closeDate: n.project_end_date || ""
+                description: n.abstract_text || "",
+                closeDate: n.project_end_date || "",
+                startDate: n.project_start_date || "",
+                awardeeName: n.org_name || n.institution_name || "",
+                pdPIName: n.contact_pi_name || n.pi_names?.[0]?.full_name || "",
+                project_num: n.project_num,
+                url: n.project_num ? `https://reporter.nih.gov/search/${n.project_num}` : null,
+                category: n.terms || n.project_terms || "",
             }, "NIH Reporter", "#06b6d4"),
             _score: 95
         }));
 
         const fromNSF = (nsfResult.value?.response?.award || []).map(n => ({
-            ...normalize(n, "NSF Awards", "#ec4899"),
+            ...normalize({
+                id: n.id,
+                title: n.title || "NSF Award",
+                agencyName: "NSF",
+                fundsObligatedAmt: parseFloat(n.fundsObligatedAmt || 0),
+                description: n.abstractText || "",
+                date: n.date,
+                expDate: n.expDate,
+                awardeeName: n.awardeeName || "",
+                pdPIName: n.pdPIName || "",
+                url: n.id ? `https://www.nsf.gov/awardsearch/showAward?AWD_ID=${n.id}` : null,
+            }, "NSF Awards", "#ec4899"),
             _score: 95
         }));
 
@@ -306,10 +354,14 @@ export const API = {
             ...normalize({
                 id: c.id || uid(),
                 title: c.name || c.title || "Innovation Challenge",
-                agencyName: c.agencyName || c.department || "Multiple Agencies",
-                Award_Amount: c.prizeTotalValue || "Prizes Variable",
-                description: c.summary || c.description || "",
-                closeDate: c.endDate || ""
+                agencyName: c.agencyName || c.agency?.name || c.department || "Federal Challenge",
+                Award_Amount: c.prizeTotalValue || c.totalPrizeValue || 0,
+                description: c.summary || c.description || c.briefDescription || "",
+                closeDate: c.submissionPeriodEndDate || c.endDate || "",
+                startDate: c.submissionPeriodStartDate || c.startDate || "",
+                url: c.id ? `https://www.challenge.gov/challenge/${c.id}` : (c.externalUrl || null),
+                awardType: "Innovation Prize",
+                status: c.status || "",
             }, "Challenge.gov", "#f43f5e"),
             _score: 92
         }));
@@ -355,12 +407,18 @@ export const API = {
         if (cached) return cached;
 
         const normalize = (item, source, color) => ({
-            id: item.id || uid(),
+            id: item.id || item.ein || uid(),
             title: item.title || item.name || item.orgName || "Untitled Foundation",
             agency: item.agencyName || item.source || item.department || "Private Funder",
-            amount: item.amount || item.totalValue || item.Award_Amount || "Prizes Variable",
+            amount: item.amount || item.totalValue || item.Award_Amount || "Strategic Assets Variable",
+            amountFloor: item.amountFloor || 0,
             deadline: item.deadline || "Rolling",
             description: item.description || item.summary || "",
+            org: item.city && item.state ? `${item.city}, ${item.state}` : (item.org || ""),
+            status: item.status || item.exemptionStatus || "",
+            ein: item.ein || "",
+            link: item.link || item.url || (item.ein ? `https://projects.propublica.org/nonprofits/organizations/${item.ein}` : null),
+            program: item.program || item.ntee_code || "",
             _source: source,
             _sourceColor: color,
             _score: source === "IRS 990-PF" ? 95 : 80,
@@ -394,18 +452,26 @@ export const API = {
 
         const fromPF = (pfResult.value?.results || []).map(p => normalize({
             id: p.ein || uid(),
-            title: p.orgName,
+            ein: p.ein,
+            title: p.orgName || p.name,
             agencyName: "IRS 990-PF Filing",
-            description: `Private Foundation filing identified. Deductibility: ${p.deductibilityStatus || "Exempt"}.`,
-            amount: "Strategic Assets Variable"
+            city: p.city,
+            state: p.state,
+            description: `Private Foundation. Deductibility: ${p.deductibilityStatus || "Charitable"}. NTEE: ${p.nteeCode || p.ntee_code || "T"}. EIN: ${p.ein || "—"}.`,
+            amount: "Grantmaking Variable",
+            url: p.ein ? `https://projects.propublica.org/nonprofits/organizations/${p.ein}` : null,
+            status: p.exemptionStatus || "501(c)(3)",
         }, "IRS 990-PF", "#8b5cf6"));
 
         const fromAlex = (alexResult.value?.results || []).flatMap(w => (w.grants || []).map(g => normalize({
             id: g.funder || uid(),
             title: g.funder_display_name || "Academic Funder",
             agencyName: "OpenAlex Research",
-            description: `Funding identified for: ${w.title}. Award ID: ${g.award_id || "N/A"}.`,
-            amount: "Academic Grant"
+            description: `Grant supporting: "${w.title}". Award ID: ${g.award_id || "N/A"}. Published: ${w.publication_year || ""}. Citations: ${w.cited_by_count || 0}.`,
+            amount: "Academic Grant",
+            url: w.doi ? `https://doi.org/${w.doi.replace("https://doi.org/", "")}` : (w.id ? `https://openalex.org/${w.id.split("/").pop()}` : null),
+            program: g.award_id || "",
+            awardType: "Research Grant",
         }, "OpenAlex", "#06b6d4")));
 
         const fromNews = (newsResult.value || []).slice(0, 5).map(n => normalize({
@@ -414,10 +480,14 @@ export const API = {
 
         const fromSEC = (secResult.value?.hits?.hits || []).map(s => normalize({
             id: s._id || uid(),
-            title: s._source.display_names?.[0] || "Corporate Filer",
+            title: s._source.display_names?.[0] || s._source.entity_name || "Corporate Filer",
             agencyName: "SEC Corporate Filing",
-            description: `Document: ${s._source.form_type} (${s._source.file_date}). SEC disclosure mentions corporate giving/philanthropy context.`,
-            amount: "CSR Commitment"
+            description: `SEC ${s._source.form_type || "Filing"} (${s._source.file_date || "recent"}): corporate giving/philanthropy context identified in disclosure documents.`,
+            amount: "CSR Commitment",
+            url: s._source.file_date && s._source.entity_id
+                ? `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${s._source.entity_id}&type=${s._source.form_type || ""}&dateb=&owner=include&count=5`
+                : null,
+            status: s._source.file_date || "",
         }, "SEC EDGAR", "#1e40af"));
 
         const fromEOS = (eosResult.value?.results || []).map(e => ({
@@ -2072,8 +2142,8 @@ export const API = {
                 }), signal: AbortSignal.timeout(8000)
             }).then(r => r.ok ? r.json() : { results: [] }).catch(() => ({ results: [] }))
         ]);
-        const fromSBA = (sbRes.value?.items || []).map(i => ({ id: uid(), title: i.title || "SBA Resource", org: "SBA", amount: 0, deadline: "Rolling", description: i.description || "", type: "Federal Program", url: i.url }));
-        const fromSpending = (spendRes.value?.results || []).map(r => ({ id: uid(), title: r["Recipient Name"] || "Small Business Award", org: r["Awarding Agency"] || "Federal", amount: r["Award Amount"] || 0, deadline: r["End Date"] || "Completed", description: r["Description"] || "", type: "Federal Award" }));
+        const fromSBA = (sbRes.value?.items || []).map(i => ({ id: uid(), title: i.title || "SBA Resource", agency: "SBA", amount: 0, deadline: "Rolling", description: i.description || i.body || "", awardType: "Federal Program", link: i.url || i.link || "https://www.sba.gov/funding-programs/grants", status: "Open" }));
+        const fromSpending = (spendRes.value?.results || []).map(r => ({ id: uid(), title: r["Recipient Name"] ? `[Past Award] ${r["Recipient Name"]}` : "Small Business Award", agency: r["Awarding Agency"] || "Federal", amount: r["Award Amount"] || 0, deadline: r["End Date"] || "Completed", description: r["Description"] || `Federal small business award. Amount: $${(r["Award Amount"]||0).toLocaleString()}.`, awardType: "Federal Award", link: r["Award ID"] ? `https://www.usaspending.gov/award/${r["Award ID"]}` : null }));
         const results = [...fromSBA, ...fromSpending].slice(0, 8);
         // Fallback to known chamber-adjacent programs if APIs return nothing
         if (results.length === 0) results.push(
@@ -2099,10 +2169,10 @@ export const API = {
             fetch(`https://projects.propublica.org/nonprofits/api/v2/search.json?q=${encodeURIComponent(`faith ${focus} grant`)}&ntee[id]=X`, { signal: AbortSignal.timeout(7000) })
                 .then(r => r.ok ? r.json() : { organizations: [] }).catch(() => ({ organizations: [] }))
         ]);
-        const fromGrants = (grantsRes.value?.oppHits || []).map(g => ({ id: uid(), title: g.oppTitle || "Grant", agency: g.agencyName || "Federal", amount: g.awardCeiling || 0, status: "Open", deadline: g.closeDate, description: g.synopsisDesc || "" }));
-        const fromProp = (propRes.value?.organizations || []).slice(0, 4).map(o => ({ id: uid(), title: `${o.name} — Grantmaking Opportunity`, agency: `${o.city || ""}, ${o.state || ""}`.trim(), amount: Math.round((o.income_amount || 0) * 0.05), status: "Rolling", description: `Faith-based org with grantmaking activity. Revenue: $${((o.income_amount||0)/1e6).toFixed(1)}M. EIN: ${o.ein}.`, ein: o.ein }));
+        const fromGrants = (grantsRes.value?.oppHits || []).map(g => ({ id: g.oppNumber || uid(), title: g.oppTitle || "Grant", agency: g.agencyName || "Federal", amount: g.awardCeiling || g.estimatedTotalProgramFunding || 0, amountFloor: g.awardFloor || 0, status: "Open", deadline: g.closeDate, description: g.synopsisDesc || "", oppNumber: g.oppNumber || "", cfda: g.cfdaNumbers?.[0] || "", link: g.oppNumber ? `https://www.grants.gov/search-results-detail/${g.oppNumber}` : "https://grants.gov", category: g.categoryExplanation || "" }));
+        const fromProp = (propRes.value?.organizations || []).slice(0, 4).map(o => ({ id: o.ein || uid(), title: `${o.name} — Grantmaking Opportunity`, agency: `${o.city || ""}, ${o.state || ""}`.trim(), amount: Math.round((o.income_amount || 0) * 0.05), status: "Rolling", description: `Faith-based org with grantmaking activity. Revenue: $${((o.income_amount||0)/1e6).toFixed(1)}M. EIN: ${o.ein}. Verify 990 for grantmaking history.`, ein: o.ein, link: o.ein ? `https://projects.propublica.org/nonprofits/organizations/${o.ein}` : null }));
         const results = [...fromGrants, ...fromProp];
-        if (results.length === 0) results.push({ id: uid(), title: "HUD Faith-Based Initiative Grants", agency: "HUD", amount: 250000, status: "Rolling", description: "HUD funding for faith-based and community organizations providing housing and social services.", deadline: "Rolling" });
+        if (results.length === 0) results.push({ id: uid(), title: "HUD Faith-Based Initiative Grants", agency: "HUD", amount: 250000, status: "Rolling", description: "HUD funding for faith-based and community organizations providing housing and social services.", deadline: "Rolling", link: "https://www.hud.gov/program_offices/faith_based" });
         SimpleCache.set(cacheKey, results, 600000);
         return results;
     },
@@ -2121,24 +2191,28 @@ export const API = {
                 .then(r => r.ok ? r.json() : { grants: [] }).catch(() => ({ grants: [] }))
         ]);
         const fromDeep = (deepRes.value?.data?.daoList || []).slice(0, 6).map(d => ({
-            id: uid(), name: d.daoName || d.name || "DAO", token: d.token || "—",
+            id: d.daoId || uid(), name: d.daoName || d.name || "DAO", token: d.token || "—",
             focus: d.categories?.join(", ") || "Public Goods",
             aum: d.aum ? `$${(d.aum / 1e6).toFixed(1)}M` : "Unknown",
             activeProp: d.proposals ? `${d.proposals} proposals` : "Active",
-            GrantSize: "Variable", url: d.url,
+            members: d.members || "—",
+            GrantSize: "Variable",
+            url: d.url || d.homepage || (d.daoName ? `https://deepdao.io/organization/${d.daoId || ""}` : null),
+            description: `${d.daoName || "DAO"} — ${d.categories?.join(", ") || "Public Goods"} focus. AUM: ${d.aum ? `$${(d.aum / 1e6).toFixed(1)}M` : "active treasury"}. ${d.proposals || ""} governance proposals.`,
         }));
         const fromGitcoin = (gitcoinRes.value?.grants || []).slice(0, 4).map(g => ({
-            id: uid(), name: g.title || "Gitcoin Grant", token: "GTC",
+            id: g.id || uid(), name: g.title || "Gitcoin Grant", token: "GTC",
             focus: g.grant_type?.label || focus,
             aum: "Gitcoin Round", activeProp: `Round ${g.id}`,
-            GrantSize: "$100 - $50k", url: g.url,
+            GrantSize: "$100 - $50k",
+            url: g.url || `https://grants.gitcoin.co/grants/${g.id}`,
+            description: g.description?.slice(0, 200) || `Active Gitcoin grant round for ${focus}.`,
         }));
         const results = [...fromDeep, ...fromGitcoin];
-        // Static fallback for always-active major DAOs
         if (results.length < 3) results.push(
-            { id: uid(), name: "Gitcoin DAO", token: "GTC", focus: "Open Source & Public Goods", aum: "Active", activeProp: "Quarterly Rounds", GrantSize: "$500 - $50k", url: "https://grants.gitcoin.co" },
-            { id: uid(), name: "Nouns DAO", token: "NOUN", focus: "Public Goods / Culture", aum: "~$50M", activeProp: "Active Proposals", GrantSize: "2-50 ETH", url: "https://nouns.wtf" },
-            { id: uid(), name: "Optimism Collective", token: "OP", focus: "Open Source / Infra", aum: "$1B+", activeProp: "RetroPGF Rounds", GrantSize: "$1k - $500k", url: "https://app.optimism.io/retropgf" }
+            { id: uid(), name: "Gitcoin DAO", token: "GTC", focus: "Open Source & Public Goods", aum: "Active", activeProp: "Quarterly Rounds", GrantSize: "$500 - $50k", url: "https://grants.gitcoin.co", description: "Largest public goods funding DAO. Quadratic funding rounds every quarter. Apply through the Gitcoin Grants portal." },
+            { id: uid(), name: "Nouns DAO", token: "NOUN", focus: "Public Goods / Culture", aum: "~$50M", activeProp: "Active Proposals", GrantSize: "2-50 ETH", url: "https://nouns.wtf", description: "Nouns DAO funds public goods, art, culture, and community projects via onchain proposals. Submit a prop to request funding." },
+            { id: uid(), name: "Optimism Collective", token: "OP", focus: "Open Source / Infra", aum: "$1B+", activeProp: "RetroPGF Rounds", GrantSize: "$1k - $500k", url: "https://app.optimism.io/retropgf", description: "Retroactive Public Goods Funding (RetroPGF) rewards builders who create value for the Optimism ecosystem." }
         );
         SimpleCache.set(cacheKey, results, 1800000); // 30min cache
         return results;
@@ -2161,18 +2235,19 @@ export const API = {
         const seen = new Set();
         const signals = allOrgs.filter(o => { if (seen.has(o.ein)) return false; seen.add(o.ein); return true; })
             .slice(0, 6).map(org => ({
-                id: uid(),
+                id: org.ein || uid(),
                 advisorFirm: org.name,
                 clientFocus: focus,
-                note: `${org.name} (${org.city || org.state}) — DAF sponsor with $${((org.income_amount||0)/1e6).toFixed(1)}M in assets. Review their 990 for grantmaking patterns.`,
+                note: `${org.name} (${org.city || ""}, ${org.state || ""}) — DAF sponsor with $${((org.income_amount||0)/1e6).toFixed(1)}M in assets. ${org.ntee_code ? `NTEE: ${org.ntee_code}.` : ""} Verify grantmaking history via 990.`,
                 grantRange: org.income_amount > 1e8 ? "$100k - $1M" : org.income_amount > 1e7 ? "$10k - $100k" : "$1k - $25k",
                 deadline: "Rolling",
                 ein: org.ein,
+                url: org.ein ? `https://projects.propublica.org/nonprofits/organizations/${org.ein}` : null,
             }));
-        // Always include major sponsors as known anchors
         if (signals.length < 3) signals.push(
-            { id: uid(), advisorFirm: "Fidelity Charitable", clientFocus: focus, note: "Largest DAF sponsor in the US. $10B+ distributed annually. Individual donors direct grants to nonprofits.", grantRange: "$50 minimum", deadline: "Rolling", url: "https://www.fidelitycharitable.org" },
-            { id: uid(), advisorFirm: "Schwab Charitable", clientFocus: focus, note: "Major DAF with strong STEM and education focus. Open to unsolicited grant requests from verified 501(c)(3)s.", grantRange: "$50 minimum", deadline: "Rolling", url: "https://www.schwabcharitable.org" }
+            { id: uid(), advisorFirm: "Fidelity Charitable", clientFocus: focus, note: "Largest DAF sponsor in the US. $10B+ distributed annually. Individual donors direct grants to verified nonprofits. No application — individual donors initiate.", grantRange: "$50 minimum", deadline: "Rolling", url: "https://www.fidelitycharitable.org" },
+            { id: uid(), advisorFirm: "Schwab Charitable", clientFocus: focus, note: "Major DAF. Open to grant recommendations from donors to verified 501(c)(3)s. Focus includes STEM, education, and community.", grantRange: "$50 minimum", deadline: "Rolling", url: "https://www.schwabcharitable.org" },
+            { id: uid(), advisorFirm: "Vanguard Charitable", clientFocus: focus, note: "Major DAF sponsor. $15B+ in assets under management. Donors can recommend grants to any eligible 501(c)(3).", grantRange: "$500 minimum", deadline: "Rolling", url: "https://www.vanguardcharitable.org" }
         );
         SimpleCache.set(cacheKey, signals, 1800000);
         return signals;
@@ -2194,16 +2269,19 @@ export const API = {
             }), signal: AbortSignal.timeout(9000)
         }).then(r => r.ok ? r.json() : { results: [] }).catch(() => ({ results: [] }));
         const signals = (r.results || []).filter(a => (a["Award Amount"] || 0) >= 500000).map(a => ({
-            id: uid(),
-            project: a["Description"] || `${a["Recipient Name"]} Contract`,
+            id: a["Award ID"] || uid(),
+            project: a["Description"]?.slice(0, 120) || `${a["Recipient Name"]} Contract`,
             developer: a["Recipient Name"] || "Prime Contractor",
             fundTotal: a["Award Amount"] || 0,
             remaining: Math.round((a["Award Amount"] || 0) * 0.2),
             status: "Active",
-            focus: `${a["Awarding Agency"]} — community benefit agreements may apply to prime awards over $500k in your area.`,
+            focus: `${a["Awarding Agency"]} — ${a["Description"]?.slice(0, 200) || "Large federal award"} in ${state}. CBA negotiations may apply to prime awards of this scale.`,
             deadline: a["End Date"],
+            awardId: a["Award ID"],
+            startDate: a["Start Date"],
+            url: a["Award ID"] ? `https://www.usaspending.gov/award/${a["Award ID"]}` : null,
         }));
-        if (signals.length === 0) signals.push({ id: uid(), project: "Search for Local CBA Opportunities", developer: "Varies", fundTotal: 0, remaining: 0, status: "Search Required", focus: "Run a USASpending search for contracts over $500k in your area to identify CBA potential.", deadline: "Rolling" });
+        if (signals.length === 0) signals.push({ id: uid(), project: "No CBA-eligible contracts found above $500k", developer: "—", fundTotal: 0, remaining: 0, status: "Search Result", focus: `No USASpending contracts above $500k found in ${state} for "${focus}". Try adjusting your location or focus area in your profile.`, deadline: "—", url: `https://www.usaspending.gov/search/?query=${encodeURIComponent(focus)}` });
         SimpleCache.set(cacheKey, signals, 600000);
         return signals;
     },

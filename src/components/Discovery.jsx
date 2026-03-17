@@ -50,50 +50,111 @@ const SourcePill = ({ label, count, ok, color, loading }) => (
 );
 
 // ─── RESULT CARD ─────────────────────────────────────────────────────────────
-const GrantResultCard = ({ g, onAdd, isTracked }) => (
-    <Card key={g.id} glow style={{
-        marginBottom: 12,
-        borderLeft: `4px solid ${isTracked ? T.mute : (g._sourceColor || T.blue)}`,
-        transition: "transform 0.2s",
-        opacity: isTracked ? 0.65 : 1
-    }}
-        onMouseEnter={e => { if (!isTracked) e.currentTarget.style.transform = "translateX(3px)"; }}
-        onMouseLeave={e => e.currentTarget.style.transform = "translateX(0)"}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div style={{ flex: 1, paddingRight: 16 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-                    <Badge color={g._sourceColor || T.blue} style={{ fontSize: 9, fontWeight: 800, letterSpacing: 0.5 }}>
-                        {g._source || "Unknown"}
-                    </Badge>
-                    {g.agency && <Badge color={T.mute} style={{ fontSize: 9 }}>{g.agency}</Badge>}
-                    {g.cfda && <Badge color={T.indigo} style={{ fontSize: 9 }}>CFDA: {g.cfda}</Badge>}
-                    {g._score >= 85 && <Badge color={T.amber} style={{ fontSize: 9, fontWeight: 800 }}>⭐ {g._score}% Match</Badge>}
-                    {isTracked && <Badge color={T.green} style={{ fontSize: 9, fontWeight: 800 }}>✓ Already Tracked</Badge>}
+const GrantResultCard = ({ g, onAdd, isTracked }) => {
+    const [expanded, setExpanded] = React.useState(false);
+    const daysLeft = g.deadline && g.deadline !== "Rolling" ? Math.ceil((new Date(g.deadline) - Date.now()) / 86400000) : null;
+    const urgency = daysLeft !== null ? (daysLeft <= 7 ? T.red : daysLeft <= 21 ? T.amber : null) : null;
+    const desc = g.description || "";
+    const shortDesc = desc.slice(0, 280);
+    const hasMore = desc.length > 280;
+    const link = g.link || g.url || g.sourceUrl || g._url;
+
+    return (
+        <Card key={g.id} glow style={{
+            marginBottom: 12,
+            borderLeft: `4px solid ${isTracked ? T.mute : (g._sourceColor || T.blue)}`,
+            transition: "box-shadow 0.2s",
+            opacity: isTracked ? 0.7 : 1,
+            background: expanded ? "rgba(255,255,255,0.04)" : undefined,
+        }}>
+            {/* ── Header row ── */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    {/* Badge row */}
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
+                        <Badge color={g._sourceColor || T.blue} style={{ fontSize: 9, fontWeight: 800, letterSpacing: 0.5 }}>
+                            {g._source || "Federal"}
+                        </Badge>
+                        {g.agency && <Badge color={T.mute} style={{ fontSize: 9, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.agency}</Badge>}
+                        {g.cfda && <Badge color="#6366f1" style={{ fontSize: 9 }}>CFDA {g.cfda}</Badge>}
+                        {g.awardType && <Badge color={T.mute} style={{ fontSize: 9 }}>{g.awardType}</Badge>}
+                        {g.setAside && <Badge color="#0ea5e9" style={{ fontSize: 9 }}>{g.setAside}</Badge>}
+                        {g.category && <Badge color="#a855f7" style={{ fontSize: 9 }}>{g.category}</Badge>}
+                        {g._score >= 85 && <Badge color={T.amber} style={{ fontSize: 9, fontWeight: 800 }}>⭐ {g._score}% match</Badge>}
+                        {isTracked && <Badge color={T.green} style={{ fontSize: 9, fontWeight: 800 }}>✓ Tracked</Badge>}
+                        {urgency && daysLeft !== null && <Badge color={urgency} style={{ fontSize: 9, fontWeight: 800 }}>⏰ {daysLeft}d left</Badge>}
+                    </div>
+
+                    {/* Title */}
+                    <h3 style={{ fontSize: 15, fontWeight: 700, color: T.text, margin: "0 0 6px", lineHeight: 1.4, fontFamily: "Outfit" }}>
+                        {link ? (
+                            <a href={link} target="_blank" rel="noopener noreferrer"
+                                style={{ color: T.text, textDecoration: "none" }}
+                                onMouseEnter={e => e.target.style.color = T.blue}
+                                onMouseLeave={e => e.target.style.color = T.text}>
+                                {g.title} <span style={{ fontSize: 11, color: T.blue, fontWeight: 400 }}>↗</span>
+                            </a>
+                        ) : g.title}
+                    </h3>
+
+                    {/* Description */}
+                    {desc && (
+                        <p style={{ color: T.sub, fontSize: 13, margin: "0 0 8px", lineHeight: 1.6 }}>
+                            {expanded ? desc : shortDesc}{!expanded && hasMore ? "…" : ""}
+                            {hasMore && (
+                                <button onClick={() => setExpanded(x => !x)}
+                                    style={{ background: "none", border: "none", color: T.blue, cursor: "pointer", fontSize: 12, padding: "0 4px", marginLeft: 2 }}>
+                                    {expanded ? "less" : "more"}
+                                </button>
+                            )}
+                        </p>
+                    )}
+
+                    {/* Meta row — identifiers, PI, program, org */}
+                    <div style={{ display: "flex", gap: 12, flexWrap: "wrap", fontSize: 11, color: T.mute, marginTop: 2 }}>
+                        {g.oppNumber && <span style={{ fontFamily: "monospace" }}>#{g.oppNumber}</span>}
+                        {g.naics && <span>NAICS: {g.naics}</span>}
+                        {g.pi && <span>PI: {g.pi}</span>}
+                        {g.org && <span>Org: {g.org}</span>}
+                        {g.program && <span>Program: {g.program}</span>}
+                        {g.status && <span style={{ color: g.status === "Open" || g.status === "Posted" ? T.green : T.mute }}>● {g.status}</span>}
+                        {g.awardStart && <span>Start: {String(g.awardStart).slice(0, 10)}</span>}
+                        {g.ein && <span>EIN: {g.ein}</span>}
+                    </div>
                 </div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: "0 0 6px", lineHeight: 1.4, fontFamily: "Outfit" }}>{g.title}</h3>
-                {g.description && <p style={{ color: T.sub, fontSize: 13, margin: 0, lineHeight: 1.5 }}>{g.description?.slice(0, 200)}{g.description?.length > 200 ? "…" : ""}</p>}
-            </div>
-            <div style={{ textAlign: "right", minWidth: 140, flexShrink: 0 }}>
-                <div style={{ fontSize: 20, fontWeight: 800, color: T.green, letterSpacing: "-0.03em" }}>
-                    {typeof g.amount === "number" && g.amount > 0 ? `$${g.amount.toLocaleString()}` : g.amount || "—"}
+
+                {/* Right column */}
+                <div style={{ textAlign: "right", minWidth: 130, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                    <div style={{ fontSize: 19, fontWeight: 800, color: T.green, letterSpacing: "-0.03em", lineHeight: 1 }}>
+                        {typeof g.amount === "number" && g.amount > 0
+                            ? g.amount >= 1e6 ? `$${(g.amount / 1e6).toFixed(1)}M` : `$${g.amount.toLocaleString()}`
+                            : g.amount || "—"}
+                    </div>
+                    {g.amountFloor > 0 && <div style={{ color: T.mute, fontSize: 10 }}>Floor: ${g.amountFloor?.toLocaleString()}</div>}
+                    {g.deadline && g.deadline !== "Rolling" && !urgency && (
+                        <div style={{ color: T.mute, fontSize: 11 }}>Due {String(g.deadline).slice(0, 10)}</div>
+                    )}
+                    {g.deadline === "Rolling" && <div style={{ color: T.mute, fontSize: 11 }}>Rolling</div>}
+                    {link && (
+                        <a href={link} target="_blank" rel="noopener noreferrer"
+                            style={{ fontSize: 10, color: T.blue, textDecoration: "none", marginTop: 2 }}>
+                            View source ↗
+                        </a>
+                    )}
+                    <Btn
+                        variant={isTracked ? "ghost" : "primary"}
+                        size="sm"
+                        style={{ marginTop: 6, width: "100%" }}
+                        onClick={() => !isTracked && onAdd(g)}
+                        disabled={isTracked}
+                    >
+                        {isTracked ? "✓ Tracked" : "+ Track"}
+                    </Btn>
                 </div>
-                {g.deadline && g.deadline !== "Rolling" && (
-                    <div style={{ color: T.mute, fontSize: 11, marginTop: 2 }}>⏰ {typeof g.deadline === "string" ? g.deadline.slice(0, 10) : g.deadline}</div>
-                )}
-                {g.oppNumber && <div style={{ color: T.mute, fontSize: 10, marginTop: 2, fontFamily: "monospace" }}>{g.oppNumber}</div>}
-                <Btn
-                    variant={isTracked ? "ghost" : "primary"}
-                    size="sm"
-                    style={{ marginTop: 10, width: "100%" }}
-                    onClick={() => !isTracked && onAdd(g)}
-                    disabled={isTracked}
-                >
-                    {isTracked ? "✓ Tracked" : "+ Track"}
-                </Btn>
             </div>
-        </div>
-    </Card>
-);
+        </Card>
+    );
+};
 
 // ─── STATE SELECTOR ───────────────────────────────────────────────────────────
 const US_STATES = ["AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"];

@@ -49,12 +49,29 @@ export const CBALedger = ({ onAdd }) => {
                                     <strong style={{ color: T.text, display: "block", marginBottom: 4 }}>COMMUNITY TARGET</strong> {p.focus}
                                 </div>
 
+                                {p.url && (
+                                    <div style={{ marginBottom: 12 }}>
+                                        <a href={p.url} target="_blank" rel="noopener noreferrer"
+                                            style={{ fontSize: 12, color: T.blue, textDecoration: "none" }}>
+                                            View USASpending Award ↗
+                                        </a>
+                                        {p.awardId && <span style={{ fontSize: 10, color: T.mute, marginLeft: 8, fontFamily: "monospace" }}>{p.awardId}</span>}
+                                    </div>
+                                )}
+                                {p.startDate && (
+                                    <div style={{ fontSize: 11, color: T.mute, marginBottom: 12 }}>
+                                        Award period: {String(p.startDate).slice(0,10)} – {p.deadline ? String(p.deadline).slice(0,10) : "ongoing"}
+                                    </div>
+                                )}
+
                                 <div style={{ display: "flex", gap: 12, borderTop: `1px solid ${T.glassBorder}`, paddingTop: 20 }}>
-                                    <Btn variant="primary" style={{ flex: 1 }}>Contact Liaison</Btn>
-                                    <Btn variant="ghost" size="sm" onClick={async () => {
-                                        const res = await API.fortuna.syncToLedger();
-                                        toast(`CBA LEDGER SYNC: ${res.synced} transactions processed for ${p.project}.`);
-                                    }}>🔄 Sync</Btn>
+                                    {p.url ? (
+                                        <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ flex: 1 }}>
+                                            <Btn variant="primary" style={{ width: "100%" }}>View Award ↗</Btn>
+                                        </a>
+                                    ) : (
+                                        <Btn variant="primary" style={{ flex: 1 }}>Contact Liaison</Btn>
+                                    )}
                                     {onAdd && (
                                         <TrackBtn onTrack={() => {
                                             onAdd({
@@ -62,10 +79,12 @@ export const CBALedger = ({ onAdd }) => {
                                                 title: `${p.project} - CBA Fund`,
                                                 agency: p.developer,
                                                 amount: p.remaining,
-                                                deadline: "Rolling",
+                                                deadline: p.deadline || "Rolling",
                                                 stage: "discovered",
-                                                description: `Developer: ${p.developer}. Focus: ${p.focus}. Contact: ${p.contact}`,
+                                                description: `Developer: ${p.developer}. Focus: ${p.focus}`,
                                                 category: "CBA Fund",
+                                                link: p.url,
+                                                awardId: p.awardId,
                                                 createdAt: new Date().toISOString()
                                             });
                                         }} label="+ Track Fund" />

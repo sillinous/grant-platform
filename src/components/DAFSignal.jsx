@@ -62,10 +62,21 @@ export const DAFSignal = ({ onAdd: propOnAdd }) => {
                                 <p style={{ fontSize: 14, color: T.text, margin: 0, fontStyle: "italic", lineHeight: 1.7 }}>"{s.note}"</p>
                             </div>
 
-                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: T.sub, marginBottom: 24, padding: "0 4px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: T.sub, marginBottom: 16, padding: "0 4px", flexWrap: "wrap", gap: 8 }}>
                                 <div><span style={{ fontWeight: 800, color: T.mute, marginRight: 6 }}>FOCUS:</span> {s.clientFocus?.toUpperCase()}</div>
-                                <div><span style={{ fontWeight: 800, color: T.mute, marginRight: 6 }}>DEADLINE:</span> {s.deadline?.toUpperCase()}</div>
+                                <div><span style={{ fontWeight: 800, color: T.mute, marginRight: 6 }}>DEADLINE:</span> {(s.deadline || "ROLLING")?.toUpperCase()}</div>
+                                {s.ein && <div><span style={{ fontWeight: 800, color: T.mute, marginRight: 6 }}>EIN:</span> <span style={{ fontFamily: "monospace" }}>{s.ein}</span></div>}
                             </div>
+
+                            {(s.url || s.ein) && (
+                                <div style={{ marginBottom: 16 }}>
+                                    <a href={s.url || `https://projects.propublica.org/nonprofits/organizations/${s.ein}`}
+                                        target="_blank" rel="noopener noreferrer"
+                                        style={{ fontSize: 12, color: T.blue, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
+                                        View 990 / Grantmaking History ↗
+                                    </a>
+                                </div>
+                            )}
 
                             <div style={{ display: "flex", gap: 12, borderTop: `1px solid ${T.glassBorder}`, paddingTop: 24 }}>
                                 <Btn variant="primary" style={{ flex: 1 }}>Draft Advisor Pitch</Btn>
@@ -80,6 +91,8 @@ export const DAFSignal = ({ onAdd: propOnAdd }) => {
                                             stage: "discovered",
                                             description: `Advisor: ${s.advisorFirm}. Focus: ${s.clientFocus}. Note: ${s.note}`,
                                             category: "DAF Lead",
+                                            ein: s.ein,
+                                            link: s.url,
                                             createdAt: new Date().toISOString()
                                         });
                                     }} label="+ Track Lead" />
