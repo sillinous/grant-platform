@@ -1,14 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Input, Btn, Stat, Badge, Empty, ScoreRing, ScanProgress, Progress } from '../ui';
-import { LS, T, uid, fmt, fmtDate } from '../globals';
+import { LS, T, uid, fmt, fmtDate, PROFILE } from '../globals';
 import { API } from '../api';
 import { useStore } from '../store';
+
+// Build default watch terms from the org profile focus areas
+const getDefaultWatchTerms = () => {
+  const profile = window.__PROFILE || PROFILE || {};
+  const focus = profile.focus || [];
+  const tags = profile.tags || [];
+  const loc = profile.loc ? profile.loc.split(',')[0].trim() : '';
+  const fromFocus = focus.slice(0, 4).map(f => f.toLowerCase());
+  const fromTags = tags.slice(0, 2).map(t => t.toLowerCase());
+  const defaults = ['rural technology', 'disability entrepreneurship', 'small business innovation', 'workforce development'];
+  // Merge profile-derived terms first, then fill with defaults
+  const merged = [...new Set([...fromFocus, ...fromTags, ...(loc ? [loc] : []), ...defaults])];
+  return merged.slice(0, 8);
+};
 
 export const MatchAlerts = ({ onAdd }) => {
   const { grants, addGrant: storeAddGrant, alliances = [] } = useStore();
   const activeOnAdd = onAdd || storeAddGrant;
   const [alerts, setAlerts] = useState(() => LS.get('match_alerts', []));
-  const [watchTerms, setWatchTerms] = useState(() => LS.get('watch_terms', ['rural technology', 'disability entrepreneurship', 'small business innovation', 'AI research', 'workforce development']));
+  const [watchTerms, setWatchTerms] = useState(() => LS.get('watch_terms', getDefaultWatchTerms()));
   const [newTerm, setNewTerm] = useState('');
   const [scanning, setScanning] = useState(false);
   const [activeTerm, setActiveTerm] = useState(null);
@@ -17,6 +31,13 @@ export const MatchAlerts = ({ onAdd }) => {
 
   useEffect(() => { LS.set('match_alerts', alerts); }, [alerts]);
   useEffect(() => { LS.set('watch_terms', watchTerms); }, [watchTerms]);
+
+  // Auto-scan on first open if we have no alerts yet
+  useEffect(() => {
+    if (alerts.length === 0 && !scanning && !lastScan) {
+      setTimeout(() => scanAll(), 800);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addWatch = () => {
     if (!newTerm.trim() || watchTerms.includes(newTerm.trim())) return;
@@ -71,7 +92,7 @@ export const MatchAlerts = ({ onAdd }) => {
           if (text.includes('workforce') || text.includes('training')) { score += 10; breakdown.push('Workforce Dev +10'); }
           if (text.includes('broadband') || text.includes('digital')) { score += 8; breakdown.push('Digital Equity +8'); }
 
-          const profile = (typeof window !== 'undefined' && window.__PROFILE) || { loc: 'Illinois', focus: [] };
+          const profile = window.__PROFILE || PROFILE || { loc: 'Illinois', focus: [] };
           const locTerms = profile.loc?.toLowerCase().split(',').map(s => s.trim());
           if (locTerms?.some(l => text.includes(l))) { score += 10; breakdown.push('Location Match +10'); }
 

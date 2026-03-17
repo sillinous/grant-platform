@@ -7,6 +7,19 @@ import { auth } from './auth.js'
 import { cloud } from './cloud.js'
 import { useStore } from './store.js'
 
+// ── Boot: Expose org profile globally so API functions can access it ──
+// api.js uses window.__PROFILE in many places — load from localStorage now
+// and keep it fresh whenever the profile changes.
+const loadProfile = () => {
+  try {
+    const stored = localStorage.getItem('org_profile');
+    window.__PROFILE = stored ? JSON.parse(stored) : {};
+  } catch { window.__PROFILE = {}; }
+};
+loadProfile();
+window.addEventListener('storage', (e) => { if (e.key === 'org_profile') loadProfile(); });
+window.addEventListener('gp_profile_updated', loadProfile);
+
 // ── Boot: Initialize Netlify Identity and cloud sync ──────────────────
 auth.init(async (user) => {
   // Broadcast auth change so AuthBar and other components can react

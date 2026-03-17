@@ -50,9 +50,14 @@ const SourcePill = ({ label, count, ok, color, loading }) => (
 );
 
 // ─── RESULT CARD ─────────────────────────────────────────────────────────────
-const GrantResultCard = ({ g, onAdd }) => (
-    <Card key={g.id} glow style={{ marginBottom: 12, borderLeft: `4px solid ${g._sourceColor || T.blue}`, transition: "transform 0.2s" }}
-        onMouseEnter={e => e.currentTarget.style.transform = "translateX(3px)"}
+const GrantResultCard = ({ g, onAdd, isTracked }) => (
+    <Card key={g.id} glow style={{
+        marginBottom: 12,
+        borderLeft: `4px solid ${isTracked ? T.mute : (g._sourceColor || T.blue)}`,
+        transition: "transform 0.2s",
+        opacity: isTracked ? 0.65 : 1
+    }}
+        onMouseEnter={e => { if (!isTracked) e.currentTarget.style.transform = "translateX(3px)"; }}
         onMouseLeave={e => e.currentTarget.style.transform = "translateX(0)"}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div style={{ flex: 1, paddingRight: 16 }}>
@@ -62,8 +67,8 @@ const GrantResultCard = ({ g, onAdd }) => (
                     </Badge>
                     {g.agency && <Badge color={T.mute} style={{ fontSize: 9 }}>{g.agency}</Badge>}
                     {g.cfda && <Badge color={T.indigo} style={{ fontSize: 9 }}>CFDA: {g.cfda}</Badge>}
-                    {g.meta?.gs_verified && <Badge color={T.green} style={{ fontSize: 9 }}>✅ GuideStar Verified</Badge>}
-                    {(g._score > 90 || g._source === "SEC EDGAR" || g._source === "IATI Standard") && <Badge color={T.amber} style={{ fontSize: 9, fontWeight: 800 }}>🔥 High Probability</Badge>}
+                    {g._score >= 85 && <Badge color={T.amber} style={{ fontSize: 9, fontWeight: 800 }}>⭐ {g._score}% Match</Badge>}
+                    {isTracked && <Badge color={T.green} style={{ fontSize: 9, fontWeight: 800 }}>✓ Already Tracked</Badge>}
                 </div>
                 <h3 style={{ fontSize: 16, fontWeight: 700, color: T.text, margin: "0 0 6px", lineHeight: 1.4, fontFamily: "Outfit" }}>{g.title}</h3>
                 {g.description && <p style={{ color: T.sub, fontSize: 13, margin: 0, lineHeight: 1.5 }}>{g.description?.slice(0, 200)}{g.description?.length > 200 ? "…" : ""}</p>}
@@ -76,7 +81,15 @@ const GrantResultCard = ({ g, onAdd }) => (
                     <div style={{ color: T.mute, fontSize: 11, marginTop: 2 }}>⏰ {typeof g.deadline === "string" ? g.deadline.slice(0, 10) : g.deadline}</div>
                 )}
                 {g.oppNumber && <div style={{ color: T.mute, fontSize: 10, marginTop: 2, fontFamily: "monospace" }}>{g.oppNumber}</div>}
-                <Btn variant="primary" size="sm" style={{ marginTop: 10, width: "100%" }} onClick={() => onAdd(g)}>+ Track</Btn>
+                <Btn
+                    variant={isTracked ? "ghost" : "primary"}
+                    size="sm"
+                    style={{ marginTop: 10, width: "100%" }}
+                    onClick={() => !isTracked && onAdd(g)}
+                    disabled={isTracked}
+                >
+                    {isTracked ? "✓ Tracked" : "+ Track"}
+                </Btn>
             </div>
         </div>
     </Card>
@@ -93,13 +106,16 @@ export const Discovery = () => {
     const [identities, setIdentities] = useState([]);
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState(null);
+    const [sortBy, setSortBy] = useState("relevance"); // relevance | amount | deadline
+    const [filterSource, setFilterSource] = useState("All");
+    const [visibleCount, setVisibleCount] = useState(20);
     const [selectedState, setSelectedState] = useState(() => {
-        // Default to user's profile state
         const loc = PROFILE.loc || "";
         const abbr = loc.split(",").pop()?.trim().slice(0, 2).toUpperCase();
         return US_STATES.includes(abbr) ? abbr : "IL";
     });
-    const { addGrant } = useStore();
+    const { grants: trackedGrants, addGrant } = useStore();
+    const trackedTitles = new Set((trackedGrants || []).map(g => (g.title || "").trim().toLowerCase()));
 
     const showToast = (msg) => {
         setToast(msg);
@@ -138,13 +154,29 @@ export const Discovery = () => {
         setResults([]);
         setSources(null);
         setIdentities([]);
+        setFilterSource("All");
+        setVisibleCount(20);
     };
+
+    // Sorted + filtered view of results
+    const sortedResults = useCallback(() => {
+        let r = filterSource === "All" ? results : results.filter(x => x._source === filterSource);
+        if (sortBy === "amount") r = [...r].sort((a, b) => (b.amount || 0) - (a.amount || 0));
+        else if (sortBy === "deadline") r = [...r].sort((a, b) => {
+            if (!a.deadline || a.deadline === "Rolling") return 1;
+            if (!b.deadline || b.deadline === "Rolling") return -1;
+            return new Date(a.deadline) - new Date(b.deadline);
+        });
+        // default: relevance (_score already ranked)
+        return r;
+    }, [results, sortBy, filterSource]);
 
     const handleSearch = async () => {
         if (!query.trim()) return;
         setLoading(true);
         setResults([]);
         setSources(null);
+        setVisibleCount(20);
 
         if (tab === "grants") {
             const data = await API.searchGrantsMultiSource(query);
@@ -258,13 +290,13 @@ export const Discovery = () => {
                     <Database style={{ width: 12, height: 12, color: T.mute }} />
                     <span style={{ fontSize: 10, color: T.mute, fontWeight: 800, letterSpacing: 0.8, textTransform: 'uppercase' }}>Sources:</span>
                     {tab === 'grants' && <>
-                        <SourcePill label="Grants.gov" count={sources?.grantsGov?.count ?? '…'} ok={sources?.grantsGov?.ok} color="#22c55e" loading={loading} />
-                        <SourcePill label="NIH Reporter" count={sources?.nih?.count ?? '…'} ok={sources?.nih?.ok} color="#06b6d4" loading={loading} />
-                        <SourcePill label="NSF Awards" count={sources?.nsf?.count ?? '…'} ok={sources?.nsf?.ok} color="#ec4899" loading={loading} />
-                        <SourcePill label="Challenge.gov" count={sources?.challenge?.count ?? '…'} ok={sources?.challenge?.ok} color="#f43f5e" loading={loading} />
-                        <SourcePill label="SAM.gov" count={sources?.sam?.count ?? '…'} ok={sources?.sam?.ok} color="#3b82f6" loading={loading} />
-                        <SourcePill label="SBIR.gov" count={sources?.sbir?.count ?? '…'} ok={sources?.sbir?.ok} color="#8b5cf6" loading={loading} />
-                        <SourcePill label="USASpending" count={sources?.usaSpending?.count ?? '…'} ok={sources?.usaSpending?.ok} color="#f59e0b" loading={loading} />
+                        <SourcePill label="Grants.gov"    count={sources?.grantsGov?.count   ?? '…'} ok={sources?.grantsGov?.ok}    color="#22c55e" loading={loading} />
+                        <SourcePill label="NIH Reporter"  count={sources?.nih?.count          ?? '…'} ok={sources?.nih?.ok}          color="#06b6d4" loading={loading} />
+                        <SourcePill label="NSF Awards"    count={sources?.nsf?.count          ?? '…'} ok={sources?.nsf?.ok}          color="#ec4899" loading={loading} />
+                        <SourcePill label="Challenge.gov" count={sources?.challenge?.count    ?? '…'} ok={sources?.challenge?.ok}    color="#f43f5e" loading={loading} />
+                        <SourcePill label="SAM.gov"       count={sources?.sam?.count          ?? '…'} ok={sources?.sam?.ok}          color="#3b82f6" loading={loading} />
+                        <SourcePill label="SBIR.gov"      count={sources?.sbir?.count         ?? '…'} ok={sources?.sbir?.ok}         color="#8b5cf6" loading={loading} />
+                        <SourcePill label="USASpending"   count={sources?.usaSpending?.count  ?? '…'} ok={sources?.usaSpending?.ok}  color="#f59e0b" loading={loading} />
                     </>}
                     {tab === 'state' && <>
                         <SourcePill label={`${selectedState} Portal`} count={sources?.statePortal?.count ?? '…'} ok={sources?.statePortal?.ok} color="#8b5cf6" loading={loading} />
@@ -325,7 +357,47 @@ export const Discovery = () => {
                             </Card>
                         )}
                         {loading && [1, 2, 3, 4].map(i => <SkeletonCard key={i} lines={3} style={{ marginBottom: 12 }} />)}
-                        {results.map(g => <GrantResultCard key={g.id} g={g} onAdd={onAdd} />)}
+                        {results.length > 0 && !loading && (() => {
+                            const sourceOptions = ['All', ...new Set(results.map(r => r._source).filter(Boolean))];
+                            const displayed = sortedResults().slice(0, visibleCount);
+                            return (
+                                <>
+                                    {/* Sort + Filter bar */}
+                                    <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+                                        <span style={{ fontSize: 11, color: T.mute, fontWeight: 700, letterSpacing: 0.8 }}>SORT:</span>
+                                        {[['relevance', '⭐ Relevance'], ['amount', '💰 Amount'], ['deadline', '⏰ Deadline']].map(([val, label]) => (
+                                            <button key={val} onClick={() => setSortBy(val)} style={{
+                                                padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                                                border: `1px solid ${sortBy === val ? T.amber + '60' : T.glassBorder}`,
+                                                background: sortBy === val ? T.amber + '14' : 'transparent',
+                                                color: sortBy === val ? T.amber : T.sub, transition: 'all 0.15s'
+                                            }}>{label}</button>
+                                        ))}
+                                        <span style={{ fontSize: 11, color: T.mute, fontWeight: 700, letterSpacing: 0.8, marginLeft: 12 }}>SOURCE:</span>
+                                        {sourceOptions.map(s => (
+                                            <button key={s} onClick={() => setFilterSource(s)} style={{
+                                                padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                                                border: `1px solid ${filterSource === s ? T.blue + '60' : T.glassBorder}`,
+                                                background: filterSource === s ? T.blue + '14' : 'transparent',
+                                                color: filterSource === s ? T.blue : T.sub, transition: 'all 0.15s'
+                                            }}>{s}</button>
+                                        ))}
+                                        <span style={{ marginLeft: 'auto', fontSize: 11, color: T.mute }}>{sortedResults().length} results</span>
+                                    </div>
+                                    {displayed.map(g => (
+                                        <GrantResultCard key={g.id} g={g} onAdd={onAdd}
+                                            isTracked={trackedTitles.has((g.title || "").trim().toLowerCase())} />
+                                    ))}
+                                    {sortedResults().length > visibleCount && (
+                                        <div style={{ textAlign: 'center', marginTop: 16 }}>
+                                            <Btn variant="secondary" onClick={() => setVisibleCount(v => v + 20)}>
+                                                Load more ({sortedResults().length - visibleCount} remaining)
+                                            </Btn>
+                                        </div>
+                                    )}
+                                </>
+                            );
+                        })()}
                     </div>
                 )}
 
