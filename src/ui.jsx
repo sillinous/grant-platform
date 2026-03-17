@@ -446,3 +446,25 @@ export const ScanProgress = ({ terms, currentTerm, done }) => (
         </div>
     </div>
 );
+
+// ── Tab convenience component (tabs=[{id,label,icon}], active, onChange) ──
+export const Tab = ({ tabs = [], active, onChange, style }) => (
+    <div style={{ display: 'flex', borderBottom: `1px solid ${T.glassBorder}`, marginBottom: 20, gap: 2, ...style }}>
+        {tabs.map(t => (
+            <button
+                key={t.id}
+                onClick={() => onChange?.(t.id)}
+                style={{
+                    padding: '8px 16px', border: 'none', borderRadius: '8px 8px 0 0', cursor: 'pointer', fontSize: 13,
+                    background: active === t.id ? T.amber + '18' : 'transparent',
+                    color: active === t.id ? T.amber : T.sub,
+                    borderBottom: active === t.id ? `2px solid ${T.amber}` : '2px solid transparent',
+                    transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 6, fontWeight: active === t.id ? 600 : 400
+                }}
+            >
+                {t.icon && <span>{t.icon}</span>}
+                <span>{t.label}</span>
+            </button>
+        ))}
+    </div>
+);

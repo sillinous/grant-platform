@@ -106,6 +106,11 @@ export const STAGE_MAP = {
 
 export const STAGES = Object.entries(STAGE_MAP).map(([id, info]) => ({ id, ...info }));
 
+export const pct = (val, decimals = 0) => {
+    if (val == null || isNaN(val)) return '0%';
+    return (val * 100).toFixed(decimals) + '%';
+};
+
 export const sanitizeInput = (str) => {
     if (typeof str !== 'string') return '';
     return str.replace(/[<>]/g, '').trim();
