@@ -254,6 +254,7 @@ export const MatchAlerts = ({ onAdd }) => {
                   <Progress value={a.matchScore} color={topColor} height={4} />
                 </div>
 
+                {(a.link || a.url || a.sourceUrl) && <a href={a.link || a.url || a.sourceUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ display: "inline-block", marginBottom: 8, fontSize: 11, color: topColor, textDecoration: "none", padding: "1px 7px", borderRadius: 5, border: `1px solid ${topColor}33`, background: `${topColor}0d`, fontWeight: 600 }}>{a.source || a._source || "Grants.gov"} ↗</a>}
                 <div style={{ fontSize: 12, color: T.sub, lineHeight: 1.7, marginBottom: 12, padding: 12, background: 'rgba(255,255,255,0.02)', borderRadius: 10, border: `1px solid ${T.glassBorder}` }}>
                   {a.description?.slice(0, 180)}{a.description?.length > 180 ? '… ' : ''}{a.description?.length > 180 && <span style={{ color: T.blue, fontSize: 11 }}>View details →</span>}
                 </div>

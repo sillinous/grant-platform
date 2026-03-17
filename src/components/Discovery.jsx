@@ -89,22 +89,38 @@ const GrantResultCard = ({ g, onAdd, isTracked, onOpen }) => {
                     {/* Title */}
                     <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 5, lineHeight: 1.4, fontFamily: "Outfit" }}>
                         {g.title}
-                        {link && <span style={{ fontSize: 10, color: T.blue, marginLeft: 5, fontWeight: 400 }}>↗</span>}
                     </div>
 
                     {/* Description preview */}
                     {desc && (
-                        <p style={{ color: T.mute, fontSize: 12, margin: 0, lineHeight: 1.5, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                        <p style={{ color: T.mute, fontSize: 12, margin: "0 0 6px", lineHeight: 1.5, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
                             {desc}
                         </p>
                     )}
 
-                    {/* Meta pills */}
-                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 11, color: T.mute, marginTop: 6 }}>
+                    {/* Meta + source link row */}
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 11, color: T.mute, alignItems: "center" }}>
                         {g.oppNumber && <span style={{ fontFamily: "monospace" }}>#{g.oppNumber}</span>}
                         {g.status && <span style={{ color: g.status === "Open" || g.status === "Posted" ? T.green : T.mute }}>● {g.status}</span>}
                         {g.naics && <span>NAICS {g.naics}</span>}
                         {g.pi && <span>PI: {g.pi}</span>}
+                        {link && (
+                            <a href={link} target="_blank" rel="noopener noreferrer"
+                                onClick={e => e.stopPropagation()}
+                                style={{
+                                    display: "inline-flex", alignItems: "center", gap: 3,
+                                    fontSize: 11, color: T.blue, textDecoration: "none",
+                                    padding: "1px 7px", borderRadius: 5,
+                                    border: `1px solid ${T.blue}33`,
+                                    background: `${T.blue}0d`,
+                                    fontWeight: 600, whiteSpace: "nowrap",
+                                    transition: "background 0.15s",
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.background = `${T.blue}22`}
+                                onMouseLeave={e => e.currentTarget.style.background = `${T.blue}0d`}>
+                                {g._source || "Source"} ↗
+                            </a>
+                        )}
                     </div>
                 </div>
 

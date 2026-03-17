@@ -127,6 +127,7 @@ export const EarmarkScout = ({ onAdd: propOnAdd }) => {
                                     {(r.latestAction || r.startDate) && <span>📅 {r.latestAction || r.startDate}</span>}
                                 </div>
 
+                                {(r.link || r.url) && <a href={r.link || r.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ display: "inline-block", marginBottom: 8, fontSize: 11, color: "#a855f7", textDecoration: "none", padding: "1px 7px", borderRadius: 5, border: "1px solid #a855f733", background: "#a855f70d", fontWeight: 600 }}>{r._source || "Source"} ↗</a>}
                                 {r.description && (
                                     <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.6, marginBottom: 12 }}>
                                         {r.description.slice(0, 240)}{r.description.length > 240 ? "…" : ""}

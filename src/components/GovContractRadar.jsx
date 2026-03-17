@@ -132,6 +132,7 @@ export const GovContractRadar = ({ onAdd: propOnAdd }) => {
                                     {r.agency && <span><b style={{ color: T.text }}>{r.agency}</b></span>}
                                     {r.naics && <span>NAICS: <span style={{ fontFamily: "monospace", color: T.text }}>{r.naics}</span></span>}
                                     {r.solicitationNumber && <span style={{ fontFamily: "monospace", color: T.mute, fontSize: 10 }}>{r.solicitationNumber}</span>}
+                                    {r.link && <a href={r.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 11, color: T.blue, textDecoration: "none", padding: "1px 7px", borderRadius: 5, border: `1px solid ${T.blue}33`, background: `${T.blue}0d`, fontWeight: 600 }}>{r._source || "Source"} ↗</a>}
                                     {r.amount > 0 && <span style={{ color: T.green, fontWeight: 800 }}>${r.amount.toLocaleString()}</span>}
                                 </div>
 
