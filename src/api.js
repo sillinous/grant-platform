@@ -1949,42 +1949,74 @@ export const API = {
     },
 
     async getCuratedBriefing(profile) {
-        // Simulate AI curation logic
-        await new Promise(r => setTimeout(r, 1500)); // Simulate thinking
-        return {
-            topPicks: [
-                {
-                    sector: "Smart Search (Gov)",
-                    title: "Regional Innovation Engines - Type II",
-                    amount: 15000000,
-                    matchScore: 98,
-                    reasoning: "Perfect alignment with your recent circular economy pilot and rural manufacturing capacity.",
-                    agency: "NSF"
-                },
-                {
-                    sector: "DAF Signal",
-                    title: "Sustainable Manufacturing Leadership Grant",
-                    amount: 500000,
-                    matchScore: 94,
-                    info: "Advisor signal from Goldman Sachs DAF pool.",
-                    reasoning: "Matches your focus on ESG-driven industrial automation. Highly responsive funder.",
-                    agency: "GS Philanthropy"
-                },
-                {
-                    sector: "Synergy Engine",
-                    title: "Digital Twin Integration for Rural Hubs",
-                    amount: 2500000,
-                    matchScore: 91,
-                    reasoning: "Leverages your existing IoT assets to qualify for infrastructure modernization funds.",
-                    agency: "USDA / DoE"
-                }
-            ],
-            insights: [
-                { icon: "≡ƒôë", label: "Market Shift", text: "Federal interest is pivoting from pure R&D to deployment-ready infrastructure. Your 'Ready-to-Scale' assets are gaining value." },
-                { icon: "≡ƒ¢í∩╕Å", label: "Compliance Watch", text: "New Build America Buy America (BABA) requirements are hitting the manufacturing sector. Review your supply chain docs." },
-                { icon: "≡ƒñ¥", label: "Network Opportunity", text: "Two prime contractors reached out to the platform seeking sub-awardees in your NAICS code. Check Sub-Grant Radar." }
-            ]
-        };
+        const cacheKey = `briefing_${(profile?.focus || []).join("_").slice(0, 40)}_${new Date().toDateString()}`;
+        const cached = SimpleCache.get(cacheKey);
+        if (cached) return cached;
+
+        const focus = (profile?.focus || ["community development"]).slice(0, 3);
+        const orgName = profile?.name || "Your Organization";
+        const loc = profile?.loc || "";
+        const grants = LS.get("grants", []);
+        const active = grants.filter(g => !["declined", "closeout"].includes(g.stage));
+        const urgent = active.filter(g => g.deadline && daysUntil(g.deadline) >= 0 && daysUntil(g.deadline) <= 14);
+        const alerts = LS.get("match_alerts", []).filter(a => !a.dismissed).slice(0, 3);
+
+        // Fan out: real grant search for top picks + AI insights
+        const [searchResult] = await Promise.allSettled([
+            this.searchGrantsMultiSource(focus.slice(0, 2).join(" "))
+        ]);
+
+        const topResults = (searchResult.value?.results || []).slice(0, 3);
+
+        // Build portfolio context for AI
+        const portfolioSummary = `Active grants: ${active.length}, Urgent deadlines: ${urgent.length}, Match alerts: ${alerts.length}. Focus: ${focus.join(", ")}. Location: ${loc}.`;
+
+        const sys = `You are a strategic grant intelligence advisor. Generate 3 concise strategic insights for this organization based on their portfolio. Each insight should be 1-2 sentences, actionable, and specific to their situation. Return JSON:
+{"insights": [{"icon": "📊", "label": "Label", "text": "Insight text"}, ...]}`;
+
+        const [aiResult] = await Promise.allSettled([
+            this.callAI([{ role: "user", content: `Organization: ${orgName}. ${portfolioSummary}` }], sys)
+        ]);
+
+        let insights = [
+            { icon: "📡", label: "Discovery Pulse", text: `${focus[0]} funding is active across federal databases. Smart Scan is ready to surface the best matches for your profile.` },
+            { icon: "⏰", label: "Pipeline Status", text: urgent.length > 0 ? `${urgent.length} grant${urgent.length > 1 ? "s are" : " is"} due within 14 days. Review your pipeline now.` : "No urgent deadlines in the next 14 days. Good time to prospect new opportunities." },
+            { icon: "🔔", label: "Match Intelligence", text: alerts.length > 0 ? `${alerts.length} active match alert${alerts.length > 1 ? "s" : ""} waiting for review in Match Alerts.` : "Set up Match Alerts to automatically monitor Grants.gov for new opportunities." }
+        ];
+
+        if (!aiResult.value?.error) {
+            try {
+                const parsed = JSON.parse(aiResult.value.text.replace(/```json\n?|```/g, "").trim());
+                if (parsed.insights?.length >= 3) insights = parsed.insights;
+            } catch {}
+        }
+
+        const topPicks = topResults.map((r, i) => ({
+            sector: r._source || "Federal",
+            title: r.title,
+            amount: typeof r.amount === "number" ? r.amount : 0,
+            matchScore: r._score || 75,
+            reasoning: r.description?.slice(0, 140) || `Relevant opportunity matching your ${focus[0] || "focus"} area.`,
+            agency: r.agency || r._source || "Federal Agency",
+            deadline: r.deadline,
+        }));
+
+        // If we got less than 3 from search, pad with focus-area placeholders
+        while (topPicks.length < 3) {
+            topPicks.push({
+                sector: focus[topPicks.length % focus.length] || "Federal",
+                title: `Explore ${focus[topPicks.length % focus.length] || "Funding"} Opportunities`,
+                amount: 0,
+                matchScore: 70,
+                reasoning: `Run a Smart Scan to find live ${focus[topPicks.length % focus.length] || "funding"} opportunities tailored to your profile.`,
+                agency: "Multiple Agencies",
+                deadline: null,
+            });
+        }
+
+        const result = { topPicks: topPicks.slice(0, 3), insights };
+        SimpleCache.set(cacheKey, result, 3600000); // cache 1hr
+        return result;
     },
 
     // ΓöÇΓöÇΓöÇ FORTUNA FINTECH EXTENSION ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
