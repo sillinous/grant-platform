@@ -781,6 +781,49 @@ const GrantResultCard = ({ g, onAdd, isTracked, onOpen }) => {
 // ─── STATE SELECTOR ───────────────────────────────────────────────────────────
 const US_STATES = ["AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"];
 
+// ─── SEARCH HISTORY (localStorage) ──────────────────────────────────────────
+const HISTORY_KEY = "discovery_search_history";
+const getHistory = () => { try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); } catch { return []; } };
+const pushHistory = (q, tab) => {
+    const h = getHistory().filter(x => x.q !== q).slice(0, 9);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify([{ q, tab, ts: Date.now() }, ...h]));
+};
+
+// ─── RESULTS STATS BAR ───────────────────────────────────────────────────────
+const ResultsStats = ({ results, sources }) => {
+    if (!results?.length) return null;
+    const totalFunding = results.reduce((s, r) => s + (typeof r.amount === "number" ? r.amount : 0), 0);
+    const withDeadlines = results.filter(r => r.deadline && r.deadline !== "Rolling" && new Date(r.deadline) > new Date());
+    const urgent = withDeadlines.filter(r => Math.ceil((new Date(r.deadline) - Date.now()) / 86400000) <= 21);
+    const avgAmt = results.filter(r => typeof r.amount === "number" && r.amount > 0);
+    const avg = avgAmt.length ? avgAmt.reduce((s, r) => s + r.amount, 0) / avgAmt.length : 0;
+    return (
+        <div style={{ display: "flex", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
+            {[
+                { label: "TOTAL FUNDING", value: totalFunding >= 1e9 ? `$${(totalFunding/1e9).toFixed(1)}B` : totalFunding >= 1e6 ? `$${(totalFunding/1e6).toFixed(0)}M` : `$${totalFunding.toLocaleString()}`, color: T.green },
+                { label: "RESULTS", value: results.length, color: T.blue },
+                { label: "AVG AWARD", value: avg > 0 ? avg >= 1e6 ? `$${(avg/1e6).toFixed(1)}M` : `$${Math.round(avg).toLocaleString()}` : "—", color: T.text },
+                urgent.length > 0 && { label: "CLOSING SOON", value: `${urgent.length} within 21d`, color: T.amber },
+            ].filter(Boolean).map(stat => (
+                <div key={stat.label} style={{ padding: "6px 12px", background: `${stat.color}0f`, border: `1px solid ${stat.color}22`, borderRadius: 8 }}>
+                    <div style={{ fontSize: 9, color: T.mute, fontWeight: 800, letterSpacing: 1 }}>{stat.label}</div>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: stat.color }}>{stat.value}</div>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+// ─── AMOUNT RANGE FILTER ─────────────────────────────────────────────────────
+const AMOUNT_RANGES = [
+    { label: "Any", min: 0, max: Infinity },
+    { label: "< $25k", min: 0, max: 25000 },
+    { label: "$25k–$100k", min: 25000, max: 100000 },
+    { label: "$100k–$500k", min: 100000, max: 500000 },
+    { label: "$500k–$2M", min: 500000, max: 2000000 },
+    { label: "> $2M", min: 2000000, max: Infinity },
+];
+
 export const Discovery = () => {
     const [tab, setTab] = useState("grants");
     const [query, setQuery] = useState("");
@@ -789,423 +832,429 @@ export const Discovery = () => {
     const [identities, setIdentities] = useState([]);
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState(null);
-    const [sortBy, setSortBy] = useState("relevance"); // relevance | amount | deadline
+    const [sortBy, setSortBy] = useState("relevance");
     const [selectedGrant, setSelectedGrant] = useState(null);
     const [filterSource, setFilterSource] = useState("All");
+    const [filterAmount, setFilterAmount] = useState(0); // index into AMOUNT_RANGES
+    const [filterDeadline, setFilterDeadline] = useState("all"); // all | open | urgent | rolling
     const [visibleCount, setVisibleCount] = useState(20);
+    const [searchHistory, setSearchHistory] = useState(getHistory);
+    const [showHistory, setShowHistory] = useState(false);
+    const [savedSearches, setSavedSearches] = useState(() => { try { return JSON.parse(localStorage.getItem("discovery_saved") || "[]"); } catch { return []; } });
     const [selectedState, setSelectedState] = useState(() => {
         const loc = PROFILE.loc || "";
         const abbr = loc.split(",").pop()?.trim().slice(0, 2).toUpperCase();
         return US_STATES.includes(abbr) ? abbr : "IL";
     });
+    const searchInputRef = useRef(null);
     const { grants: trackedGrants, addGrant } = useStore();
     const trackedTitles = new Set((trackedGrants || []).map(g => (g.title || "").trim().toLowerCase()));
 
-    const showToast = (msg) => {
-        setToast(msg);
-        setTimeout(() => setToast(null), 3000);
-    };
+    const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+    const onAdd = (grant) => { addGrant({ ...grant, id: grant.id || uid() }); showToast(`✅ Tracked: ${grant.title?.slice(0, 42) || "Opportunity"}`); };
 
-    const onAdd = (grant) => {
-        addGrant({ ...grant, id: grant.id || uid() });
-        showToast(`✅ Tracked: ${grant.title?.slice(0, 42) || "Opportunity"}`);
-    };
-
-    // Auto-search on mount if org profile has focus areas
+    // Auto-search on mount
     useEffect(() => {
         if (results.length > 0 || loading) return;
         const focusAreas = PROFILE.focus || [];
-        const orgName = PROFILE.name || "";
         if (focusAreas.length > 0) {
-            const autoQuery = focusAreas.slice(0, 2).join(" ") + (orgName ? ` ${orgName}` : "");
+            const autoQuery = focusAreas.slice(0, 2).join(" ");
             setQuery(autoQuery);
-            // Slight delay so UI renders first
             setTimeout(() => {
                 setLoading(true);
-                setResults([]);
-                setSources(null);
                 API.searchGrantsMultiSource(autoQuery).then(data => {
                     setResults(data.results || []);
                     setSources(data.sources);
                     setLoading(false);
                 });
-            }, 400);
+            }, 300);
         }
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleTabChange = (newTab) => {
         setTab(newTab);
-        setResults([]);
-        setSources(null);
-        setIdentities([]);
-        setFilterSource("All");
-        setVisibleCount(20);
+        setResults([]); setSources(null); setIdentities([]);
+        setFilterSource("All"); setFilterAmount(0); setFilterDeadline("all");
+        setVisibleCount(20); setShowHistory(false);
     };
 
-    // Sorted + filtered view of results
+    // Sorted + filtered results
     const sortedResults = useCallback(() => {
-        let r = filterSource === "All" ? results : results.filter(x => x._source === filterSource);
+        const amtRange = AMOUNT_RANGES[filterAmount];
+        let r = results
+            .filter(x => filterSource === "All" || x._source === filterSource)
+            .filter(x => {
+                const amt = typeof x.amount === "number" ? x.amount : 0;
+                return amt === 0 || (amt >= amtRange.min && amt <= amtRange.max);
+            })
+            .filter(x => {
+                if (filterDeadline === "all") return true;
+                if (filterDeadline === "rolling") return x.deadline === "Rolling" || !x.deadline;
+                if (filterDeadline === "open") return x.deadline && x.deadline !== "Rolling" && new Date(x.deadline) > new Date();
+                if (filterDeadline === "urgent") {
+                    const d = Math.ceil((new Date(x.deadline) - Date.now()) / 86400000);
+                    return d >= 0 && d <= 21;
+                }
+                return true;
+            });
         if (sortBy === "amount") r = [...r].sort((a, b) => (b.amount || 0) - (a.amount || 0));
         else if (sortBy === "deadline") r = [...r].sort((a, b) => {
             if (!a.deadline || a.deadline === "Rolling") return 1;
             if (!b.deadline || b.deadline === "Rolling") return -1;
             return new Date(a.deadline) - new Date(b.deadline);
         });
-        // default: relevance (_score already ranked)
         return r;
-    }, [results, sortBy, filterSource]);
+    }, [results, sortBy, filterSource, filterAmount, filterDeadline]);
 
-    const smartScan = async () => {
-        setLoading(true);
-        setResults([]);
-        setSources(null);
-        setVisibleCount(20);
-        // Build an optimized query from the org profile using AI
+    const smartScan = async (targetTab = tab) => {
+        setLoading(true); setResults([]); setSources(null); setVisibleCount(20);
         const profile = window.__PROFILE || PROFILE;
-        const focus = (profile.focus || []).join(", ");
-        const tags = (profile.tags || []).join(", ");
-        const loc = profile.loc || "";
-        const type = profile.type || "Non-Profit";
-        const sys = `You are a grant discovery expert. Given this org profile, generate the single best 3-6 word search query to find the most relevant federal grants. Return ONLY the query string, nothing else.`;
-        const msg = `Organization: ${profile.name || "Non-Profit"}, Type: ${type}, Focus: ${focus}, Tags: ${tags}, Location: ${loc}`;
+        const sys = `You are a grant discovery expert. Given this org profile, generate the single best 3-6 word search query to find the most relevant funding. Return ONLY the query string.`;
+        const msg = `Org: ${profile.name||"Non-Profit"}, Type: ${profile.type||"Non-Profit"}, Focus: ${(profile.focus||[]).join(", ")}, Tags: ${(profile.tags||[]).join(", ")}, Location: ${profile.loc||""}`;
         const result = await API.callAI([{ role: "user", content: msg }], sys);
-        const smartQuery = result.error ? (focus.split(",")[0] || "community development") : result.text.trim().replace(/["\n]/g, "");
+        const smartQuery = result.error ? ((profile.focus||[])[0] || "community development") : result.text.trim().replace(/["\n]/g, "");
         setQuery(smartQuery);
-        const data = await API.searchGrantsMultiSource(smartQuery);
-        setResults(data.results || []);
-        setSources(data.sources);
+        await execSearch(smartQuery, targetTab);
+    };
+
+    const execSearch = async (q, searchTab = tab) => {
+        setLoading(true); setResults([]); setSources(null); setVisibleCount(20);
+        pushHistory(q, searchTab);
+        setSearchHistory(getHistory());
+        try {
+            if (searchTab === "grants") {
+                const data = await API.searchGrantsMultiSource(q);
+                setResults(data.results || []); setSources(data.sources);
+            } else if (searchTab === "philanthropy") {
+                const [data, candid] = await Promise.all([API.searchPhilanthropyMultiSource(q), API.searchCandidProBono(q)]);
+                setResults([...(data.results || []), ...candid]); setSources(data.sources); setIdentities(data.identities || []);
+            } else if (searchTab === "international") {
+                const data = await API.searchInternationalMultiSource(q);
+                setResults(data.results || []); setSources(data.sources);
+            } else if (searchTab === "state") {
+                const [data, municipal] = await Promise.all([API.searchStateGrants(q, selectedState), API.searchMunicipalPulse(q, selectedState)]);
+                const base = Array.isArray(data) ? data : (data.results || []);
+                setResults([...base, ...municipal]);
+                if (!Array.isArray(data)) setSources(data.sources);
+            }
+        } catch {}
         setLoading(false);
     };
 
-    const handleSearch = async () => {
-        if (!query.trim()) return;
-        setLoading(true);
-        setResults([]);
-        setSources(null);
-        setVisibleCount(20);
+    const handleSearch = () => { if (query.trim()) execSearch(query); };
 
-        if (tab === "grants") {
-            const data = await API.searchGrantsMultiSource(query);
-            setResults(data.results || []);
-            setSources(data.sources);
-        } else if (tab === "philanthropy") {
-            const [data, candid] = await Promise.all([
-                API.searchPhilanthropyMultiSource(query),
-                API.searchCandidProBono(query)
-            ]);
-            setResults([...(data.results || []), ...candid]);
-            setSources(data.sources);
-            setIdentities(data.identities || []);
-        } else if (tab === "international") {
-            const data = await API.searchInternationalMultiSource(query);
-            setResults(data.results || []);
-            setSources(data.sources);
-        } else if (tab === "state") {
-            const [data, municipal] = await Promise.all([
-                API.searchStateGrants(query, selectedState),
-                API.searchMunicipalPulse(query, selectedState)
-            ]);
-            const baseResults = Array.isArray(data) ? data : (data.results || []);
-            setResults([...baseResults, ...municipal]);
-            if (!Array.isArray(data)) setSources(data.sources);
-        }
-        setLoading(false);
+    const saveSearch = () => {
+        if (!query.trim()) return;
+        const saved = [{ q: query, tab, ts: Date.now() }, ...savedSearches.filter(s => s.q !== query)].slice(0, 10);
+        setSavedSearches(saved);
+        localStorage.setItem("discovery_saved", JSON.stringify(saved));
+        showToast("🔖 Search saved");
     };
 
     const TABS = [
-        { id: "grants", label: "Federal Grants", icon: <Globe className="w-4 h-4" /> },
-        { id: "international", label: "International", icon: <Globe className="w-4 h-4" /> },
-        { id: "state", label: "State & Local", icon: <Map className="w-4 h-4" /> },
-        { id: "philanthropy", label: "Philanthropy", icon: <DollarSign className="w-4 h-4" /> },
-        { id: "regional", label: "Regional/Local", icon: <Target className="w-4 h-4" /> },
-        { id: "contracts", label: "Contracts", icon: <Shield className="w-4 h-4" /> },
-        { id: "tax_credits", label: "Tax Credits", icon: <TrendingUp className="w-4 h-4" /> },
-        { id: "earmarks", label: "Earmarks", icon: <Bookmark className="w-4 h-4" /> },
-        { id: "foresight", label: "Strategic Foresight", icon: <Cpu className="w-4 h-4" /> },
-        { id: "alerts", label: "Match Alerts", icon: <Zap className="w-4 h-4" /> },
+        { id: "grants",      label: "Federal",       icon: "🏛️", color: "#22c55e" },
+        { id: "state",       label: "State & Local",  icon: "🗺️", color: "#8b5cf6" },
+        { id: "philanthropy",label: "Philanthropy",   icon: "🤝", color: "#3b82f6" },
+        { id: "international",label: "International", icon: "🌎", color: "#059669" },
+        { id: "regional",    label: "Regional",       icon: "📍", color: "#f59e0b" },
+        { id: "contracts",   label: "Contracts",      icon: "📄", color: "#0ea5e9" },
+        { id: "tax_credits", label: "Tax Credits",    icon: "💰", color: "#10b981" },
+        { id: "earmarks",    label: "Earmarks",       icon: "🏷️", color: "#a855f7" },
+        { id: "foresight",   label: "Foresight",      icon: "🔭", color: "#6366f1" },
+        { id: "alerts",      label: "Alerts",         icon: "⚡", color: "#f43f5e" },
     ];
 
-    const showSearchBar = tab === "grants" || tab === "state" || tab === "philanthropy" || tab === "international";
+    const QUICK_CHIPS = [
+        "rural broadband", "workforce development", "affordable housing", "climate resilience",
+        "STEM education", "small business", "mental health", "food security", "clean energy", "economic development"
+    ];
+
+    const showSearchBar = ["grants", "state", "philanthropy", "international"].includes(tab);
+
+    // ─── UNIFIED RESULTS PANEL ───────────────────────────────────────────────
+    const ResultsPanel = () => {
+        const displayed = sortedResults().slice(0, visibleCount);
+        const total = sortedResults().length;
+        const sourceOptions = ["All", ...new Set(results.map(r => r._source).filter(Boolean))];
+
+        if (loading) return <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>{[1,2,3,4].map(i => <SkeletonCard key={i} lines={3} />)}</div>;
+        if (results.length === 0) return null;
+
+        return (
+            <div>
+                <ResultsStats results={results} sources={sources} />
+
+                {/* ── Filter + Sort bar ── */}
+                <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap", alignItems: "center", padding: "10px 14px", background: "rgba(255,255,255,0.02)", borderRadius: 12, border: `1px solid ${T.glassBorder}` }}>
+                    {/* Sort */}
+                    <span style={{ fontSize: 10, color: T.mute, fontWeight: 800, letterSpacing: 0.8 }}>SORT</span>
+                    {[["relevance", "⭐ Relevance"], ["amount", "💰 Amount"], ["deadline", "⏰ Deadline"]].map(([val, label]) => (
+                        <button key={val} onClick={() => setSortBy(val)} style={{
+                            padding: "3px 10px", borderRadius: 16, fontSize: 11, fontWeight: 700, cursor: "pointer", border: `1px solid ${sortBy === val ? T.amber+"60" : T.glassBorder}`,
+                            background: sortBy === val ? T.amber+"14" : "transparent", color: sortBy === val ? T.amber : T.sub, transition: "all 0.15s",
+                        }}>{label}</button>
+                    ))}
+
+                    <span style={{ fontSize: 10, color: T.mute, fontWeight: 800, letterSpacing: 0.8, marginLeft: 8 }}>AMOUNT</span>
+                    {AMOUNT_RANGES.map((r, i) => (
+                        <button key={i} onClick={() => setFilterAmount(i)} style={{
+                            padding: "3px 10px", borderRadius: 16, fontSize: 11, fontWeight: 700, cursor: "pointer", border: `1px solid ${filterAmount === i ? T.green+"60" : T.glassBorder}`,
+                            background: filterAmount === i ? T.green+"14" : "transparent", color: filterAmount === i ? T.green : T.sub, transition: "all 0.15s",
+                        }}>{r.label}</button>
+                    ))}
+
+                    <span style={{ fontSize: 10, color: T.mute, fontWeight: 800, letterSpacing: 0.8, marginLeft: 8 }}>DEADLINE</span>
+                    {[["all","All"],["open","Open"],["urgent","Urgent ≤21d"],["rolling","Rolling"]].map(([val, label]) => (
+                        <button key={val} onClick={() => setFilterDeadline(val)} style={{
+                            padding: "3px 10px", borderRadius: 16, fontSize: 11, fontWeight: 700, cursor: "pointer", border: `1px solid ${filterDeadline === val ? T.blue+"60" : T.glassBorder}`,
+                            background: filterDeadline === val ? T.blue+"14" : "transparent", color: filterDeadline === val ? T.blue : T.sub, transition: "all 0.15s",
+                        }}>{label}</button>
+                    ))}
+
+                    <span style={{ fontSize: 10, color: T.mute, fontWeight: 800, letterSpacing: 0.8, marginLeft: 8 }}>SOURCE</span>
+                    {sourceOptions.map(s => (
+                        <button key={s} onClick={() => setFilterSource(s)} style={{
+                            padding: "3px 10px", borderRadius: 16, fontSize: 11, fontWeight: 700, cursor: "pointer", border: `1px solid ${filterSource === s ? "#6366f160" : T.glassBorder}`,
+                            background: filterSource === s ? "#6366f114" : "transparent", color: filterSource === s ? "#818cf8" : T.sub, transition: "all 0.15s",
+                        }}>{s}</button>
+                    ))}
+
+                    <span style={{ marginLeft: "auto", fontSize: 11, color: T.mute, fontWeight: 600 }}>{total} results</span>
+                </div>
+
+                {/* Results */}
+                {displayed.map(g => (
+                    <GrantResultCard key={g.id} g={g} onAdd={onAdd} onOpen={setSelectedGrant}
+                        isTracked={trackedTitles.has((g.title || "").trim().toLowerCase())} />
+                ))}
+
+                {total > visibleCount && (
+                    <div style={{ textAlign: "center", marginTop: 16, display: "flex", gap: 10, justifyContent: "center" }}>
+                        <Btn variant="secondary" onClick={() => setVisibleCount(v => v + 20)}>
+                            Load 20 more ({total - visibleCount} remaining)
+                        </Btn>
+                        <Btn variant="ghost" onClick={() => setVisibleCount(total)} style={{ fontSize: 12 }}>
+                            Show all {total}
+                        </Btn>
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     return (
-        <div className="discovery-hub animate-in" style={{ position: "relative" }}>
+        <div style={{ position: "relative" }}>
 
-            {/* ── Opportunity Detail Drawer ── */}
             {selectedGrant && (
-                <OpportunityDrawer
-                    grant={selectedGrant}
-                    onClose={() => setSelectedGrant(null)}
-                    onAdd={onAdd}
-                    isTracked={trackedTitles.has((selectedGrant.title || "").trim().toLowerCase())}
-                />
+                <OpportunityDrawer grant={selectedGrant} onClose={() => setSelectedGrant(null)}
+                    onAdd={onAdd} isTracked={trackedTitles.has((selectedGrant.title || "").trim().toLowerCase())} />
             )}
 
-            {/* Toast Notification */}
             {toast && (
                 <div style={{
                     position: "fixed", bottom: 28, right: 28, zIndex: 9999,
                     background: `linear-gradient(135deg, ${T.green}22, ${T.panel})`,
-                    border: `1px solid ${T.green}44`, borderRadius: 14,
-                    padding: "14px 20px", display: "flex", alignItems: "center", gap: 10,
+                    border: `1px solid ${T.green}44`, borderRadius: 14, padding: "14px 20px",
+                    display: "flex", alignItems: "center", gap: 10,
                     boxShadow: `0 8px 32px ${T.green}22`, backdropFilter: "blur(12px)",
                     fontSize: 13, fontWeight: 700, color: T.text, animation: "fadeIn 0.3s ease"
                 }}>
-                    <CheckCircle style={{ width: 18, height: 18, color: T.green }} />
-                    {toast}
+                    <CheckCircle style={{ width: 18, height: 18, color: T.green }} />{toast}
                 </div>
             )}
 
-            <header style={{ marginBottom: 28 }}>
-                <h1 style={{ fontSize: 32, fontWeight: 900, color: T.text, margin: 0, letterSpacing: "-0.04em", fontFamily: "Outfit" }}>Discovery Hub</h1>
-                <p style={{ color: T.sub, marginTop: 4, fontSize: 15 }}>Global funding intelligence & strategic opportunity mapping.</p>
-            </header>
-
-            {/* Search bar — only for tabs that support it */}
-            {showSearchBar && (
-                <div style={{ display: "flex", gap: 10, marginBottom: 16, alignItems: "center" }}>
-                    {/* State Selector (State tab only) */}
-                    {tab === "state" && (
-                        <div style={{ position: "relative", flexShrink: 0 }}>
-                            <select
-                                value={selectedState}
-                                onChange={e => setSelectedState(e.target.value)}
-                                style={{
-                                    appearance: "none", padding: "0 36px 0 12px", height: 48, borderRadius: 12,
-                                    border: `1px solid ${T.glassBorder}`, background: T.glassLg, color: T.text,
-                                    fontSize: 13, fontWeight: 700, cursor: "pointer", outline: "none"
-                                }}>
-                                {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
-                            <ChevronDown style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", width: 14, height: 14, color: T.mute, pointerEvents: "none" }} />
-                        </div>
-                    )}
-                    <div style={{ flex: 1, position: "relative" }}>
-                        <Search style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", width: 17, height: 17, color: T.mute }} />
-                        <Input
-                            value={query}
-                            onChange={(e) => setQuery(e.target ? e.target.value : e)}
-                            placeholder={tab === 'grants'
-                                ? 'Search 7 sources: Grants.gov · NIH · NSF · Challenge · SAM · SBIR · USASpending…'
-                                : tab === 'philanthropy'
-                                    ? 'Search 5 sources: IRS 990-PF · SEC EDGAR · OpenAlex · News · Identity…'
-                                    : tab === 'international'
-                                        ? 'Search International: World Bank Open Data · Projects & Operations…'
-                                        : `Search ${selectedState} portal · Grants.gov · USASpending…`}
-                            style={{ paddingLeft: 44, height: 48, borderRadius: 12, border: `1px solid ${T.glassBorder}`, background: T.glassLg }}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                        />
-                    </div>
-                    <Btn variant="primary" style={{ padding: "0 24px", height: 48, borderRadius: 12, flexShrink: 0 }} onClick={handleSearch} disabled={loading}>
-                        {loading ? <><Loader style={{ width: 14, height: 14, display: "inline-block", marginRight: 6, animation: "spin 1s linear infinite" }} />Scanning…</> : "🔍 Search"}
+            {/* ── HEADER ── */}
+            <div style={{ marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: 12 }}>
+                <div>
+                    <h1 style={{ fontSize: 30, fontWeight: 900, color: T.text, margin: 0, letterSpacing: "-0.04em", fontFamily: "Outfit" }}>Discovery Hub</h1>
+                    <p style={{ color: T.sub, marginTop: 3, fontSize: 13 }}>Global funding intelligence · {trackedGrants?.length || 0} opportunities tracked</p>
+                </div>
+                <div style={{ display: "flex", gap: 8, position: "relative" }}>
+                    <Btn variant="ghost" size="sm" onClick={() => setShowHistory(h => !h)}
+                        style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12 }}>
+                        🕐 History {searchHistory.length > 0 && `(${searchHistory.length})`}
                     </Btn>
-                    {tab === "grants" && (
-                        <Btn variant="ghost" style={{ padding: "0 16px", height: 48, borderRadius: 12, flexShrink: 0, border: `1px solid ${T.amber}40`, color: T.amber, fontSize: 12 }} onClick={smartScan} disabled={loading} title="AI builds optimized query from your org profile">
-                            ✨ Smart Scan
+                    {savedSearches.length > 0 && (
+                        <Btn variant="ghost" size="sm" onClick={() => setShowHistory(h => !h)}
+                            style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, border: `1px solid ${T.amber}40`, color: T.amber }}>
+                            🔖 Saved ({savedSearches.length})
                         </Btn>
                     )}
-                </div>
-            )}
-
-            {/* Source Status Bar */}
-            {showSearchBar && (sources || loading) && (
-                <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <Database style={{ width: 12, height: 12, color: T.mute }} />
-                    <span style={{ fontSize: 10, color: T.mute, fontWeight: 800, letterSpacing: 0.8, textTransform: 'uppercase' }}>Sources:</span>
-                    {tab === 'grants' && <>
-                        <SourcePill label="Grants.gov"    count={sources?.grantsGov?.count   ?? '…'} ok={sources?.grantsGov?.ok}    color="#22c55e" loading={loading} />
-                        <SourcePill label="NIH Reporter"  count={sources?.nih?.count          ?? '…'} ok={sources?.nih?.ok}          color="#06b6d4" loading={loading} />
-                        <SourcePill label="NSF Awards"    count={sources?.nsf?.count          ?? '…'} ok={sources?.nsf?.ok}          color="#ec4899" loading={loading} />
-                        <SourcePill label="Challenge.gov" count={sources?.challenge?.count    ?? '…'} ok={sources?.challenge?.ok}    color="#f43f5e" loading={loading} />
-                        <SourcePill label="SAM.gov"       count={sources?.sam?.count          ?? '…'} ok={sources?.sam?.ok}          color="#3b82f6" loading={loading} />
-                        <SourcePill label="SBIR.gov"      count={sources?.sbir?.count         ?? '…'} ok={sources?.sbir?.ok}         color="#8b5cf6" loading={loading} />
-                        <SourcePill label="USASpending"   count={sources?.usaSpending?.count  ?? '…'} ok={sources?.usaSpending?.ok}  color="#f59e0b" loading={loading} />
-                    </>}
-                    {tab === 'state' && <>
-                        <SourcePill label={`${selectedState} Portal`} count={sources?.statePortal?.count ?? '…'} ok={sources?.statePortal?.ok} color="#8b5cf6" loading={loading} />
-                        <SourcePill label="Grants.gov" count={sources?.grantsGov?.count ?? '…'} ok={sources?.grantsGov?.ok} color="#22c55e" loading={loading} />
-                        <SourcePill label="USASpending" count={sources?.usaSpending?.count ?? '…'} ok={sources?.usaSpending?.ok} color="#f59e0b" loading={loading} />
-                    </>}
-                    {tab === 'philanthropy' && <>
-                        <SourcePill label="IRS 990-PF" count={sources?.pf?.count ?? '…'} ok={sources?.pf?.ok} color="#8b5cf6" loading={loading} />
-                        <SourcePill label="SEC EDGAR" count={sources?.sec?.count ?? '…'} ok={sources?.sec?.ok} color="#1e40af" loading={loading} />
-                        <SourcePill label="OpenAlex" count={sources?.alex?.count ?? '…'} ok={sources?.alex?.ok} color="#06b6d4" loading={loading} />
-                        <SourcePill label="Phil News" count={sources?.news?.count ?? '…'} ok={sources?.news?.ok} color="#3b82f6" loading={loading} />
-                        <SourcePill label="IRS Identity" count={sources?.eos?.count ?? '…'} ok={sources?.eos?.ok} color="#22c55e" loading={loading} />
-                    </>}
-                    {tab === 'international' && <>
-                        <SourcePill label="World Bank" count={sources?.wb?.count ?? '…'} ok={sources?.wb?.ok} color="#059669" loading={loading} />
-                    </>}
-                    {!loading && results.length > 0 && (
-                        <span style={{ marginLeft: 'auto', fontSize: 11, color: T.mute, fontWeight: 700 }}>
-                            {results.length} results · deduplicated &amp; ranked
-                        </span>
+                    {showHistory && (
+                        <div style={{ position: "absolute", top: "110%", right: 0, minWidth: 280, background: T.panel, border: `1px solid ${T.glassBorder}`, borderRadius: 12, zIndex: 300, padding: 8, boxShadow: "0 8px 32px rgba(0,0,0,0.4)" }}>
+                            {searchHistory.length > 0 && <>
+                                <div style={{ fontSize: 10, color: T.mute, fontWeight: 800, letterSpacing: 1, padding: "4px 8px 6px" }}>RECENT SEARCHES</div>
+                                {searchHistory.slice(0, 5).map((s, i) => (
+                                    <div key={i} onClick={() => { setQuery(s.q); execSearch(s.q, s.tab || "grants"); setShowHistory(false); }}
+                                        style={{ padding: "7px 10px", borderRadius: 8, cursor: "pointer", display: "flex", gap: 8, alignItems: "center", fontSize: 12, color: T.sub }}
+                                        onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+                                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                                        <Clock size={11} style={{ color: T.mute }} />
+                                        <span style={{ flex: 1 }}>{s.q}</span>
+                                        <span style={{ fontSize: 10, color: T.mute }}>{new Date(s.ts).toLocaleDateString()}</span>
+                                    </div>
+                                ))}
+                            </>}
+                            {savedSearches.length > 0 && <>
+                                <div style={{ fontSize: 10, color: T.amber, fontWeight: 800, letterSpacing: 1, padding: "8px 8px 6px" }}>🔖 SAVED SEARCHES</div>
+                                {savedSearches.map((s, i) => (
+                                    <div key={i} onClick={() => { setQuery(s.q); handleTabChange(s.tab); execSearch(s.q, s.tab); setShowHistory(false); }}
+                                        style={{ padding: "7px 10px", borderRadius: 8, cursor: "pointer", display: "flex", gap: 8, alignItems: "center", fontSize: 12, color: T.sub }}
+                                        onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+                                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                                        <span>{TABS.find(t => t.id === s.tab)?.icon || "🔍"}</span>
+                                        <span style={{ flex: 1 }}>{s.q}</span>
+                                        <button onClick={e => { e.stopPropagation(); const f = savedSearches.filter((_, j) => j !== i); setSavedSearches(f); localStorage.setItem("discovery_saved", JSON.stringify(f)); }}
+                                            style={{ background: "none", border: "none", cursor: "pointer", color: T.mute, fontSize: 14 }}>×</button>
+                                    </div>
+                                ))}
+                            </>}
+                        </div>
                     )}
                 </div>
-            )}
+            </div>
 
-            {/* Tab Navigation */}
-            <div className="flex overflow-x-auto pb-2 gap-1 border-b border-white/5 scrollbar-hide" style={{ marginBottom: 0 }}>
+            {/* ── TAB BAR ── */}
+            <div style={{ display: "flex", gap: 1, overflowX: "auto", borderBottom: `1px solid ${T.glassBorder}`, marginBottom: 20 }}>
                 {TABS.map(t => (
-                    <button
-                        key={t.id}
-                        onClick={() => handleTabChange(t.id)}
-                        style={{ transition: "all 0.2s" }}
-                        className={`px-4 py-3 flex items-center gap-2 whitespace-nowrap text-sm border-b-2 ${tab === t.id ? "border-amber-500 text-amber-500 bg-white/5" : "border-transparent text-gray-500 hover:text-gray-300"}`}
-                    >
-                        {t.icon}
-                        {t.label}
+                    <button key={t.id} onClick={() => handleTabChange(t.id)} style={{
+                        background: tab === t.id ? `${t.color}0f` : "none", border: "none",
+                        borderBottom: tab === t.id ? `2px solid ${t.color}` : "2px solid transparent",
+                        padding: "8px 14px 10px", cursor: "pointer", whiteSpace: "nowrap",
+                        fontSize: 12, fontWeight: tab === t.id ? 800 : 500,
+                        color: tab === t.id ? t.color : T.mute,
+                        display: "flex", alignItems: "center", gap: 5, transition: "all 0.15s", borderRadius: "4px 4px 0 0",
+                    }}>
+                        {t.icon} {t.label}
                     </button>
                 ))}
             </div>
 
-            {/* Tab Content */}
-            <div style={{ marginTop: 28 }}>
-
-                {/* ── FEDERAL GRANTS ── */}
-                {tab === "grants" && (
-                    <div>
-                        {results.length === 0 && !loading && (
-                            <Card style={{ textAlign: 'center', padding: '56px 40px', borderTop: `3px solid ${T.amber}` }}>
-                                <div style={{ fontSize: 40, marginBottom: 14 }}>🔍</div>
-                                <div style={{ fontWeight: 800, color: T.text, marginBottom: 8, fontSize: 18, fontFamily: 'Outfit' }}>7-Source Federal Search</div>
-                                <p style={{ color: T.mute, fontSize: 13, maxWidth: 500, margin: '0 auto 24px', lineHeight: 1.7 }}>
-                                    Simultaneously scans all major federal funding databases — deduplicates and ranks results in a single unified view.
-                                </p>
-                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-                                    {[['Grants.gov', '#22c55e'], ['NIH Reporter', '#06b6d4'], ['NSF Awards', '#ec4899'], ['Challenge.gov', '#f43f5e'], ['SAM.gov', '#3b82f6'], ['SBIR.gov', '#8b5cf6'], ['USASpending', '#f59e0b']].map(([label, color]) => (
-                                        <span key={label} style={{ padding: '5px 12px', borderRadius: 20, background: color + '18', border: `1px solid ${color}44`, fontSize: 11, fontWeight: 700, color }}>{label}</span>
-                                    ))}
-                                </div>
-                            </Card>
+            {/* ── SEARCH BAR ── */}
+            {showSearchBar && (
+                <div style={{ marginBottom: 16 }}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+                        {tab === "state" && (
+                            <div style={{ position: "relative", flexShrink: 0 }}>
+                                <select value={selectedState} onChange={e => setSelectedState(e.target.value)}
+                                    style={{ appearance: "none", padding: "0 32px 0 12px", height: 44, borderRadius: 10, border: `1px solid ${T.glassBorder}`, background: T.glassLg, color: T.text, fontSize: 13, fontWeight: 700, cursor: "pointer", outline: "none" }}>
+                                    {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                                <ChevronDown style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", width: 13, height: 13, color: T.mute, pointerEvents: "none" }} />
+                            </div>
                         )}
-                        {loading && [1, 2, 3, 4].map(i => <SkeletonCard key={i} lines={3} style={{ marginBottom: 12 }} />)}
-                        {results.length > 0 && !loading && (() => {
-                            const sourceOptions = ['All', ...new Set(results.map(r => r._source).filter(Boolean))];
-                            const displayed = sortedResults().slice(0, visibleCount);
-                            return (
-                                <>
-                                    {/* Sort + Filter bar */}
-                                    <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-                                        <span style={{ fontSize: 11, color: T.mute, fontWeight: 700, letterSpacing: 0.8 }}>SORT:</span>
-                                        {[['relevance', '⭐ Relevance'], ['amount', '💰 Amount'], ['deadline', '⏰ Deadline']].map(([val, label]) => (
-                                            <button key={val} onClick={() => setSortBy(val)} style={{
-                                                padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                                                border: `1px solid ${sortBy === val ? T.amber + '60' : T.glassBorder}`,
-                                                background: sortBy === val ? T.amber + '14' : 'transparent',
-                                                color: sortBy === val ? T.amber : T.sub, transition: 'all 0.15s'
-                                            }}>{label}</button>
-                                        ))}
-                                        <span style={{ fontSize: 11, color: T.mute, fontWeight: 700, letterSpacing: 0.8, marginLeft: 12 }}>SOURCE:</span>
-                                        {sourceOptions.map(s => (
-                                            <button key={s} onClick={() => setFilterSource(s)} style={{
-                                                padding: '4px 12px', borderRadius: 20, fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                                                border: `1px solid ${filterSource === s ? T.blue + '60' : T.glassBorder}`,
-                                                background: filterSource === s ? T.blue + '14' : 'transparent',
-                                                color: filterSource === s ? T.blue : T.sub, transition: 'all 0.15s'
-                                            }}>{s}</button>
-                                        ))}
-                                        <span style={{ marginLeft: 'auto', fontSize: 11, color: T.mute }}>{sortedResults().length} results</span>
-                                    </div>
-                                    {displayed.map(g => (
-                                        <GrantResultCard key={g.id} g={g} onAdd={onAdd} onOpen={setSelectedGrant}
-                                            isTracked={trackedTitles.has((g.title || "").trim().toLowerCase())} />
-                                    ))}
-                                    {sortedResults().length > visibleCount && (
-                                        <div style={{ textAlign: 'center', marginTop: 16 }}>
-                                            <Btn variant="secondary" onClick={() => setVisibleCount(v => v + 20)}>
-                                                Load more ({sortedResults().length - visibleCount} remaining)
-                                            </Btn>
-                                        </div>
-                                    )}
-                                </>
-                            );
-                        })()}
-                    </div>
-                )}
-
-                {/* ── INTERNATIONAL GRANTS ── */}
-                {tab === "international" && (
-                    <div>
-                        {results.length === 0 && !loading && (
-                            <Card style={{ textAlign: 'center', padding: '56px 40px', borderTop: `3px solid ${T.green}` }}>
-                                <div style={{ fontSize: 40, marginBottom: 14 }}>🌎</div>
-                                <div style={{ fontWeight: 800, color: T.text, marginBottom: 8, fontSize: 18, fontFamily: 'Outfit' }}>International Development Search</div>
-                                <p style={{ color: T.mute, fontSize: 13, maxWidth: 500, margin: '0 auto 24px', lineHeight: 1.7 }}>
-                                    Scans Global Development projects via the <strong style={{ color: T.green }}>World Bank Open Data</strong> API. Tracks IBRD and IDA projects across all regions.
-                                </p>
-                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-                                    {[['World Bank IBRD', '#059669'], ['World Bank IDA', '#10b981'], ['Projects & Ops', '#34d399']].map(([label, color]) => (
-                                        <span key={label} style={{ padding: '5px 12px', borderRadius: 20, background: color + '18', border: `1px solid ${color}44`, fontSize: 11, fontWeight: 700, color }}>{label}</span>
-                                    ))}
-                                </div>
-                            </Card>
-                        )}
-                        {loading && [1, 2, 3].map(i => <SkeletonCard key={i} lines={3} style={{ marginBottom: 12 }} />)}
-                        {results.map(g => <GrantResultCard key={g.id} g={g} onAdd={onAdd} onOpen={setSelectedGrant} />)}
-                    </div>
-                )}
-
-                {/* ── STATE & LOCAL ── */}
-                {tab === "state" && (
-                    <div>
-                        {results.length === 0 && !loading && (
-                            <Card style={{ textAlign: "center", padding: 60 }}>
-                                <div style={{ fontSize: 32, marginBottom: 12 }}>🗺️</div>
-                                <div style={{ fontWeight: 700, color: T.text, marginBottom: 6 }}>State & Local Multi-Source Search</div>
-                                <p style={{ color: T.mute, fontSize: 13, maxWidth: 420, margin: "0 auto" }}>
-                                    Select your state, then search. Pulls from the <strong style={{ color: "#8b5cf6" }}>state's own portal</strong>, federal <strong style={{ color: "#22c55e" }}>Grants.gov</strong>, and <strong style={{ color: "#f59e0b" }}>USASpending</strong> awards placed in that state.
-                                </p>
-                            </Card>
-                        )}
-                        {loading && [1, 2].map(i => (
-                            <Card key={i} style={{ marginBottom: 12, padding: 24, opacity: 0.5 }}>
-                                <div style={{ height: 12, background: "rgba(255,255,255,0.08)", borderRadius: 6, width: "55%", marginBottom: 10 }} />
-                                <div style={{ height: 10, background: "rgba(255,255,255,0.05)", borderRadius: 6, width: "75%" }} />
-                            </Card>
-                        ))}
-                        {results.map(g => <GrantResultCard key={g.id} g={g} onAdd={onAdd} onOpen={setSelectedGrant} />)}
-                    </div>
-                )}
-
-                {/* ── REGIONAL/LOCAL ── */}
-                {tab === "regional" && (
-                    <div className="space-y-8">
-                        <RegionalPulse onAdd={onAdd} />
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            <ChamberPulse onAdd={onAdd} />
-                            <FaithFunder onAdd={onAdd} />
-                            <CBALedger onAdd={onAdd} />
-                            <InKindVault onAdd={onAdd} />
-                            <SurplusSentinel onAdd={onAdd} />
+                        <div style={{ flex: 1, position: "relative" }}>
+                            <Search style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", width: 15, height: 15, color: T.mute }} />
+                            <input ref={searchInputRef} value={query}
+                                onChange={e => setQuery(e.target.value)}
+                                onKeyDown={e => e.key === "Enter" && handleSearch()}
+                                placeholder={
+                                    tab === "grants" ? "Search Grants.gov · NIH · NSF · Challenge · SAM · SBIR · USASpending…" :
+                                    tab === "philanthropy" ? "Search IRS 990-PF · SEC EDGAR · OpenAlex · News…" :
+                                    tab === "international" ? "Search World Bank projects · IATI aid data…" :
+                                    `Search ${selectedState} portal · Grants.gov · USASpending…`
+                                }
+                                style={{ width: "100%", paddingLeft: 40, height: 44, borderRadius: 10, border: `1px solid ${T.glassBorder}`, background: T.glassLg, color: T.text, fontSize: 13, outline: "none", boxSizing: "border-box" }} />
                         </div>
+                        <Btn variant="primary" style={{ padding: "0 22px", height: 44, borderRadius: 10, flexShrink: 0 }} onClick={handleSearch} disabled={loading}>
+                            {loading ? <><Loader style={{ width: 13, height: 13, display: "inline", marginRight: 5, animation: "spin 1s linear infinite" }} />Scanning</> : "🔍 Search"}
+                        </Btn>
+                        <Btn variant="ghost" style={{ padding: "0 14px", height: 44, borderRadius: 10, flexShrink: 0, border: `1px solid ${T.amber}40`, color: T.amber, fontSize: 11 }}
+                            onClick={() => smartScan(tab)} disabled={loading} title="AI-generated query from your org profile">
+                            ✨ Smart
+                        </Btn>
+                        {query.trim() && <Btn variant="ghost" size="sm" onClick={saveSearch} style={{ flexShrink: 0, fontSize: 11 }}>🔖</Btn>}
+                    </div>
+
+                    {/* Quick topic chips */}
+                    {!loading && results.length === 0 && (
+                        <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 6 }}>
+                            <span style={{ fontSize: 10, color: T.mute, fontWeight: 700, alignSelf: "center", marginRight: 2 }}>Quick:</span>
+                            {QUICK_CHIPS.map(chip => (
+                                <button key={chip} onClick={() => { setQuery(chip); execSearch(chip); }}
+                                    style={{ padding: "2px 10px", borderRadius: 14, fontSize: 11, fontWeight: 600, cursor: "pointer", background: "rgba(255,255,255,0.04)", border: `1px solid ${T.glassBorder}`, color: T.sub, transition: "all 0.15s" }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; e.currentTarget.style.color = T.text; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.color = T.sub; }}>
+                                    {chip}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Source status pills */}
+                    {(sources || loading) && (
+                        <div style={{ display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center" }}>
+                            <Database style={{ width: 11, height: 11, color: T.mute }} />
+                            {tab === "grants" && <>
+                                <SourcePill label="Grants.gov"  count={sources?.grantsGov?.count  ?? "…"} ok={sources?.grantsGov?.ok}   color="#22c55e" loading={loading} />
+                                <SourcePill label="NIH"         count={sources?.nih?.count         ?? "…"} ok={sources?.nih?.ok}         color="#06b6d4" loading={loading} />
+                                <SourcePill label="NSF"         count={sources?.nsf?.count         ?? "…"} ok={sources?.nsf?.ok}         color="#ec4899" loading={loading} />
+                                <SourcePill label="Challenge"   count={sources?.challenge?.count   ?? "…"} ok={sources?.challenge?.ok}   color="#f43f5e" loading={loading} />
+                                <SourcePill label="SAM.gov"     count={sources?.sam?.count         ?? "…"} ok={sources?.sam?.ok}         color="#3b82f6" loading={loading} />
+                                <SourcePill label="SBIR"        count={sources?.sbir?.count        ?? "…"} ok={sources?.sbir?.ok}        color="#8b5cf6" loading={loading} />
+                                <SourcePill label="USASpending" count={sources?.usaSpending?.count ?? "…"} ok={sources?.usaSpending?.ok} color="#f59e0b" loading={loading} />
+                            </>}
+                            {tab === "state" && <>
+                                <SourcePill label={`${selectedState} Portal`} count={sources?.statePortal?.count ?? "…"} ok={sources?.statePortal?.ok} color="#8b5cf6" loading={loading} />
+                                <SourcePill label="Grants.gov"  count={sources?.grantsGov?.count ?? "…"} ok={sources?.grantsGov?.ok}  color="#22c55e" loading={loading} />
+                                <SourcePill label="USASpending" count={sources?.usaSpending?.count ?? "…"} ok={sources?.usaSpending?.ok} color="#f59e0b" loading={loading} />
+                            </>}
+                            {tab === "philanthropy" && <>
+                                <SourcePill label="IRS 990-PF"  count={sources?.pf?.count   ?? "…"} ok={sources?.pf?.ok}   color="#8b5cf6" loading={loading} />
+                                <SourcePill label="SEC EDGAR"   count={sources?.sec?.count  ?? "…"} ok={sources?.sec?.ok}  color="#1e40af" loading={loading} />
+                                <SourcePill label="OpenAlex"    count={sources?.alex?.count ?? "…"} ok={sources?.alex?.ok} color="#06b6d4" loading={loading} />
+                                <SourcePill label="Phil News"   count={sources?.news?.count ?? "…"} ok={sources?.news?.ok} color="#3b82f6" loading={loading} />
+                                <SourcePill label="IRS Identity" count={sources?.eos?.count ?? "…"} ok={sources?.eos?.ok}  color="#22c55e" loading={loading} />
+                            </>}
+                            {tab === "international" && <>
+                                <SourcePill label="World Bank" count={sources?.wb?.count   ?? "…"} ok={sources?.wb?.ok}   color="#059669" loading={loading} />
+                                <SourcePill label="IATI"       count={sources?.iati?.count ?? "…"} ok={sources?.iati?.ok} color="#1e40af" loading={loading} />
+                            </>}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* ── CONTENT AREA ── */}
+            <div>
+                {["grants","state","international"].includes(tab) && (
+                    <div>
+                        {results.length === 0 && !loading && (
+                            <Card style={{ textAlign: "center", padding: "44px 32px", borderTop: `3px solid ${TABS.find(t => t.id === tab)?.color || T.blue}`, marginBottom: 16 }}>
+                                <div style={{ fontSize: 32, marginBottom: 10 }}>{TABS.find(t => t.id === tab)?.icon}</div>
+                                <div style={{ fontWeight: 800, color: T.text, marginBottom: 6, fontSize: 16, fontFamily: "Outfit" }}>
+                                    {{ grants: "7-Source Federal Search", state: `${selectedState} State & Local`, international: "International Development" }[tab]}
+                                </div>
+                                <p style={{ color: T.mute, fontSize: 13, maxWidth: 440, margin: "0 auto 18px", lineHeight: 1.6 }}>
+                                    {{ grants: "Grants.gov · NIH Reporter · NSF · Challenge.gov · SAM.gov · SBIR.gov · USASpending — deduplicated and ranked.", state: `${selectedState} state portal + federal Grants.gov + USASpending awards in ${selectedState}.`, international: "World Bank Open Data + IATI Standard international aid data." }[tab]}
+                                </p>
+                                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center" }}>
+                                    {QUICK_CHIPS.slice(0,6).map(c => (
+                                        <button key={c} onClick={() => { setQuery(c); execSearch(c); }}
+                                            style={{ padding: "4px 12px", borderRadius: 16, fontSize: 11, fontWeight: 600, cursor: "pointer", background: "rgba(255,255,255,0.04)", border: `1px solid ${T.glassBorder}`, color: T.sub }}>
+                                            {c}
+                                        </button>
+                                    ))}
+                                </div>
+                            </Card>
+                        )}
+                        <ResultsPanel />
                     </div>
                 )}
 
-                {tab === "contracts" && <GovContractRadar onAdd={onAdd} />}
-                {tab === "tax_credits" && <TaxCreditNavigator onAdd={onAdd} />}
-                {tab === "earmarks" && <EarmarkScout onAdd={onAdd} />}
-
-                {/* ── PHILANTHROPY ── */}
                 {tab === "philanthropy" && (
-                    <div className="space-y-8">
-                        {/* Search Results View */}
-                        {(results.length > 0 || loading) && (
+                    <div>
+                        {(results.length > 0 || loading) ? (
                             <div>
-                                {results.length === 0 && loading && [1, 2].map(i => <SkeletonCard key={i} lines={3} style={{ marginBottom: 12 }} />)}
-
-                                {/* Identity Results (IRS EOS) */}
                                 {identities.length > 0 && (
-                                    <div style={{ marginBottom: 24, padding: 16, background: `${T.green}08`, borderRadius: 16, border: `1px solid ${T.green}22` }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                                            <CheckCircle style={{ width: 14, height: 14, color: T.green }} />
-                                            <span style={{ fontSize: 11, fontWeight: 800, color: T.green, letterSpacing: 0.5 }}>IRS IDENTITY VERIFICATION (501c3 STATUS)</span>
-                                        </div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+                                    <div style={{ marginBottom: 16, padding: 12, background: `${T.green}08`, borderRadius: 12, border: `1px solid ${T.green}22` }}>
+                                        <div style={{ fontSize: 10, fontWeight: 800, color: T.green, letterSpacing: 0.5, marginBottom: 8 }}>✅ IRS IDENTITY VERIFICATION — 501(c)(3) STATUS</div>
+                                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 8 }}>
                                             {identities.map(id => (
-                                                <div key={id.id} style={{ padding: 12, borderRadius: 12, border: `1px solid ${T.glassBorder}`, background: T.glassLg, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div key={id.id} style={{ padding: 10, borderRadius: 8, border: `1px solid ${T.glassBorder}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                                     <div>
-                                                        <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>{id.title}</div>
-                                                        <div style={{ fontSize: 11, color: T.mute }}>EIN: {id.id} · {id.status}</div>
+                                                        <div style={{ fontSize: 12, fontWeight: 700, color: T.text }}>{id.title}</div>
+                                                        <div style={{ fontSize: 10, color: T.mute }}>EIN: {id.id} · {id.status}</div>
                                                     </div>
                                                     <Badge color={T.green}>VERIFIED</Badge>
                                                 </div>
@@ -1213,32 +1262,28 @@ export const Discovery = () => {
                                         </div>
                                     </div>
                                 )}
-
-                                {results.map(p => <GrantResultCard key={p.id} g={p} onAdd={onAdd} onOpen={setSelectedGrant} />)}
-                                <div style={{ textAlign: "center", padding: "20px 0" }}>
-                                    <Btn variant="secondary" onClick={() => { setResults([]); setIdentities([]); setSources(null); setQuery(""); }}>Clear Search Results</Btn>
+                                <ResultsPanel />
+                                <div style={{ textAlign: "center", paddingTop: 12 }}>
+                                    <Btn variant="ghost" onClick={() => { setResults([]); setIdentities([]); setSources(null); setQuery(""); }}>← Clear</Btn>
                                 </div>
                             </div>
-                        )}
-
-                        {/* Default Landing View (if no search active) */}
-                        {results.length === 0 && !loading && (
-                            <>
-                                <Card style={{ textAlign: 'center', padding: '40px', borderTop: `3px solid ${T.blue}` }}>
-                                    <div style={{ fontSize: 32, marginBottom: 12 }}>🏛️</div>
-                                    <div style={{ fontWeight: 800, color: T.text, marginBottom: 8, fontSize: 18, fontFamily: 'Outfit' }}>Philanthropy Multi-Source Search</div>
-                                    <p style={{ color: T.mute, fontSize: 13, maxWidth: 500, margin: '0 auto 24px', lineHeight: 1.7 }}>
-                                        Scans private foundations, academic funding research, and real-time news signals. Includes automated 501(c)(3) identity verification via the IRS.
-                                    </p>
-                                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
-                                        {[['IRS 990-PF', '#8b5cf6'], ['SEC EDGAR', '#1e40af'], ['OpenAlex Research', '#06b6d4'], ['Inside Philanthropy', '#3b82f6'], ['IRS Identity Check', '#22c55e']].map(([label, color]) => (
-                                            <span key={label} style={{ padding: '4px 12px', borderRadius: 20, background: color + '15', border: `1px solid ${color}33`, fontSize: 10, fontWeight: 700, color }}>{label}</span>
+                        ) : (
+                            <div>
+                                <Card style={{ textAlign: "center", padding: "36px 32px", borderTop: `3px solid ${T.blue}`, marginBottom: 20 }}>
+                                    <div style={{ fontSize: 28, marginBottom: 8 }}>🤝</div>
+                                    <div style={{ fontWeight: 800, color: T.text, marginBottom: 6, fontSize: 16 }}>Philanthropy Multi-Source Search</div>
+                                    <p style={{ color: T.mute, fontSize: 12, maxWidth: 420, margin: "0 auto 14px", lineHeight: 1.6 }}>IRS 990-PF · SEC EDGAR · OpenAlex Research · Philanthropy News · IRS Identity Verification</p>
+                                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap", justifyContent: "center" }}>
+                                        {["education foundation","health equity","community development","environment","arts & culture"].map(c => (
+                                            <button key={c} onClick={() => { setQuery(c); execSearch(c); }}
+                                                style={{ padding: "3px 10px", borderRadius: 14, fontSize: 11, fontWeight: 600, cursor: "pointer", background: "rgba(255,255,255,0.04)", border: `1px solid ${T.glassBorder}`, color: T.sub }}>
+                                                {c}
+                                            </button>
                                         ))}
                                     </div>
                                 </Card>
-
                                 <PhilanthropyPulse onAdd={onAdd} />
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 18, marginTop: 18 }}>
                                     <FoundationScout990 onAdd={onAdd} />
                                     <FamilyOfficeProspector onAdd={onAdd} />
                                     <PeerProspecting onAdd={onAdd} />
@@ -1250,17 +1295,31 @@ export const Discovery = () => {
                                     <CSRAllianceMapper onAdd={onAdd} />
                                     <UnsolicitedProspector onAdd={onAdd} />
                                 </div>
-                            </>
+                            </div>
                         )}
                     </div>
                 )}
 
-                {/* ── MATCH ALERTS ── */}
-                {tab === "alerts" && <MatchAlerts onAdd={onAdd} />}
+                {tab === "regional" && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                        <RegionalPulse onAdd={onAdd} />
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 18 }}>
+                            <ChamberPulse onAdd={onAdd} />
+                            <FaithFunder onAdd={onAdd} />
+                            <CBALedger onAdd={onAdd} />
+                            <InKindVault onAdd={onAdd} />
+                            <SurplusSentinel onAdd={onAdd} />
+                        </div>
+                    </div>
+                )}
 
-                {/* ── STRATEGIC FORESIGHT ── */}
+                {tab === "contracts"   && <GovContractRadar onAdd={onAdd} />}
+                {tab === "tax_credits" && <TaxCreditNavigator onAdd={onAdd} />}
+                {tab === "earmarks"    && <EarmarkScout onAdd={onAdd} />}
+                {tab === "alerts"      && <MatchAlerts onAdd={onAdd} />}
+
                 {tab === "foresight" && (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))", gap: 18 }}>
                         <LegislativeTracker onAdd={onAdd} />
                         <PolicySentinel onAdd={onAdd} />
                         <SynergyEngine onAdd={onAdd} />
@@ -1270,6 +1329,7 @@ export const Discovery = () => {
             </div>
         </div>
     );
+
 };
 
 export default Discovery;
