@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Card, Badge, Btn, Tabs, Input, SkeletonCard } from '../ui';
 import { T, uid, PROFILE } from '../globals';
 import { API } from '../api';
@@ -110,6 +110,28 @@ export const Discovery = () => {
         addGrant({ ...grant, id: grant.id || uid() });
         showToast(`✅ Tracked: ${grant.title?.slice(0, 42) || "Opportunity"}`);
     };
+
+    // Auto-search on mount if org profile has focus areas
+    useEffect(() => {
+        if (results.length > 0 || loading) return;
+        const focusAreas = PROFILE.focus || [];
+        const orgName = PROFILE.name || "";
+        if (focusAreas.length > 0) {
+            const autoQuery = focusAreas.slice(0, 2).join(" ") + (orgName ? ` ${orgName}` : "");
+            setQuery(autoQuery);
+            // Slight delay so UI renders first
+            setTimeout(() => {
+                setLoading(true);
+                setResults([]);
+                setSources(null);
+                API.searchGrantsMultiSource(autoQuery).then(data => {
+                    setResults(data.results || []);
+                    setSources(data.sources);
+                    setLoading(false);
+                });
+            }, 400);
+        }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleTabChange = (newTab) => {
         setTab(newTab);

@@ -4,7 +4,57 @@ import { AI_PROVIDERS, getActiveProvider } from "./ai-config";
 import { FortunaAPI } from "./fortuna";
 import { PhilanthropyAPI } from "./philanthropy";
 
-// ΓöÇΓöÇΓöÇ SIMPLE CACHE ΓöÇΓöÇΓöÇ
+// ─── PROFILE-AWARE RELEVANCE SCORER ─────────────────────────────────────────
+// Scores a grant result against the org's profile focus areas and tags.
+// Returns 0-100, higher = more relevant. Used to re-rank discovery results.
+function scoreResultAgainstProfile(result, profile) {
+    if (!profile || !result) return 50;
+    let score = result._score || 50;
+    const focus = (profile.focus || []).map(f => f.toLowerCase());
+    const tags = (profile.tags || []).map(t => t.toLowerCase());
+    const orgType = (profile.type || "").toLowerCase();
+    const text = `${result.title || ""} ${result.description || ""} ${result.agency || ""}`.toLowerCase();
+
+    // Focus area matches — strong signal
+    for (const f of focus) {
+        const kw = f.replace(/[^a-z0-9 ]/g, "").split(" ").filter(w => w.length > 3);
+        const hits = kw.filter(w => text.includes(w)).length;
+        score += hits * 8;
+    }
+
+    // Tag matches — moderate signal
+    for (const t of tags) {
+        if (text.includes(t)) score += 5;
+    }
+
+    // Org type bonus
+    if (orgType.includes("non-profit") || orgType.includes("nonprofit")) {
+        if (text.includes("nonprofit") || text.includes("501") || text.includes("community")) score += 10;
+    }
+    if (orgType.includes("small business") || orgType.includes("sbir")) {
+        if (result._source === "SBIR.gov") score += 20;
+    }
+
+    // Rural/underserved bonus
+    if (tags.includes("rural") && text.includes("rural")) score += 15;
+    if (tags.includes("veteran") && text.includes("veteran")) score += 15;
+
+    // Deadline freshness — closer to now = better (but not overdue)
+    if (result.deadline && result.deadline !== "Rolling") {
+        const days = Math.ceil((new Date(result.deadline) - new Date()) / 86400000);
+        if (days > 0 && days < 30) score += 10;
+        else if (days > 0 && days < 90) score += 5;
+        else if (days < 0) score -= 30; // past deadline
+    }
+
+    // Amount relevance — prefer grants in a reasonable range
+    const amt = typeof result.amount === "number" ? result.amount : 0;
+    if (amt > 1000 && amt < 5000000) score += 5;
+
+    return Math.min(100, Math.max(0, Math.round(score)));
+}
+
+// ─── SIMPLE CACHE ─────────────────────────────────────────────────────────
 const SimpleCache = {
     data: {},
     get(key) {
@@ -147,7 +197,7 @@ export const API = {
         });
 
         // Fan out ALL 6 sources simultaneously — never wait for one before starting another
-        const [grantsGovResult, spendingResult, samResult, sbirResult, nihResult, nsfResult] = await Promise.allSettled([
+        const [grantsGovResult, spendingResult, samResult, sbirResult, nihResult, nsfResult, challengeResult] = await Promise.allSettled([
             // 1. Grants.gov — primary federal grants database
             fetch("https://apply07.grants.gov/grantsws/rest/opportunities/search", {
                 method: "POST", headers: { "Content-Type": "application/json" },
@@ -274,8 +324,13 @@ export const API = {
             return true;
         });
 
+        // Re-rank results against the org profile
+        const profile = LS.get("org_profile", PROFILE);
+        const ranked = deduped.map(r => ({ ...r, _score: scoreResultAgainstProfile(r, profile) }))
+            .sort((a, b) => b._score - a._score);
+
         const result = {
-            results: deduped.sort((a, b) => b._score - a._score),
+            results: ranked,
             sources: {
                 grantsGov:  { count: fromGrantsGov.length,  ok: grantsGovResult.status === "fulfilled",  color: "#22c55e" },
                 usaSpending:{ count: fromUSASpending.length, ok: spendingResult.status === "fulfilled",   color: "#f59e0b" },
