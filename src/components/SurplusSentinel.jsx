@@ -95,6 +95,7 @@ export const SurplusSentinel = ({ onAdd: propOnAdd }) => {
                                     {isLocal && <Badge color={T.green} style={{ fontSize: 9, fontWeight: 900 }}>📍 LOCAL</Badge>}
                                     {isAlliance && <Badge color={T.purple} style={{ fontSize: 9, fontWeight: 900 }}>🤝 ALLIANCE</Badge>}
                                     {daysLeft <= 14 && <Badge color={T.red} style={{ fontSize: 9, fontWeight: 900 }}>🔴 CRITICAL</Badge>}
+                                    {(s.link || s.url) && <a href={s.link || s.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 10, color: "#f59e0b", textDecoration: "none", padding: "1px 7px", borderRadius: 5, border: "1px solid #f59e0b33", background: "#f59e0b0d", fontWeight: 700 }}>View Award ↗</a>}
                                 </div>
 
                                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, alignItems: "flex-start" }}>

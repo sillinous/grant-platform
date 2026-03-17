@@ -40,7 +40,10 @@ export const PRINavigator = ({ onAdd: propOnAdd }) => {
                                 </div>
                             </div>
 
-                            <h3 style={{ fontSize: 20, fontWeight: 900, color: T.text, margin: 0, marginBottom: 12, fontFamily: "Outfit", lineHeight: 1.3 }}>{s.foundation}</h3>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                                <h3 style={{ fontSize: 20, fontWeight: 900, color: T.text, margin: 0, fontFamily: "Outfit", lineHeight: 1.3 }}>{s.foundation}</h3>
+                                {(s.link || s.url) && <a href={s.link || s.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 11, color: T.green, textDecoration: "none", padding: "1px 7px", borderRadius: 5, border: `1px solid ${T.green}33`, background: `${T.green}0d`, fontWeight: 600, whiteSpace: "nowrap" }}>990-PF ↗</a>}
+                            </div>
                             <div style={{ fontSize: 36, fontWeight: 900, color: T.green, marginBottom: 24, letterSpacing: "-0.04em" }}>{fmt(s.amount)}</div>
                             
                             <div style={{ padding: 20, background: "rgba(255,255,255,0.02)", borderRadius: 16, fontSize: 14, color: T.sub, lineHeight: 1.7, marginBottom: 24, border: `1px solid ${T.glassBorder}` }}>
@@ -61,6 +64,7 @@ export const PRINavigator = ({ onAdd: propOnAdd }) => {
                                             deadline: "Rolling",
                                             stage: "discovered",
                                             description: `Term: ${s.term}. Rate: ${s.rate}. Focus: ${s.focus}.`,
+                                            link: s.link || s.url,
                                             category: "PRI Investment",
                                             createdAt: new Date().toISOString()
                                         });

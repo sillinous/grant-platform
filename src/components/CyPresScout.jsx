@@ -104,6 +104,11 @@ export const CyPresScout = ({ onAdd: propOnAdd }) => {
 
                                     <p style={{ fontSize: 12, color: T.sub, lineHeight: 1.7, margin: '0 0 16px', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{c.description}</p>
 
+                                    {(c.link || c.url) && (
+                                        <a href={c.link || c.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 11, color: "#ef4444", textDecoration: "none", padding: "1px 8px", borderRadius: 5, border: "1px solid #ef444433", background: "#ef44440d", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 3, marginBottom: 10 }}>
+                                            CourtListener ↗
+                                        </a>
+                                    )}
                                     <div style={{ display: 'flex', gap: 8, borderTop: `1px solid ${T.glassBorder}`, paddingTop: 14 }}>
                                         <Btn variant="primary" size="sm" style={{ flex: 1, fontSize: 12 }}>📜 Draft Amicus</Btn>
                                         {onAdd && (

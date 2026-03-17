@@ -87,6 +87,7 @@ export const PhilanthropyAPI = {
                 tags: profileTags.slice(0, 2),
                 matchScore: 60 + Math.random() * 20,
                 amount: org.income_amount || null,
+                url: org.ein ? `https://projects.propublica.org/nonprofits/organizations/${org.ein}` : null,
             }));
         }
 
@@ -100,6 +101,7 @@ export const PhilanthropyAPI = {
                 tags: profileTags.filter(t => (opp.oppTitle + (opp.synopsisDesc || "")).toLowerCase().includes(t.toLowerCase())),
                 amount: opp.awardCeiling || null,
                 matchScore: 70 + Math.random() * 20,
+                url: opp.oppNumber ? `https://www.grants.gov/search-results-detail/${opp.oppNumber}` : "https://www.grants.gov",
             }));
         }
 

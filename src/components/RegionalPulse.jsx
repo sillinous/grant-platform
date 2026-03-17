@@ -102,9 +102,10 @@ export const RegionalPulse = ({ onAdd: propOnAdd }) => {
                             <Card key={i.id} glow style={{ borderLeft: `6px solid ${T.amber}`, background: `${T.amber}05`, padding: 20 }}>
                                 <div style={{ fontSize: 10, color: T.sub, fontWeight: 800, letterSpacing: 1, marginBottom: 8, textTransform: "uppercase" }}>{i.agency}</div>
                                 <div style={{ fontSize: 16, fontWeight: 800, color: T.text, marginBottom: 8, fontFamily: "Outfit" }}>{i.title}</div>
-                                <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.6, marginBottom: 20 }}>{i.description}</div>
+                                <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.6, marginBottom: 10 }}>{i.description}</div>
+                                {(i.link || i.url) && <a href={i.link || i.url} target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", marginBottom: 14, fontSize: 11, color: T.amber, textDecoration: "none", padding: "1px 8px", borderRadius: 5, border: `1px solid ${T.amber}33`, background: `${T.amber}0d`, fontWeight: 600 }}>View Program ↗</a>}
                                 <div style={{ display: "flex", gap: 12, borderTop: `1px solid ${T.glassBorder}`, paddingTop: 16 }}>
-                                    <Btn variant="primary" style={{ flex: 1 }}>Check Specs</Btn>
+                                    {(i.link || i.url) ? <a href={i.link || i.url} target="_blank" rel="noopener noreferrer" style={{ flex: 1 }}><Btn variant="primary" style={{ width: "100%" }}>View Specs ↗</Btn></a> : <Btn variant="primary" style={{ flex: 1 }}>Check Specs</Btn>}
                                     {onAdd && (
                                         <TrackBtn onTrack={() => onAdd({
                                             id: uid(), title: i.title, agency: i.agency, stage: "discovered", description: i.description, category: i.type,

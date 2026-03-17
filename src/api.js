@@ -1080,13 +1080,15 @@ export const API = {
             const endDate = r["End Date"] ? new Date(r["End Date"]) : new Date(Date.now() + 45 * 86400000);
             const daysLeft = Math.max(0, Math.round((endDate - now) / 86400000));
             return {
-                id: uid(),
+                id: r["Award ID"] || uid(),
                 jurisdiction: r["Awarding Agency"] || stateAbbr + " Region",
                 budgetPool: "Federal Unobligated Balance",
                 surplus: r["Award Amount"] || 0,
                 alert: `Award period ending in ~${daysLeft} days. Unspent balance may be reallocated — contact ${r["Awarding Agency"]} for supplemental funding.`,
                 eofy: endDate.toISOString().slice(0, 10),
                 description: r["Description"] || "Federal award approaching end date.",
+                link: r["Award ID"] ? `https://www.usaspending.gov/award/${r["Award ID"]}` : null,
+                url: r["Award ID"] ? `https://www.usaspending.gov/award/${r["Award ID"]}` : null,
                 _source: "USASpending"
             };
         });
@@ -1099,6 +1101,9 @@ export const API = {
             alert: `Grant closes ${g.closeDate ? new Date(g.closeDate).toLocaleDateString() : "soon"}. Apply before funds are returned to Treasury.`,
             eofy: g.closeDate || new Date(Date.now() + 20 * 86400000).toISOString().slice(0, 10),
             description: g.synopsisDesc || g.oppTitle || "",
+            oppNumber: g.oppNumber || "",
+            link: g.oppNumber ? `https://www.grants.gov/search-results-detail/${g.oppNumber}` : "https://www.grants.gov",
+            url: g.oppNumber ? `https://www.grants.gov/search-results-detail/${g.oppNumber}` : "https://www.grants.gov",
             _source: "Grants.gov"
         }));
 
@@ -1935,7 +1940,9 @@ export const API = {
                     description: `Private grantmaking foundation based in ${org.city}, ${org.state}. Focus: ${org.ntee_code || "General Philanthropy"}.`,
                     potential: affinity > 50 ? "High" : affinity > 30 ? "Medium" : "Low",
                     affinity,
-                    amount: 50000 + (affinity * 1000)
+                    amount: 50000 + (affinity * 1000),
+                    link: org.ein ? `https://projects.propublica.org/nonprofits/organizations/${org.ein}` : null,
+                    url: org.ein ? `https://projects.propublica.org/nonprofits/organizations/${org.ein}` : null,
                 };
             }).sort((a, b) => b.affinity - a.affinity);
 
@@ -1977,15 +1984,24 @@ export const API = {
         try {
             const incentives = {
                 "IL": [
-                    { id: "il-edge", title: "EDGE Tax Credit", agency: "DCEO", type: "EDC Incentive", description: "Economic Development for a Growing Economy tax credit for job creation." },
-                    { id: "il-grit", title: "GRIT Grant Program", agency: "Illinois EDC", type: "Regional Grant", description: "Global Region Innovation and Technology grants for startups." }
+                    { id: "il-edge", title: "EDGE Tax Credit", agency: "DCEO", type: "EDC Incentive", description: "Economic Development for a Growing Economy tax credit for job creation.", link: "https://dceo.illinois.gov/expandrelocate/incentives/taxassistance/edgetaxcredit.html" },
+                    { id: "il-grit", title: "GRIT Grant Program", agency: "Illinois EDC", type: "Regional Grant", description: "Global Region Innovation and Technology grants for startups.", link: "https://dceo.illinois.gov" }
                 ],
                 "CA": [
-                    { id: "ca-competes", title: "California Competetes Tax Credit", agency: "GO-Biz", type: "EDC Incentive", description: "Income tax credit for businesses that want to stay in or grow in CA." }
+                    { id: "ca-competes", title: "California Competes Tax Credit", agency: "GO-Biz", type: "EDC Incentive", description: "Income tax credit for businesses that want to stay in or grow in CA.", link: "https://business.ca.gov/california-competes-tax-credit/" }
+                ],
+                "TX": [
+                    { id: "tx-enterprise", title: "Texas Enterprise Fund", agency: "Office of the Governor", type: "EDC Incentive", description: "Closing fund for major economic development projects.", link: "https://gov.texas.gov/business/page/texas-enterprise-fund" }
+                ],
+                "NY": [
+                    { id: "ny-excelsior", title: "Excelsior Jobs Program", agency: "Empire State Development", type: "EDC Incentive", description: "Refundable tax credits for businesses creating/retaining jobs in NY.", link: "https://esd.ny.gov/excelsior-jobs-program" }
+                ],
+                "FL": [
+                    { id: "fl-jobs", title: "Florida Job Growth Grant Fund", agency: "DEO", type: "Regional Grant", description: "Public infrastructure and workforce training grants.", link: "https://floridajobs.org/business-growth-and-partnerships/for-businesses/business-incentives" }
                 ]
             };
             const result = incentives[st] || [
-                { id: "gen-edc", title: "Regional Opportunity Zone Credit", agency: "Local EDC", type: "EDC Incentive", description: "Federal/State hybrid incentive for investments in distressed communities." }
+                { id: "gen-edc", title: "Regional Opportunity Zone Credit", agency: "Local EDC", type: "EDC Incentive", description: "Federal/State hybrid incentive for investments in distressed communities.", link: `https://opportunityzones.hud.gov/` }
             ];
             SimpleCache.set(cacheKey, result, 3600000);
             return result;
@@ -2509,11 +2525,12 @@ export const API = {
                 docket: c.docketNumber,
                 court: c.court,
                 dateFiled: c.dateFiled,
-                url: c.absoluteUrl,
+                url: c.absoluteUrl ? `https://www.courtlistener.com${c.absoluteUrl}` : `https://www.courtlistener.com/?q=${encodeURIComponent(query + " cy pres")}`,
+                link: c.absoluteUrl ? `https://www.courtlistener.com${c.absoluteUrl}` : `https://www.courtlistener.com/?q=${encodeURIComponent(query + " cy pres")}`,
                 snippet: c.snippet,
                 cause: "Class Action Settlement",
                 status: "Active Docket",
-                residualFund: Math.floor(Math.random() * 500000) + 50000 // estimated
+                residualFund: Math.floor(Math.random() * 500000) + 50000
             }));
             SimpleCache.set(cacheKey, cases);
             return cases;
