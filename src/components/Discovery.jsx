@@ -1,9 +1,9 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Card, Badge, Btn, Tabs, Input, SkeletonCard } from '../ui';
-import { T, uid, PROFILE } from '../globals';
+import { T, uid, PROFILE, fmt } from '../globals';
 import { API } from '../api';
 import { useStore } from '../store';
-import { Globe, Map, Target, Shield, Cpu, Zap, DollarSign, Bookmark, TrendingUp, Search, CheckCircle, AlertCircle, Loader, Database, ChevronDown } from 'lucide-react';
+import { Globe, Map, Target, Shield, Cpu, Zap, DollarSign, Bookmark, TrendingUp, Search, CheckCircle, AlertCircle, Loader, Database, ChevronDown, X, ExternalLink, FileText, Sparkles, Clock, Building2, Hash, Users, Calendar, Tag, ChevronRight } from 'lucide-react';
 
 // Sub-components
 import { GovContractRadar } from "./GovContractRadar";
@@ -50,106 +50,462 @@ const SourcePill = ({ label, count, ok, color, loading }) => (
 );
 
 // ─── RESULT CARD ─────────────────────────────────────────────────────────────
-const GrantResultCard = ({ g, onAdd, isTracked }) => {
-    const [expanded, setExpanded] = React.useState(false);
+// ─── OPPORTUNITY DETAIL DRAWER ───────────────────────────────────────────────
+const OpportunityDrawer = ({ grant: g, onClose, onAdd, isTracked }) => {
+    const [aiAnalysis, setAiAnalysis] = useState(null);
+    const [aiLoading, setAiLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState("overview");
+    const drawerRef = useRef(null);
+
+    const link = g?.link || g?.url || g?.sourceUrl;
+    const daysLeft = g?.deadline && g?.deadline !== "Rolling"
+        ? Math.ceil((new Date(g.deadline) - Date.now()) / 86400000)
+        : null;
+    const urgencyColor = daysLeft !== null ? (daysLeft <= 7 ? T.red : daysLeft <= 21 ? T.amber : T.green) : T.mute;
+
+    // Close on Escape
+    useEffect(() => {
+        const handler = (e) => { if (e.key === "Escape") onClose(); };
+        window.addEventListener("keydown", handler);
+        return () => window.removeEventListener("keydown", handler);
+    }, [onClose]);
+
+    // Click outside to close
+    useEffect(() => {
+        const handler = (e) => {
+            if (drawerRef.current && !drawerRef.current.contains(e.target)) onClose();
+        };
+        setTimeout(() => window.addEventListener("mousedown", handler), 50);
+        return () => window.removeEventListener("mousedown", handler);
+    }, [onClose]);
+
+    const runAIAnalysis = async () => {
+        setAiLoading(true);
+        const sys = `You are a grant eligibility analyst. Analyze this funding opportunity against the organization profile and return JSON:
+{
+  "eligibilityScore": 0-100,
+  "verdict": "Strong Match" | "Good Match" | "Possible Match" | "Low Match",
+  "strengths": ["...", "..."],
+  "risks": ["...", "..."],
+  "nextSteps": ["...", "..."],
+  "competitionLevel": "Low" | "Medium" | "High" | "Very High",
+  "estimatedEffort": "1-2 days" | "1 week" | "2-3 weeks" | "1+ month"
+}`;
+        const prompt = `Organization: ${PROFILE.name || "Unknown"}, Focus: ${(PROFILE.focus || []).join(", ")}, Tags: ${(PROFILE.tags || []).join(", ")}, Location: ${PROFILE.loc || "Unknown"}, NAICS: ${PROFILE.naics || "N/A"}.
+
+Opportunity: "${g.title}"
+Agency: ${g.agency || "Unknown"}
+Amount: ${typeof g.amount === "number" ? "$" + g.amount.toLocaleString() : g.amount || "Unknown"}
+Deadline: ${g.deadline || "Unknown"}
+CFDA: ${g.cfda || "N/A"}
+Type: ${g.awardType || "Grant"}
+Set-Aside: ${g.setAside || "None"}
+Description: ${g.description?.slice(0, 600) || "No description available"}`;
+
+        try {
+            const res = await API.callAI([{ role: "user", content: prompt }], sys);
+            const json = JSON.parse((res.text || "{}").replace(/```json\n?|```/g, "").trim());
+            setAiAnalysis(json);
+        } catch {
+            setAiAnalysis({ eligibilityScore: 0, verdict: "Analysis unavailable", strengths: [], risks: ["AI analysis failed — check API connection"], nextSteps: [], competitionLevel: "Unknown", estimatedEffort: "Unknown" });
+        }
+        setAiLoading(false);
+    };
+
+    if (!g) return null;
+
+    const tabs = [
+        { key: "overview", label: "Overview" },
+        { key: "details", label: "Details" },
+        { key: "ai", label: "AI Analysis" },
+    ];
+
+    const Row = ({ icon: Icon, label, value, mono, link: rowLink, color }) => value ? (
+        <div style={{ display: "flex", gap: 12, alignItems: "flex-start", padding: "10px 0", borderBottom: `1px solid ${T.glassBorder}` }}>
+            <div style={{ color: T.mute, flexShrink: 0, marginTop: 1 }}>{Icon && <Icon size={14} />}</div>
+            <div style={{ fontSize: 12, color: T.mute, minWidth: 110, flexShrink: 0 }}>{label}</div>
+            <div style={{ fontSize: 13, color: color || T.text, fontFamily: mono ? "monospace" : undefined, flex: 1, wordBreak: "break-word" }}>
+                {rowLink ? <a href={rowLink} target="_blank" rel="noopener noreferrer" style={{ color: T.blue, textDecoration: "none" }}>{value} ↗</a> : value}
+            </div>
+        </div>
+    ) : null;
+
+    return (
+        <>
+            {/* Backdrop */}
+            <div style={{
+                position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 999,
+                animation: "fadeIn 0.15s",
+            }} />
+
+            {/* Drawer */}
+            <div ref={drawerRef} style={{
+                position: "fixed", top: 0, right: 0, bottom: 0,
+                width: "min(640px, 100vw)",
+                background: T.glass,
+                backdropFilter: "blur(24px)",
+                borderLeft: `1px solid ${T.glassBorder}`,
+                zIndex: 1000,
+                display: "flex", flexDirection: "column",
+                animation: "slideInRight 0.25s cubic-bezier(0.4,0,0.2,1)",
+                boxShadow: "-24px 0 80px rgba(0,0,0,0.4)",
+            }}>
+                {/* Header */}
+                <div style={{
+                    padding: "20px 24px 16px",
+                    borderBottom: `1px solid ${T.glassBorder}`,
+                    flexShrink: 0,
+                }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            {/* Source + badges */}
+                            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+                                <Badge color={g._sourceColor || T.blue} style={{ fontSize: 9, fontWeight: 800 }}>{g._source || "Federal"}</Badge>
+                                {g.cfda && <Badge color="#6366f1" style={{ fontSize: 9 }}>CFDA {g.cfda}</Badge>}
+                                {g.awardType && <Badge color={T.mute} style={{ fontSize: 9 }}>{g.awardType}</Badge>}
+                                {g.setAside && <Badge color="#0ea5e9" style={{ fontSize: 9 }}>{g.setAside}</Badge>}
+                                {g.category && <Badge color="#a855f7" style={{ fontSize: 9 }}>{g.category}</Badge>}
+                                {isTracked && <Badge color={T.green} style={{ fontSize: 9 }}>✓ Tracked</Badge>}
+                            </div>
+                            <h2 style={{ fontSize: 17, fontWeight: 800, color: T.text, margin: 0, lineHeight: 1.4, fontFamily: "Outfit" }}>{g.title}</h2>
+                            <div style={{ fontSize: 12, color: T.sub, marginTop: 6 }}>{g.agency}</div>
+                        </div>
+                        <button onClick={onClose} style={{
+                            background: "rgba(255,255,255,0.06)", border: "none", borderRadius: 8,
+                            padding: 8, cursor: "pointer", color: T.mute, flexShrink: 0,
+                            display: "flex", alignItems: "center",
+                        }}>
+                            <X size={16} />
+                        </button>
+                    </div>
+
+                    {/* Amount + deadline hero */}
+                    <div style={{ display: "flex", gap: 16, marginTop: 16, flexWrap: "wrap" }}>
+                        <div style={{ background: `${T.green}15`, border: `1px solid ${T.green}33`, borderRadius: 10, padding: "10px 16px" }}>
+                            <div style={{ fontSize: 10, color: T.mute, fontWeight: 800, letterSpacing: 1, marginBottom: 2 }}>AWARD AMOUNT</div>
+                            <div style={{ fontSize: 22, fontWeight: 900, color: T.green, letterSpacing: "-0.03em" }}>
+                                {typeof g.amount === "number" && g.amount > 0
+                                    ? g.amount >= 1e6 ? `$${(g.amount / 1e6).toFixed(1)}M` : `$${g.amount.toLocaleString()}`
+                                    : g.amount || "—"}
+                            </div>
+                            {g.amountFloor > 0 && <div style={{ fontSize: 10, color: T.mute }}>Floor: ${g.amountFloor?.toLocaleString()}</div>}
+                        </div>
+                        {(g.deadline || daysLeft !== null) && (
+                            <div style={{ background: `${urgencyColor}15`, border: `1px solid ${urgencyColor}33`, borderRadius: 10, padding: "10px 16px" }}>
+                                <div style={{ fontSize: 10, color: T.mute, fontWeight: 800, letterSpacing: 1, marginBottom: 2 }}>DEADLINE</div>
+                                <div style={{ fontSize: 16, fontWeight: 800, color: urgencyColor }}>
+                                    {g.deadline === "Rolling" ? "Rolling" : String(g.deadline || "").slice(0, 10)}
+                                </div>
+                                {daysLeft !== null && <div style={{ fontSize: 11, color: urgencyColor }}>{daysLeft > 0 ? `${daysLeft} days left` : "Expired"}</div>}
+                            </div>
+                        )}
+                        {link && (
+                            <a href={link} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none", display: "flex" }}>
+                                <div style={{ background: `${T.blue}15`, border: `1px solid ${T.blue}33`, borderRadius: 10, padding: "10px 16px", cursor: "pointer", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", gap: 4 }}>
+                                    <ExternalLink size={16} color={T.blue} />
+                                    <div style={{ fontSize: 10, color: T.blue, fontWeight: 700 }}>Source</div>
+                                </div>
+                            </a>
+                        )}
+                    </div>
+
+                    {/* Tab nav */}
+                    <div style={{ display: "flex", gap: 4, marginTop: 16 }}>
+                        {tabs.map(t => (
+                            <button key={t.key} onClick={() => { setActiveTab(t.key); if (t.key === "ai" && !aiAnalysis && !aiLoading) runAIAnalysis(); }}
+                                style={{
+                                    background: activeTab === t.key ? `${T.blue}22` : "transparent",
+                                    border: `1px solid ${activeTab === t.key ? T.blue + "66" : T.glassBorder}`,
+                                    borderRadius: 8, padding: "6px 14px", cursor: "pointer",
+                                    fontSize: 12, fontWeight: 700,
+                                    color: activeTab === t.key ? T.blue : T.mute,
+                                    transition: "all 0.15s",
+                                }}>
+                                {t.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Body */}
+                <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
+
+                    {/* ── OVERVIEW ── */}
+                    {activeTab === "overview" && (
+                        <div style={{ animation: "fadeIn 0.2s" }}>
+                            {g.description && (
+                                <div style={{ marginBottom: 24 }}>
+                                    <div style={{ fontSize: 11, color: T.mute, fontWeight: 800, letterSpacing: 1, marginBottom: 8 }}>DESCRIPTION</div>
+                                    <p style={{ fontSize: 14, color: T.sub, lineHeight: 1.7, margin: 0 }}>{g.description}</p>
+                                </div>
+                            )}
+
+                            {/* Key facts grid */}
+                            <div style={{ marginBottom: 20 }}>
+                                <div style={{ fontSize: 11, color: T.mute, fontWeight: 800, letterSpacing: 1, marginBottom: 8 }}>KEY FACTS</div>
+                                <Row icon={Building2} label="Agency" value={g.agency} />
+                                <Row icon={Hash} label="Opp Number" value={g.oppNumber} mono />
+                                <Row icon={Tag} label="CFDA" value={g.cfda} />
+                                <Row icon={Tag} label="NAICS" value={g.naics} />
+                                <Row icon={Tag} label="Award Type" value={g.awardType} />
+                                <Row icon={Shield} label="Set-Aside" value={g.setAside} />
+                                <Row icon={Tag} label="Category" value={g.category} />
+                                <Row icon={CheckCircle} label="Status" value={g.status} color={g.status === "Open" || g.status === "Posted" ? T.green : undefined} />
+                                <Row icon={Calendar} label="Award Start" value={g.awardStart ? String(g.awardStart).slice(0, 10) : null} />
+                                <Row icon={Users} label="PI / Contact" value={g.pi} />
+                                <Row icon={Building2} label="Recipient Org" value={g.org} />
+                                <Row icon={FileText} label="Program" value={g.program} />
+                                <Row icon={Hash} label="EIN" value={g.ein} mono />
+                            </div>
+
+                            {link && (
+                                <a href={link} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                                    <div style={{
+                                        padding: "14px 18px", background: `${T.blue}10`, border: `1px solid ${T.blue}33`,
+                                        borderRadius: 12, display: "flex", alignItems: "center", gap: 10,
+                                        color: T.blue, fontSize: 14, fontWeight: 700,
+                                    }}>
+                                        <ExternalLink size={16} />
+                                        View Full Opportunity at {g._source || "Source"}
+                                    </div>
+                                </a>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ── DETAILS ── */}
+                    {activeTab === "details" && (
+                        <div style={{ animation: "fadeIn 0.2s" }}>
+                            <div style={{ fontSize: 11, color: T.mute, fontWeight: 800, letterSpacing: 1, marginBottom: 8 }}>ALL AVAILABLE DATA</div>
+                            {Object.entries(g)
+                                .filter(([k, v]) => !k.startsWith("_") && v !== null && v !== undefined && v !== "" && v !== 0)
+                                .map(([k, v]) => (
+                                    <div key={k} style={{ display: "flex", gap: 12, padding: "8px 0", borderBottom: `1px solid ${T.glassBorder}` }}>
+                                        <div style={{ fontSize: 11, color: T.mute, minWidth: 130, flexShrink: 0, fontFamily: "monospace" }}>{k}</div>
+                                        <div style={{ fontSize: 12, color: T.sub, flex: 1, wordBreak: "break-all" }}>
+                                            {typeof v === "string" && (v.startsWith("http://") || v.startsWith("https://"))
+                                                ? <a href={v} target="_blank" rel="noopener noreferrer" style={{ color: T.blue, textDecoration: "none" }}>{v}</a>
+                                                : typeof v === "number" && v > 1000 ? `$${v.toLocaleString()}`
+                                                : typeof v === "object" ? JSON.stringify(v).slice(0, 200)
+                                                : String(v).slice(0, 400)}
+                                        </div>
+                                    </div>
+                                ))
+                            }
+                        </div>
+                    )}
+
+                    {/* ── AI ANALYSIS ── */}
+                    {activeTab === "ai" && (
+                        <div style={{ animation: "fadeIn 0.2s" }}>
+                            {aiLoading ? (
+                                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: "48px 0" }}>
+                                    <div style={{ fontSize: 32 }}>🧠</div>
+                                    <div style={{ fontSize: 14, color: T.sub }}>Analyzing eligibility against your profile…</div>
+                                    <div style={{ width: "100%", height: 3, background: T.glassBorder, borderRadius: 2, overflow: "hidden" }}>
+                                        <div style={{ height: "100%", width: "60%", background: T.blue, animation: "pulse 1.5s ease-in-out infinite", borderRadius: 2 }} />
+                                    </div>
+                                </div>
+                            ) : aiAnalysis ? (
+                                <div>
+                                    {/* Score ring */}
+                                    <div style={{ display: "flex", gap: 20, alignItems: "center", marginBottom: 24, padding: 20, background: "rgba(255,255,255,0.03)", borderRadius: 14, border: `1px solid ${T.glassBorder}` }}>
+                                        <div style={{ position: "relative", width: 80, height: 80, flexShrink: 0 }}>
+                                            <svg viewBox="0 0 80 80" style={{ transform: "rotate(-90deg)", width: 80, height: 80 }}>
+                                                <circle cx={40} cy={40} r={32} fill="none" stroke={T.border} strokeWidth={7} />
+                                                <circle cx={40} cy={40} r={32} fill="none"
+                                                    stroke={aiAnalysis.eligibilityScore >= 80 ? T.green : aiAnalysis.eligibilityScore >= 60 ? T.amber : T.red}
+                                                    strokeWidth={7}
+                                                    strokeDasharray={`${(aiAnalysis.eligibilityScore / 100) * 201} 201`}
+                                                    strokeLinecap="round" />
+                                            </svg>
+                                            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 900, color: T.text }}>
+                                                {aiAnalysis.eligibilityScore}%
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: 18, fontWeight: 800, color: T.text, marginBottom: 4 }}>{aiAnalysis.verdict}</div>
+                                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                                                {aiAnalysis.competitionLevel && <Badge color={T.mute} style={{ fontSize: 10 }}>Competition: {aiAnalysis.competitionLevel}</Badge>}
+                                                {aiAnalysis.estimatedEffort && <Badge color={T.blue} style={{ fontSize: 10 }}>Effort: {aiAnalysis.estimatedEffort}</Badge>}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Strengths */}
+                                    {aiAnalysis.strengths?.length > 0 && (
+                                        <div style={{ marginBottom: 20 }}>
+                                            <div style={{ fontSize: 11, color: T.green, fontWeight: 800, letterSpacing: 1, marginBottom: 10 }}>✅ STRENGTHS</div>
+                                            {aiAnalysis.strengths.map((s, i) => (
+                                                <div key={i} style={{ display: "flex", gap: 10, padding: "8px 0", borderBottom: `1px solid ${T.glassBorder}` }}>
+                                                    <div style={{ color: T.green, flexShrink: 0 }}>•</div>
+                                                    <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.5 }}>{s}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Risks */}
+                                    {aiAnalysis.risks?.length > 0 && (
+                                        <div style={{ marginBottom: 20 }}>
+                                            <div style={{ fontSize: 11, color: T.amber, fontWeight: 800, letterSpacing: 1, marginBottom: 10 }}>⚠️ RISKS / GAPS</div>
+                                            {aiAnalysis.risks.map((r, i) => (
+                                                <div key={i} style={{ display: "flex", gap: 10, padding: "8px 0", borderBottom: `1px solid ${T.glassBorder}` }}>
+                                                    <div style={{ color: T.amber, flexShrink: 0 }}>•</div>
+                                                    <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.5 }}>{r}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Next steps */}
+                                    {aiAnalysis.nextSteps?.length > 0 && (
+                                        <div style={{ marginBottom: 20 }}>
+                                            <div style={{ fontSize: 11, color: T.blue, fontWeight: 800, letterSpacing: 1, marginBottom: 10 }}>🚀 NEXT STEPS</div>
+                                            {aiAnalysis.nextSteps.map((s, i) => (
+                                                <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "8px 0", borderBottom: `1px solid ${T.glassBorder}` }}>
+                                                    <div style={{ background: T.blue, color: "#fff", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, flexShrink: 0, marginTop: 1 }}>{i + 1}</div>
+                                                    <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.5 }}>{s}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    <Btn variant="ghost" size="sm" onClick={runAIAnalysis} style={{ width: "100%" }}>↺ Re-analyze</Btn>
+                                </div>
+                            ) : (
+                                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: "48px 0", textAlign: "center" }}>
+                                    <div style={{ fontSize: 40 }}>🧠</div>
+                                    <div style={{ fontSize: 15, fontWeight: 700, color: T.text }}>AI Eligibility Analysis</div>
+                                    <div style={{ fontSize: 13, color: T.sub, maxWidth: 320 }}>Get an instant eligibility score, strengths, risk gaps, and next steps — tailored to your profile.</div>
+                                    <Btn variant="primary" onClick={runAIAnalysis}>Run Analysis</Btn>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer actions */}
+                <div style={{ padding: "16px 24px", borderTop: `1px solid ${T.glassBorder}`, flexShrink: 0, display: "flex", gap: 10 }}>
+                    {link && (
+                        <a href={link} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                            <Btn variant="ghost" size="sm" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                <ExternalLink size={13} /> Open
+                            </Btn>
+                        </a>
+                    )}
+                    <Btn variant="ghost" size="sm"
+                        style={{ display: "flex", alignItems: "center", gap: 6 }}
+                        onClick={() => { setActiveTab("ai"); if (!aiAnalysis && !aiLoading) runAIAnalysis(); }}>
+                        <Sparkles size={13} /> AI Analysis
+                    </Btn>
+                    <Btn
+                        variant={isTracked ? "ghost" : "primary"}
+                        size="sm"
+                        style={{ flex: 1 }}
+                        onClick={() => !isTracked && onAdd(g)}
+                        disabled={isTracked}
+                    >
+                        {isTracked ? "✓ Already Tracked" : "+ Track Opportunity"}
+                    </Btn>
+                </div>
+            </div>
+
+            <style>{`
+                @keyframes slideInRight {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+            `}</style>
+        </>
+    );
+};
+
+// ─── GRANT RESULT CARD ────────────────────────────────────────────────────────
+const GrantResultCard = ({ g, onAdd, isTracked, onOpen }) => {
     const daysLeft = g.deadline && g.deadline !== "Rolling" ? Math.ceil((new Date(g.deadline) - Date.now()) / 86400000) : null;
     const urgency = daysLeft !== null ? (daysLeft <= 7 ? T.red : daysLeft <= 21 ? T.amber : null) : null;
     const desc = g.description || "";
-    const shortDesc = desc.slice(0, 280);
-    const hasMore = desc.length > 280;
     const link = g.link || g.url || g.sourceUrl || g._url;
 
     return (
         <Card key={g.id} glow style={{
-            marginBottom: 12,
+            marginBottom: 10,
             borderLeft: `4px solid ${isTracked ? T.mute : (g._sourceColor || T.blue)}`,
-            transition: "box-shadow 0.2s",
-            opacity: isTracked ? 0.7 : 1,
-            background: expanded ? "rgba(255,255,255,0.04)" : undefined,
-        }}>
-            {/* ── Header row ── */}
+            cursor: "pointer",
+            transition: "background 0.15s, transform 0.15s",
+            opacity: isTracked ? 0.75 : 1,
+        }}
+            onClick={() => onOpen(g)}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; e.currentTarget.style.transform = "translateX(2px)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = ""; e.currentTarget.style.transform = ""; }}
+        >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                     {/* Badge row */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 7, flexWrap: "wrap" }}>
                         <Badge color={g._sourceColor || T.blue} style={{ fontSize: 9, fontWeight: 800, letterSpacing: 0.5 }}>
                             {g._source || "Federal"}
                         </Badge>
-                        {g.agency && <Badge color={T.mute} style={{ fontSize: 9, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.agency}</Badge>}
+                        {g.agency && <Badge color={T.mute} style={{ fontSize: 9, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{g.agency}</Badge>}
                         {g.cfda && <Badge color="#6366f1" style={{ fontSize: 9 }}>CFDA {g.cfda}</Badge>}
                         {g.awardType && <Badge color={T.mute} style={{ fontSize: 9 }}>{g.awardType}</Badge>}
                         {g.setAside && <Badge color="#0ea5e9" style={{ fontSize: 9 }}>{g.setAside}</Badge>}
-                        {g.category && <Badge color="#a855f7" style={{ fontSize: 9 }}>{g.category}</Badge>}
-                        {g._score >= 85 && <Badge color={T.amber} style={{ fontSize: 9, fontWeight: 800 }}>⭐ {g._score}% match</Badge>}
-                        {isTracked && <Badge color={T.green} style={{ fontSize: 9, fontWeight: 800 }}>✓ Tracked</Badge>}
-                        {urgency && daysLeft !== null && <Badge color={urgency} style={{ fontSize: 9, fontWeight: 800 }}>⏰ {daysLeft}d left</Badge>}
+                        {g._score >= 85 && <Badge color={T.amber} style={{ fontSize: 9, fontWeight: 800 }}>⭐ {g._score}%</Badge>}
+                        {isTracked && <Badge color={T.green} style={{ fontSize: 9 }}>✓ Tracked</Badge>}
+                        {urgency && daysLeft !== null && <Badge color={urgency} style={{ fontSize: 9, fontWeight: 800 }}>⏰ {daysLeft}d</Badge>}
                     </div>
 
                     {/* Title */}
-                    <h3 style={{ fontSize: 15, fontWeight: 700, color: T.text, margin: "0 0 6px", lineHeight: 1.4, fontFamily: "Outfit" }}>
-                        {link ? (
-                            <a href={link} target="_blank" rel="noopener noreferrer"
-                                style={{ color: T.text, textDecoration: "none" }}
-                                onMouseEnter={e => e.target.style.color = T.blue}
-                                onMouseLeave={e => e.target.style.color = T.text}>
-                                {g.title} <span style={{ fontSize: 11, color: T.blue, fontWeight: 400 }}>↗</span>
-                            </a>
-                        ) : g.title}
-                    </h3>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 5, lineHeight: 1.4, fontFamily: "Outfit" }}>
+                        {g.title}
+                        {link && <span style={{ fontSize: 10, color: T.blue, marginLeft: 5, fontWeight: 400 }}>↗</span>}
+                    </div>
 
-                    {/* Description */}
+                    {/* Description preview */}
                     {desc && (
-                        <p style={{ color: T.sub, fontSize: 13, margin: "0 0 8px", lineHeight: 1.6 }}>
-                            {expanded ? desc : shortDesc}{!expanded && hasMore ? "…" : ""}
-                            {hasMore && (
-                                <button onClick={() => setExpanded(x => !x)}
-                                    style={{ background: "none", border: "none", color: T.blue, cursor: "pointer", fontSize: 12, padding: "0 4px", marginLeft: 2 }}>
-                                    {expanded ? "less" : "more"}
-                                </button>
-                            )}
+                        <p style={{ color: T.mute, fontSize: 12, margin: 0, lineHeight: 1.5, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                            {desc}
                         </p>
                     )}
 
-                    {/* Meta row — identifiers, PI, program, org */}
-                    <div style={{ display: "flex", gap: 12, flexWrap: "wrap", fontSize: 11, color: T.mute, marginTop: 2 }}>
+                    {/* Meta pills */}
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", fontSize: 11, color: T.mute, marginTop: 6 }}>
                         {g.oppNumber && <span style={{ fontFamily: "monospace" }}>#{g.oppNumber}</span>}
-                        {g.naics && <span>NAICS: {g.naics}</span>}
-                        {g.pi && <span>PI: {g.pi}</span>}
-                        {g.org && <span>Org: {g.org}</span>}
-                        {g.program && <span>Program: {g.program}</span>}
                         {g.status && <span style={{ color: g.status === "Open" || g.status === "Posted" ? T.green : T.mute }}>● {g.status}</span>}
-                        {g.awardStart && <span>Start: {String(g.awardStart).slice(0, 10)}</span>}
-                        {g.ein && <span>EIN: {g.ein}</span>}
+                        {g.naics && <span>NAICS {g.naics}</span>}
+                        {g.pi && <span>PI: {g.pi}</span>}
                     </div>
                 </div>
 
                 {/* Right column */}
-                <div style={{ textAlign: "right", minWidth: 130, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-                    <div style={{ fontSize: 19, fontWeight: 800, color: T.green, letterSpacing: "-0.03em", lineHeight: 1 }}>
+                <div style={{ textAlign: "right", minWidth: 110, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3 }}>
+                    <div style={{ fontSize: 17, fontWeight: 800, color: T.green, letterSpacing: "-0.03em", lineHeight: 1 }}>
                         {typeof g.amount === "number" && g.amount > 0
                             ? g.amount >= 1e6 ? `$${(g.amount / 1e6).toFixed(1)}M` : `$${g.amount.toLocaleString()}`
                             : g.amount || "—"}
                     </div>
-                    {g.amountFloor > 0 && <div style={{ color: T.mute, fontSize: 10 }}>Floor: ${g.amountFloor?.toLocaleString()}</div>}
-                    {g.deadline && g.deadline !== "Rolling" && !urgency && (
-                        <div style={{ color: T.mute, fontSize: 11 }}>Due {String(g.deadline).slice(0, 10)}</div>
+                    {g.deadline && g.deadline !== "Rolling" && (
+                        <div style={{ color: urgency || T.mute, fontSize: 10 }}>
+                            {urgency ? `${daysLeft}d left` : `Due ${String(g.deadline).slice(0, 10)}`}
+                        </div>
                     )}
-                    {g.deadline === "Rolling" && <div style={{ color: T.mute, fontSize: 11 }}>Rolling</div>}
-                    {link && (
-                        <a href={link} target="_blank" rel="noopener noreferrer"
-                            style={{ fontSize: 10, color: T.blue, textDecoration: "none", marginTop: 2 }}>
-                            View source ↗
-                        </a>
-                    )}
-                    <Btn
-                        variant={isTracked ? "ghost" : "primary"}
-                        size="sm"
-                        style={{ marginTop: 6, width: "100%" }}
-                        onClick={() => !isTracked && onAdd(g)}
-                        disabled={isTracked}
-                    >
-                        {isTracked ? "✓ Tracked" : "+ Track"}
-                    </Btn>
+                    {g.deadline === "Rolling" && <div style={{ color: T.mute, fontSize: 10 }}>Rolling</div>}
+                    <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                        <Btn variant="ghost" size="sm" style={{ fontSize: 10, padding: "3px 8px" }}
+                            onClick={e => { e.stopPropagation(); onOpen(g); }}>
+                            Details
+                        </Btn>
+                        <Btn
+                            variant={isTracked ? "ghost" : "primary"}
+                            size="sm"
+                            style={{ fontSize: 10, padding: "3px 10px" }}
+                            onClick={e => { e.stopPropagation(); if (!isTracked) onAdd(g); }}
+                            disabled={isTracked}
+                        >
+                            {isTracked ? "✓" : "+ Track"}
+                        </Btn>
+                    </div>
                 </div>
             </div>
         </Card>
@@ -168,6 +524,7 @@ export const Discovery = () => {
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState(null);
     const [sortBy, setSortBy] = useState("relevance"); // relevance | amount | deadline
+    const [selectedGrant, setSelectedGrant] = useState(null);
     const [filterSource, setFilterSource] = useState("All");
     const [visibleCount, setVisibleCount] = useState(20);
     const [selectedState, setSelectedState] = useState(() => {
@@ -306,6 +663,17 @@ export const Discovery = () => {
 
     return (
         <div className="discovery-hub animate-in" style={{ position: "relative" }}>
+
+            {/* ── Opportunity Detail Drawer ── */}
+            {selectedGrant && (
+                <OpportunityDrawer
+                    grant={selectedGrant}
+                    onClose={() => setSelectedGrant(null)}
+                    onAdd={onAdd}
+                    isTracked={trackedTitles.has((selectedGrant.title || "").trim().toLowerCase())}
+                />
+            )}
+
             {/* Toast Notification */}
             {toast && (
                 <div style={{
@@ -473,7 +841,7 @@ export const Discovery = () => {
                                         <span style={{ marginLeft: 'auto', fontSize: 11, color: T.mute }}>{sortedResults().length} results</span>
                                     </div>
                                     {displayed.map(g => (
-                                        <GrantResultCard key={g.id} g={g} onAdd={onAdd}
+                                        <GrantResultCard key={g.id} g={g} onAdd={onAdd} onOpen={setSelectedGrant}
                                             isTracked={trackedTitles.has((g.title || "").trim().toLowerCase())} />
                                     ))}
                                     {sortedResults().length > visibleCount && (
@@ -507,7 +875,7 @@ export const Discovery = () => {
                             </Card>
                         )}
                         {loading && [1, 2, 3].map(i => <SkeletonCard key={i} lines={3} style={{ marginBottom: 12 }} />)}
-                        {results.map(g => <GrantResultCard key={g.id} g={g} onAdd={onAdd} />)}
+                        {results.map(g => <GrantResultCard key={g.id} g={g} onAdd={onAdd} onOpen={setSelectedGrant} />)}
                     </div>
                 )}
 
@@ -529,7 +897,7 @@ export const Discovery = () => {
                                 <div style={{ height: 10, background: "rgba(255,255,255,0.05)", borderRadius: 6, width: "75%" }} />
                             </Card>
                         ))}
-                        {results.map(g => <GrantResultCard key={g.id} g={g} onAdd={onAdd} />)}
+                        {results.map(g => <GrantResultCard key={g.id} g={g} onAdd={onAdd} onOpen={setSelectedGrant} />)}
                     </div>
                 )}
 
@@ -580,7 +948,7 @@ export const Discovery = () => {
                                     </div>
                                 )}
 
-                                {results.map(p => <GrantResultCard key={p.id} g={p} onAdd={onAdd} />)}
+                                {results.map(p => <GrantResultCard key={p.id} g={p} onAdd={onAdd} onOpen={setSelectedGrant} />)}
                                 <div style={{ textAlign: "center", padding: "20px 0" }}>
                                     <Btn variant="secondary" onClick={() => { setResults([]); setIdentities([]); setSources(null); setQuery(""); }}>Clear Search Results</Btn>
                                 </div>
