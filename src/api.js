@@ -1794,24 +1794,23 @@ export const API = {
     },
 
     async getFEMAActiveDeclarations() {
-        if (this._cache["fema_active"]) return this._cache["fema_active"];
+        const cached = SimpleCache.get("fema_active");
+        if (cached) return cached;
         try {
-            // Real OpenFEMA endpoint (no key required for basic data)
-            const r = await fetch(`https://openfema.fema.gov/api/open/v2/DisasterDeclarationsSummaries?$filter=declarationDate gt '2024-01-01'&$top=5&$orderby=declarationDate desc`);
+            const r = await fetch(`https://openfema.fema.gov/api/open/v2/DisasterDeclarationsSummaries?$filter=declarationDate gt '2024-01-01'&$top=8&$orderby=declarationDate desc`);
             const data = await r.json();
             const result = data.DisasterDeclarationsSummaries || [];
-            this._cache["fema_active"] = result;
+            SimpleCache.set("fema_active", result, 3600000);
             return result;
         } catch {
-            // Fallback for demo stability
-            const mock = [{ disasterNumber: 4756, state: "CA", declarationDate: new Date().toISOString(), incidentType: "Flood", declarationTitle: "Severe Winter Storms" }];
-            return mock;
+            return [];
         }
     },
 
     async getPhilanthropicIntel(zipCode = "60601") {
         const cacheKey = `phil_v2_${zipCode}`;
-        if (this._cache[cacheKey]) return this._cache[cacheKey];
+        const cached = SimpleCache.get(cacheKey);
+        if (cached) return cached;
         try {
             const loc = getProfileState().abbr;
             const r = await fetch(`https://projects.propublica.org/nonprofits/api/v2/search.json?q=foundation&state=${loc}`);
@@ -1837,7 +1836,7 @@ export const API = {
                 };
             }).sort((a, b) => b.affinity - a.affinity);
 
-            this._cache[cacheKey] = foundations;
+            SimpleCache.set(cacheKey, foundations, 600000);
             return foundations;
         } catch (e) { return { _error: e.message }; }
     },
@@ -1845,7 +1844,8 @@ export const API = {
     async getDisasterRiskProfile(state) {
         const st = state || getProfileState().abbr;
         const cacheKey = `fema_risk_${st}`;
-        if (this._cache[cacheKey]) return this._cache[cacheKey];
+        const cachedRisk = SimpleCache.get(cacheKey);
+        if (cachedRisk) return cachedRisk;
         try {
             // Aggregate historically (last 10 years) to find patterns
             const r = await fetch(`https://openfema.fema.gov/api/open/v2/DisasterDeclarationsSummaries?$filter=state eq '${st}' and declarationDate gt '2014-01-01'&$top=1000&$select=incidentType`);
@@ -1861,7 +1861,7 @@ export const API = {
                 .map(([type, count]) => ({ type, count, risk: Math.min(100, count * 5) }))
                 .sort((a, b) => b.count - a.count);
 
-            this._cache[cacheKey] = sorted;
+            SimpleCache.set(cacheKey, sorted, 86400000);
             return sorted;
         } catch (e) { return { _error: e.message }; }
     },
@@ -1869,7 +1869,8 @@ export const API = {
     async getRegionalIncentives(state) {
         const st = state || getProfileState().abbr;
         const cacheKey = `edc_${st}`;
-        if (this._cache[cacheKey]) return this._cache[cacheKey];
+        const cachedInc = SimpleCache.get(cacheKey);
+        if (cachedInc) return cachedInc;
         try {
             const incentives = {
                 "IL": [
@@ -1883,7 +1884,7 @@ export const API = {
             const result = incentives[st] || [
                 { id: "gen-edc", title: "Regional Opportunity Zone Credit", agency: "Local EDC", type: "EDC Incentive", description: "Federal/State hybrid incentive for investments in distressed communities." }
             ];
-            this._cache[cacheKey] = result;
+            SimpleCache.set(cacheKey, result, 3600000);
             return result;
         } catch (e) { return { _error: e.message }; }
     },
@@ -2522,25 +2523,63 @@ export const API = {
     },
 
     async searchMunicipalPulse(query, state) {
-        const st = state || getProfileState().abbr;
-        try {
-            const r = await fetch(`https://data.ct.gov/api/views/6fzc-m5m3/rows.json?search=${encodeURIComponent(query)}`, {
-                signal: AbortSignal.timeout(7000)
-            });
-            if (!r.ok) return [];
-            const data = await r.json();
-            return (data.data || []).slice(0, 5).map(row => ({
-                id: row[0] || uid(),
-                title: row[8] || "Municipal Grant Opportunity",
-                agency: `${st} Municipal Portal`,
-                amount: row[14] || "Local Grant",
-                deadline: "See Portal",
-                description: `City-level opportunity identified via municipal open data.`,
-                _source: "MunicipalPulse",
-                _sourceColor: "#7c3aed",
-                _score: 75
+        const st = state || getProfileState().abbr || "IL";
+        const cacheKey = `municipal_pulse_${st}_${query}`;
+        const cached = SimpleCache.get(cacheKey);
+        if (cached) return cached;
+
+        // State-specific open data portals (Socrata-compatible)
+        const statePortals = {
+            IL: `https://data.illinois.gov/resource/grants.json?$q=${encodeURIComponent(query)}&$limit=5`,
+            NY: `https://data.ny.gov/resource/9cg8-kdxi.json?$q=${encodeURIComponent(query)}&$limit=5`,
+            CA: `https://data.ca.gov/api/3/action/datastore_search?resource_id=grants&q=${encodeURIComponent(query)}`,
+            TX: `https://data.texas.gov/resource/b38d-f8w6.json?$q=${encodeURIComponent(query)}&$limit=5`,
+            WA: `https://data.wa.gov/resource/qav3-psh4.json?$q=${encodeURIComponent(query)}&$limit=5`,
+            CO: `https://data.colorado.gov/resource/grant-programs.json?$q=${encodeURIComponent(query)}&$limit=5`,
+            FL: `https://data.floridajobs.org/api/records/2.0/search?dataset=floridastatefunding&q=${encodeURIComponent(query)}&rows=5`,
+        };
+
+        const portalUrl = statePortals[st];
+        const [portalRes, usaRes] = await Promise.allSettled([
+            portalUrl ? fetch(portalUrl, { signal: AbortSignal.timeout(7000) }).then(r => r.ok ? r.json() : null).catch(() => null) : Promise.resolve(null),
+            // USASpending city/county level — reliable fallback
+            fetch("https://api.usaspending.gov/api/v2/search/spending_by_award/", {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    filters: { keywords: [query], award_type_codes: ["02","03","04","05"], place_of_performance_locations: [{ country: "USA", state: st }] },
+                    fields: ["Award ID","Recipient Name","Award Amount","Awarding Agency","Description","Place of Performance City Name"],
+                    limit: 5, page: 1, sort: "Award Amount", order: "desc"
+                }), signal: AbortSignal.timeout(8000)
+            }).then(r => r.ok ? r.json() : { results: [] }).catch(() => ({ results: [] }))
+        ]);
+
+        const fromPortal = [];
+        if (portalRes.value) {
+            const records = Array.isArray(portalRes.value) ? portalRes.value : (portalRes.value?.result?.records || portalRes.value?.records || []);
+            records.slice(0, 4).forEach(rec => fromPortal.push({
+                id: uid(),
+                title: rec.title || rec.grant_title || rec.program_name || "Municipal Grant",
+                agency: `${st} State/Municipal`,
+                amount: parseFloat(rec.amount || rec.award_amount || rec.funding_amount || 0),
+                deadline: "See portal",
+                description: rec.description || rec.purpose || `${st} state grant opportunity.`,
+                _source: `${st} Open Data`, _sourceColor: "#7c3aed", _score: 78
             }));
-        } catch { return []; }
+        }
+
+        const fromUSA = (usaRes.value?.results || []).map(r => ({
+            id: uid(),
+            title: `[${r["Place of Performance City Name"] || st}] ${r["Recipient Name"] || "Award"}`,
+            agency: r["Awarding Agency"] || "Federal",
+            amount: r["Award Amount"] || 0,
+            deadline: "Completed",
+            description: r["Description"] || `Federal award in ${st}.`,
+            _source: "USASpending", _sourceColor: "#f59e0b", _score: 72
+        }));
+
+        const results = [...fromPortal, ...fromUSA];
+        SimpleCache.set(cacheKey, results, 300000);
+        return results;
     },
 
     async searchFecInfluence(query) {
