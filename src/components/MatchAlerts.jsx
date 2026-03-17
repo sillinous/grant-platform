@@ -190,7 +190,7 @@ export const MatchAlerts = ({ onAdd }) => {
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>
-          <Input value={newTerm} onChange={e => setNewTerm(e.target.value)} placeholder="Add watch keyword..." style={{ flex: 1 }} onKeyDown={e => e.key === 'Enter' && addWatch()} />
+          <Input value={newTerm} onChange={v => setNewTerm(v)} placeholder="Add watch keyword..." style={{ flex: 1 }} onKeyDown={e => e.key === 'Enter' && addWatch()} />
           <Btn size="sm" onClick={addWatch}>+ Add</Btn>
           <Btn variant="primary" onClick={scanAll} disabled={scanning} style={{ minWidth: 110 }}>
             {scanning ? <><span style={{ display: 'inline-block', animation: 'spin 1s linear infinite', marginRight: 4 }}>⚙️</span>Scanning</> : '🔍 Scan Now'}

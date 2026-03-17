@@ -16,8 +16,11 @@ export const useStore = create(
           deadline: "2026-06-15",
           amount: 250000,
           focus: ["Infrastructure", "Rural"],
-          status: "Discovery",
-          description: "Support for expanding high-speed internet access to underserved rural housing complexes."
+          stage: "researching",
+          _source: "HUD",
+          description: "Support for expanding high-speed internet access to underserved rural housing complexes.",
+          meta: { riskScore: 18, alignmentScore: 82, winProbability: 55 },
+          compliance: { reportingFrequency: "Quarterly", requiredAudits: [], matchingFundsRequired: false, matchPercent: 0 },
         },
         {
           id: "grant-nsf-02",
@@ -26,8 +29,11 @@ export const useStore = create(
           deadline: "2026-04-20",
           amount: 75000,
           focus: ["Education", "STEM"],
-          status: "Pipeline",
-          description: "Funding for community-led STEM workshops for K-12 students."
+          stage: "drafting",
+          _source: "NSF",
+          description: "Funding for community-led STEM workshops for K-12 students.",
+          meta: { riskScore: 12, alignmentScore: 78, winProbability: 60 },
+          compliance: { reportingFrequency: "Annual", requiredAudits: [], matchingFundsRequired: false, matchPercent: 0 },
         }
       ],
       vaultDocs: [

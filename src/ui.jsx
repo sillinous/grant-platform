@@ -133,11 +133,13 @@ export const Badge = ({ children, color = T.blue, style, onClick }) => (
 );
 
 export const Input = ({ label, style, dictate, value, onChange, ...props }) => {
+    // onChange is called with the value string directly (not the event object)
+    const handleChange = onChange ? (e) => onChange(e.target.value) : undefined;
     const { isListening, toggle } = useSpeechRecognition((transcript) => {
         if (onChange) {
             const currentVal = value || '';
             const space = currentVal.length > 0 && !currentVal.endsWith(' ') ? ' ' : '';
-            onChange({ target: { value: currentVal + space + transcript } });
+            onChange(currentVal + space + transcript);
         }
     });
 
@@ -146,7 +148,7 @@ export const Input = ({ label, style, dictate, value, onChange, ...props }) => {
             {label && <label style={{ fontSize: 11, color: T.sub, fontWeight: 700, letterSpacing: 0.5 }}>{label}</label>}
             <input
                 value={value}
-                onChange={onChange}
+                onChange={handleChange}
                 style={{
                     padding: '11px 15px', paddingRight: dictate ? 40 : 15, background: 'rgba(255,255,255,0.03)',
                     border: `1px solid ${T.glassBorder}`,
@@ -172,10 +174,14 @@ export const Input = ({ label, style, dictate, value, onChange, ...props }) => {
     );
 };
 
-export const Select = ({ label, options = [], style, ...props }) => (
+export const Select = ({ label, options = [], style, onChange, ...props }) => {
+    // onChange receives the value string directly (not the event object)
+    const handleChange = onChange ? (e) => onChange(e.target.value) : undefined;
+    return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
         {label && <label style={{ fontSize: 11, color: T.sub, fontWeight: 700, letterSpacing: 0.5 }}>{label}</label>}
         <select
+            onChange={handleChange}
             style={{
                 padding: '11px 15px', background: 'rgba(255,255,255,0.04)',
                 border: `1px solid ${T.glassBorder}`,
@@ -190,7 +196,8 @@ export const Select = ({ label, options = [], style, ...props }) => (
             {options.map(opt => <option key={opt.value} value={opt.value} style={{ background: T.panel }}>{opt.label}</option>)}
         </select>
     </div>
-);
+    );
+};
 
 export const Progress = ({ value, max = 100, color = T.blue, height = 10, style, animated }) => (
     <div style={{ width: '100%', height, background: 'rgba(255,255,255,0.05)', borderRadius: height / 2, overflow: 'hidden', ...style }}>
@@ -359,11 +366,13 @@ export const SkeletonCard = ({ lines = 3, style }) => (
 );
 
 export const TextArea = ({ label, style, dictate, value, onChange, ...props }) => {
+    // onChange is called with the value string directly (not the event object)
+    const handleChange = onChange ? (e) => onChange(e.target.value) : undefined;
     const { isListening, toggle } = useSpeechRecognition((transcript) => {
         if (onChange) {
             const currentVal = value || '';
             const space = currentVal.length > 0 && !currentVal.endsWith(' ') && !currentVal.endsWith('\n') ? ' ' : '';
-            onChange({ target: { value: currentVal + space + transcript } });
+            onChange(currentVal + space + transcript);
         }
     });
 
@@ -372,7 +381,7 @@ export const TextArea = ({ label, style, dictate, value, onChange, ...props }) =
             {label && <label style={{ fontSize: 11, color: T.sub, fontWeight: 700, letterSpacing: 0.5 }}>{label}</label>}
             <textarea
                 value={value}
-                onChange={onChange}
+                onChange={handleChange}
                 style={{
                     padding: '11px 15px', paddingRight: dictate ? 40 : 15, background: 'rgba(255,255,255,0.03)',
                     border: `1px solid ${T.glassBorder}`,

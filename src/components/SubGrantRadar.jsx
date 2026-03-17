@@ -135,7 +135,7 @@ export const SubGrantRadar = ({ onAdd: propOnAdd }) => {
                 <div style={{ display: "flex", gap: 8 }}>
                     <Input
                         value={query}
-                        onChange={e => setQuery(e.target ? e.target.value : e)}
+                        onChange={v => setQuery(v)}
                         placeholder="Search sector for prime awards with sub-grant potential…"
                         style={{ flex: 1 }}
                         onKeyDown={e => e.key === "Enter" && handleSearch()}

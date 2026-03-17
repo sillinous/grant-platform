@@ -38,7 +38,9 @@ export const Dashboard = () => {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
                 <Card glow style={{ borderTop: `4px solid ${T.amber}` }}>
                     <Stat label="Total Awarded" value={fmt(totalAwarded)} color={T.amber} />
-                    <div style={{ fontSize: 10, color: T.green, marginTop: 4 }}>↑ ${fmt(totalAwarded * 0.1)} this quarter</div>
+                    <div style={{ fontSize: 10, color: T.green, marginTop: 4 }}>
+                        {awarded.length > 0 ? `${awarded.length} grant${awarded.length > 1 ? "s" : ""} in portfolio` : "No awards yet"}
+                    </div>
                 </Card>
                 <Card>
                     <Stat label="Active Pipeline" value={fmt(totalPipeline)} color={T.blue} />
@@ -50,7 +52,9 @@ export const Dashboard = () => {
                 </Card>
                 <Card>
                     <Stat label="Upcoming Events" value={events?.length || 0} color={T.cyan} />
-                    <div style={{ fontSize: 10, color: T.sub, marginTop: 4 }}>Next: Proposal Workshop</div>
+                    <div style={{ fontSize: 10, color: T.sub, marginTop: 4 }}>
+                        {events?.length > 0 ? `Next: ${(events[0]?.title || "Event").slice(0, 28)}` : "No upcoming events"}
+                    </div>
                 </Card>
             </div>
 

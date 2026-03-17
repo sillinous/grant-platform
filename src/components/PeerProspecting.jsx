@@ -72,7 +72,7 @@ Return a structured professional report.`;
         <div style={{ fontSize:13, fontWeight:600, color:T.text, marginBottom:8 }}>🔎 Peer Prospecting</div>
         <div style={{ fontSize:12, color:T.sub, marginBottom:12 }}>Find organizations similar to yours that have received federal funding. Learn from their strategies and identify potential partners or competitors.</div>
         <div style={{ display:"flex", gap:8, marginBottom:8 }}>
-          <Input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search recipients... (e.g., technology, disability services, Newton IL)" style={{ flex: 1 }} />
+          <Input value={query} onChange={v => setQuery(v)} placeholder="Search recipients... (e.g., technology, disability services, Newton IL)" style={{ flex: 1 }} />
           <Btn variant="primary" onClick={searchRecipients} disabled={loading}>🔍 Recipients</Btn>
           <Btn onClick={searchSpending} disabled={loading}>💰 Awards</Btn>
         </div>

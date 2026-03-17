@@ -116,7 +116,7 @@ export function buildGrantContext(grantId) {
     const library = LS.get("section_library", []);
     const vault = LS.get("vault_docs", []);
 
-    // ≡ƒºá PORTFOLIO INTELLIGENCE: Find same-agency successes
+    // 🏆 PORTFOLIO INTELLIGENCE: Find same-agency successes
     const agencySuccesses = grants.filter(x =>
         x.id !== grantId &&
         x.agency === g.agency &&
@@ -2088,7 +2088,7 @@ export const API = {
         LS.set("grants", updated);
 
         logActivity("Application Submitted", `Triggered autonomous submission to ${newGrant.agency}`, {
-            icon: "≡ƒôñ",
+            icon: "📡",
             color: T.green,
             amount: newGrant.amount
         });

@@ -498,7 +498,7 @@ export const Settings = ({ showToast }) => {
             </div>
             <div style={{ fontSize: 11, color: T.sub, marginBottom: 12 }}>
               The platform is optimized for <strong>Free AI</strong>. Groq and OpenRouter Free models are lightning-fast and cost $0.
-              {!hasAnyKey() && <span style={{ color: T.amber, fontWeight: 600 }}> ΓåÆ You haven't added a key yet. Start with Groq!</span>}
+              {!hasAnyKey() && <span style={{ color: T.amber, fontWeight: 600 }}> → You haven't added a key yet. Start with Groq!</span>}
             </div>
 
             <div style={{ fontSize: 10, color: T.mute, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>Recommended Free Providers</div>
@@ -506,7 +506,7 @@ export const Settings = ({ showToast }) => {
               {Object.values(AI_PROVIDERS_LIST).filter(p => p.free).map(p => (
                 <Btn key={p.id} size="sm" variant={aiProvider === p.id ? "primary" : "ghost"} onClick={() => { LS.set("ai_provider", p.id); setAiProvider(p.id); }}
                   style={aiProvider === p.id ? { borderColor: p.color, boxShadow: `0 0 8px ${p.color}44` } : {}}>
-                  {p.icon} {p.name} {getProviderKeyFn(p.id) ? "Γ£à" : "Γ£¿"}
+                  {p.icon} {p.name} {getProviderKeyFn(p.id) ? "✓" : "✗"}
                 </Btn>
               ))}
             </div>
@@ -514,20 +514,20 @@ export const Settings = ({ showToast }) => {
             <div style={{ fontSize: 10, color: T.mute, marginBottom: 8, textTransform: "uppercase", letterSpacing: 0.5 }}>All Providers (Auto-detect active)</div>
             <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
               <Btn size="sm" variant={!aiProvider ? "primary" : "ghost"} onClick={() => { LS.del("ai_provider"); setAiProvider(""); }}>
-                ≡ƒôä Auto-detect (Prefers Free)
+                🔧 Auto-detect (Prefers Free)
               </Btn>
               {Object.values(AI_PROVIDERS_LIST).filter(p => !p.free).map(p => (
                 <Btn key={p.id} size="sm" variant={aiProvider === p.id ? "primary" : "ghost"} onClick={() => { LS.set("ai_provider", p.id); setAiProvider(p.id); }}
                   style={aiProvider === p.id ? { borderColor: p.color } : {}}>
-                  {p.icon} {p.name} {getProviderKeyFn(p.id) ? "Γ£à" : ""}
+                  {p.icon} {p.name} {getProviderKeyFn(p.id) ? "✓" : ""}
                 </Btn>
               ))}
             </div>
 
             <div style={{ fontSize: 11, color: T.mute, padding: "8px 12px", borderRadius: 8, background: T.panel, border: `1px solid ${T.border}` }}>
               Currently active: <strong style={{ color: activeProvider?.color || T.text }}>{activeProvider?.icon} {activeProvider?.name}</strong>
-              {activeModel && <span> ┬╜ Model: <strong>{AI_PROVIDERS_LIST[activeProvider?.id]?.models.find(m => m.id === activeModel)?.label || activeModel}</strong></span>}
-              {!getProviderKeyFn(activeProvider?.id) && <div style={{ color: T.red, marginTop: 4, fontWeight: 600 }}>ΓÜá∩╕Å Missing API Key: Using local stub or failing. Add a key below.</div>}
+              {activeModel && <span> · Model: <strong>{AI_PROVIDERS_LIST[activeProvider?.id]?.models.find(m => m.id === activeModel)?.label || activeModel}</strong></span>}
+              {!getProviderKeyFn(activeProvider?.id) && <div style={{ color: T.red, marginTop: 4, fontWeight: 600 }}>⚠️ Missing API Key: Using local stub or failing. Add a key below.</div>}
             </div>
           </Card>
 

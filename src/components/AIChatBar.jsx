@@ -135,7 +135,7 @@ export const AIChatBar = () => {
 
       {/* Input */}
       <div style={{ padding: "10px 12px", borderTop: `1px solid ${T.border}`, display: "flex", gap: 8 }}>
-        <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()}
+        <input value={input} onChange={v => setInput(v)} onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()}
           placeholder="Ask about your grants..."
           style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: `1px solid ${T.border}`, borderRadius: 10, padding: "9px 13px", color: T.text, outline: "none", fontSize: 13, transition: "border-color 0.2s" }}
           onFocus={e => e.currentTarget.style.borderColor = T.amber}

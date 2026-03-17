@@ -147,7 +147,7 @@ ${citationText}
               <TextArea 
                 dictate={true}
                 value={inputs[current.field] || ""}
-                onChange={e => setInputs({ ...inputs, [current.field]: e.target.value })}
+                onChange={v => setInputs({ ...inputs, [current.field]: v })}
                 rows={8}
                 placeholder={current.placeholder}
                 style={{ fontSize: 13, lineHeight: 1.6 }}

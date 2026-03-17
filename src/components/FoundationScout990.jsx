@@ -41,7 +41,7 @@ export const FoundationScout990 = ({ onAdd: propOnAdd }) => {
 
             <Card style={{ marginBottom: 20, background: T.panel }}>
                 <div style={{ display: "flex", gap: 12 }}>
-                    <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Enter foundation name or EIN (e.g. Gates Foundation)" style={{ flex: 1 }} />
+                    <Input value={search} onChange={v => setSearch(v)} placeholder="Enter foundation name or EIN (e.g. Gates Foundation)" style={{ flex: 1 }} />
                     <Btn variant="primary" onClick={runAnalysis} disabled={loading}>{loading ? "Analyzing..." : "Analyze Filing"}</Btn>
                 </div>
             </Card>
