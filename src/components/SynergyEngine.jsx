@@ -4,6 +4,7 @@ import { T, PROFILE, uid, fmt } from '../globals';
 import { API } from '../api';
 import { useStore } from '../store';
 import { Zap, Database, RefreshCw } from 'lucide-react';
+import { OpportunityDrawer } from "./OpportunityDrawer";
 
 const ScoreRing = ({ score }) => {
     const color = score >= 85 ? T.green : score >= 70 ? T.blue : T.amber;
@@ -25,6 +26,7 @@ export const SynergyEngine = ({ onAdd: propOnAdd }) => {
     const { addGrant: storeOnAdd, alliances = [] } = useStore();
     const onAdd = propOnAdd || storeOnAdd;
     const [synergies, setSynergies] = useState([]);
+    const [selectedGrant, setSelectedGrant] = useState(null);
     const [loading, setLoading] = useState(true);
     const [aiExplain, setAiExplain] = useState(null);
     const [explaining, setExplaining] = useState(null);
@@ -119,7 +121,7 @@ export const SynergyEngine = ({ onAdd: propOnAdd }) => {
                     ) : synergies.map(s => {
                         const isAlliance = alliances.some(a => a.name?.toLowerCase().includes(s.sector?.toLowerCase()));
                         return (
-                            <Card key={s.id} glow style={{ borderTop: `5px solid ${T.blue}`, position: "relative" }}>
+                            <Card key={s.id} glow style={{ borderTop: `5px solid ${T.blue}`, position: "relative", cursor: "pointer" }} onClick={() => setSelectedGrant(s)}>
                                 {isAlliance && (
                                     <div style={{ position: "absolute", top: -12, left: 14 }}>
                                         <Badge color={T.purple} style={{ fontWeight: 900, boxShadow: `0 4px 12px ${T.purple}44` }}>🤝 EXISTING ALLIANCE SECTOR</Badge>

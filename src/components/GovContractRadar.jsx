@@ -25,6 +25,7 @@ export const GovContractRadar = ({ onAdd: propOnAdd }) => {
     const [setAside, setSetAside] = useState("");
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState([]);
+    const [selectedGrant, setSelectedGrant] = useState(null);
     const [sources, setSources] = useState(null);
 
     const handleSearch = async () => {
@@ -106,7 +107,7 @@ export const GovContractRadar = ({ onAdd: propOnAdd }) => {
                         const isAlliance = alliances.some(a => a.name?.toLowerCase().includes(r.agency?.toLowerCase()));
                         const isHistory = r._source === "USASpending";
                         return (
-                            <Card key={r.id} glow style={{ borderLeft: `5px solid ${r._sourceColor || T.blue}`, padding: 22, position: "relative" }}>
+                            <Card key={r.id} glow style={{ borderLeft: `5px solid ${r._sourceColor || T.blue}`, padding: 22, position: "relative", cursor: "pointer" }} onClick={() => setSelectedGrant(r)}>
                                 {isAlliance && (
                                     <div style={{ position: "absolute", top: -12, left: 16 }}>
                                         <Badge color={T.purple} style={{ fontWeight: 900, boxShadow: `0 4px 12px ${T.purple}44` }}>🤝 ALLIANCE AGENCY</Badge>

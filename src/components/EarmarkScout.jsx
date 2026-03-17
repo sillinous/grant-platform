@@ -32,6 +32,7 @@ export const EarmarkScout = ({ onAdd: propOnAdd }) => {
     const [query, setQuery] = useState("");
     const [loading, setLoading] = useState(false);
     const [results, setResults] = useState([]);
+    const [selectedGrant, setSelectedGrant] = useState(null);
     const [sources, setSources] = useState(null);
 
     const handleSearch = async () => {
@@ -100,7 +101,7 @@ export const EarmarkScout = ({ onAdd: propOnAdd }) => {
                         const statusColor = STATUS_COLOR[r.status] || T.mute;
                         const isCDS = r._source === "USASpending";
                         return (
-                            <Card key={r.id} glow style={{ borderLeft: `5px solid ${r._sourceColor || T.purple}` }}>
+                            <Card key={r.id} glow style={{ borderLeft: `5px solid ${r._sourceColor || T.purple}`, cursor: "pointer" }} onClick={() => setSelectedGrant(r)}>
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
                                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                                         <Badge color={r._sourceColor || T.purple} style={{ fontSize: 9, fontWeight: 800 }}>{r._source}</Badge>

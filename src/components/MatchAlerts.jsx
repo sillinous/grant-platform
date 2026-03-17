@@ -228,7 +228,7 @@ export const MatchAlerts = ({ onAdd }) => {
           : filteredAlerts.map(a => {
             const topColor = a.matchScore >= 75 ? T.green : a.matchScore >= 45 ? T.amber : T.mute;
             return (
-              <Card key={a.id} interactive glow={a.matchScore >= 70} style={{ borderTop: `5px solid ${topColor}`, padding: 22, cursor: 'default' }}>
+              <Card key={a.id} interactive glow={a.matchScore >= 70} style={{ borderTop: `5px solid ${topColor}`, padding: 22, cursor: 'pointer' }} onClick={() => setSelectedGrant(a)}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
                   <div style={{ flex: 1, marginRight: 12 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
@@ -255,7 +255,7 @@ export const MatchAlerts = ({ onAdd }) => {
                 </div>
 
                 <div style={{ fontSize: 12, color: T.sub, lineHeight: 1.7, marginBottom: 12, padding: 12, background: 'rgba(255,255,255,0.02)', borderRadius: 10, border: `1px solid ${T.glassBorder}` }}>
-                  {a.description?.slice(0, 220)}{a.description?.length > 220 ? '…' : ''}
+                  {a.description?.slice(0, 180)}{a.description?.length > 180 ? '… ' : ''}{a.description?.length > 180 && <span style={{ color: T.blue, fontSize: 11 }}>View details →</span>}
                 </div>
 
                 {a.breakdown && expandedAlert === a.id && (

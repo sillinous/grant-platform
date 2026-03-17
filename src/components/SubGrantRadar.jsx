@@ -4,6 +4,7 @@ import { T, uid, fmt, PROFILE } from '../globals';
 import { API } from '../api';
 import { useStore } from '../store';
 import { Database, CheckCircle, AlertCircle } from 'lucide-react';
+import { OpportunityDrawer } from "./OpportunityDrawer";
 
 const SourcePill = ({ label, count, ok, color, loading }) => (
     <div style={{
@@ -26,6 +27,7 @@ export const SubGrantRadar = ({ onAdd: propOnAdd }) => {
         return (PROFILE.focus || ["workforce", "technology", "community"])[0] || "workforce";
     });
     const [data, setData] = useState([]);
+    const [selectedGrant, setSelectedGrant] = useState(null);
     const [regAlerts, setRegAlerts] = useState([]);
     const [loading, setLoading] = useState(false);
     const [sources, setSources] = useState(null);
@@ -117,6 +119,7 @@ export const SubGrantRadar = ({ onAdd: propOnAdd }) => {
 
     return (
         <div style={{ padding: 20, animation: "fadeIn 0.4s" }}>
+            {selectedGrant && <OpportunityDrawer grant={selectedGrant} onClose={() => setSelectedGrant(null)} onAdd={onAdd} isTracked={false} />}
             <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 20 }}>
                 <div style={{ fontSize: 24, padding: "8px", background: `${T.amber}11`, borderRadius: "8px" }}>🛰️</div>
                 <div style={{ flex: 1 }}>
@@ -185,7 +188,7 @@ export const SubGrantRadar = ({ onAdd: propOnAdd }) => {
                         const isAlliance = alliances.some(a => a.name?.toLowerCase().includes(item.prime?.toLowerCase()));
                         const isHistorical = item._source === "USASpending";
                         return (
-                            <Card key={item.id} glow style={{ borderTop: `5px solid ${item._source === "USASpending" ? T.amber : T.green}`, position: "relative" }}>
+                            <Card key={item.id} glow style={{ borderTop: `5px solid ${item._source === "USASpending" ? T.amber : T.green}`, position: "relative", cursor: "pointer" }} onClick={() => setSelectedGrant(item)}>
                                 {isAlliance && (
                                     <div style={{ position: "absolute", top: -12, left: 16 }}>
                                         <Badge color={T.purple} style={{ fontWeight: 900, boxShadow: `0 4px 12px ${T.purple}44` }}>🤝 ALLIANCE TARGET</Badge>
