@@ -39,7 +39,7 @@ Return ONLY JSON:
         const cleaned = result.text.replace(/```json\n?|```/g, "").trim();
         const parsed = JSON.parse(cleaned);
         setMatrices({ ...matrices, [selectedGrant]: { ...parsed, analyzedAt: new Date().toISOString() } });
-      } catch (e) { alert("Analysis failed to parse findings."); }
+      } catch (e) { toast("Analysis failed to parse findings."); }
     }
     setLoading(false);
   };

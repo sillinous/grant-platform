@@ -38,7 +38,7 @@ export const DAFSignal = ({ onAdd: propOnAdd }) => {
                             </div>
                         </div>
                         <Btn variant="success" onClick={() => {
-                            API.fortuna.syncToLedger().then(() => alert("DAF Transfer Initialized via Fortuna Engine."));
+                            API.fortuna.syncToLedger().then(() => toast("DAF Transfer Initialized via Fortuna Engine."));
                         }}>Execute DAF Transfer</Btn>
                     </div>
                 </Card>

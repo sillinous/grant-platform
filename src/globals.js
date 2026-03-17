@@ -88,7 +88,9 @@ export const getProfileState = () => PROFILE;
 
 export const saveProfile = (p) => {
     LS.set("org_profile", p);
+    window.__PROFILE = p; // immediate sync
     window.dispatchEvent(new Event("profile_update"));
+    window.dispatchEvent(new Event("gp_profile_updated"));
 };
 
 export const STAGE_MAP = {
@@ -120,4 +122,9 @@ export const logActivity = (action, details) => {
     const logs = LS.get("activity_logs", []);
     logs.unshift({ id: uid(), ts: new Date().toISOString(), action, details });
     LS.set("activity_logs", logs.slice(0, 100));
+};
+
+// ── Global toast helper — works anywhere without importing store ──────────────
+export const toast = (msg, type = 'success') => {
+    window.dispatchEvent(new CustomEvent('gp_toast', { detail: { msg, type, id: Date.now() } }));
 };

@@ -10,6 +10,17 @@ export const Toast = () => {
   const [visible, setVisible] = useState(false);
   const [current, setCurrent] = useState(null);
 
+  // Listen to global toast events dispatched via toast() from globals.js
+  useEffect(() => {
+    const handler = (e) => {
+      setCurrent(e.detail);
+      setVisible(true);
+      setTimeout(() => setVisible(false), 3200);
+    };
+    window.addEventListener('gp_toast', handler);
+    return () => window.removeEventListener('gp_toast', handler);
+  }, []);
+
   useEffect(() => {
     if (toast) {
       setCurrent(toast);

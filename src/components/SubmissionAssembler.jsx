@@ -39,7 +39,7 @@ export const SubmissionAssembler = () => {
             a.download = `Submission_Package_${grant.title.replace(/\s+/g, '_')}.json`;
             a.click();
             setIsExporting(false);
-            alert("📦 Submission Package Manifest Generated! In a production environment, this would initiate a multi-file ZIP download.");
+            toast("📦 Submission Package Manifest Generated! In a production environment, this would initiate a multi-file ZIP download.");
         }, 1500);
     };
 

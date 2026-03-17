@@ -64,7 +64,7 @@ Return ONLY a JSON array of opportunities:
     saveProfile(p);
     setScanning(false);
     setProgress(0);
-    alert(`Risk Calibrated: System has identified ${highRisk.length} active environmental threats for ${p.loc}. Baseline risk updated.`);
+    toast(`Risk Calibrated: System has identified ${highRisk.length} active environmental threats for ${p.loc}. Baseline risk updated.`);
   };
 
   // Simulate periodic background scanning if active

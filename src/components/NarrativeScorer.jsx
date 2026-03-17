@@ -139,9 +139,9 @@ Return ONLY the optimized narrative text.`;
     const res = await API.callAI([{ role: "user", content: text }], sys);
     if (!res.error) {
       setText(res.text);
-      alert(`✨ Narrative optimized for ${label}! Review changes in the editor.`);
+      toast(`✨ Narrative optimized for ${label}! Review changes in the editor.`);
       setScoreResult(null); // Force re-score
-    } else { alert(res.error); }
+    } else { toast(res.error); }
     setLoading(false);
   };
 

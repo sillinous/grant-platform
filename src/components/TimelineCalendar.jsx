@@ -55,7 +55,7 @@ function generateICS(events) {
 
 function downloadICS(events) {
   const upcoming = events.filter(e => new Date(e.date) >= new Date(new Date().toDateString()));
-  if (upcoming.length === 0) { alert('No upcoming events to export.'); return; }
+  if (upcoming.length === 0) { toast('No upcoming events to export.'); return; }
   const icsContent = generateICS(upcoming);
   const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
   const url = URL.createObjectURL(blob);

@@ -1,3 +1,4 @@
+import { toast } from '../globals';
 import { useStore } from '../store';
 
 export const OutcomeTracker = () => {
@@ -42,8 +43,8 @@ Format as JSON:
           return { id: uid(), title: m.title, dueDate: d.toISOString().split("T")[0], status: "pending" };
         });
         updateOutcomes(grantId, { kpis: [...outcomes.kpis, ...newKpis], milestones: [...outcomes.milestones, ...newMs] });
-      } catch (e) { alert("Failed to parse suggested outcomes."); }
-    } else { alert(res.error); }
+      } catch (e) { toast("Failed to parse suggested outcomes."); }
+    } else { toast(res.error); }
     setLoading(false);
   };
 

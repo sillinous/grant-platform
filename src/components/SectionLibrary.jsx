@@ -63,7 +63,7 @@ export const SectionLibrary = () => {
   };
 
   const harvestBoilerplate = async () => {
-    if (!vaultDocs || vaultDocs.length === 0) return alert("Vault is empty. Add documents first.");
+    if (!vaultDocs || vaultDocs.length === 0) return toast("Vault is empty. Add documents first.");
     setLoading(true);
     const content = vaultDocs.map(d => `DOC: ${d.title}\nCONTENT: ${d.content?.slice(0, 500)}`).join("\n\n---\n\n");
     const sys = `You are a Grant Content Architect. Analyze the following documents from the organization's vault.
@@ -79,7 +79,7 @@ Available Categories: ${SECTION_TYPES.map(t => t.id).join(", ")}`;
       try {
         const cleaned = result.text.replace(/```json\n?|```/g, "").trim();
         setHarvestResults(JSON.parse(cleaned));
-      } catch (e) { alert("Failed to parse boilerplate candidates."); }
+      } catch (e) { toast("Failed to parse boilerplate candidates."); }
     }
     setLoading(false);
   };
@@ -130,7 +130,7 @@ Return the adapted content only.`;
     if (!result.error) {
       navigator.clipboard?.writeText(result.text);
       setSections(prev => prev.map(x => x.id === sectionId ? { ...x, useCount: (x.useCount || 0) + 1 } : x));
-      alert("✨ Adapted section copied to clipboard!");
+      toast("✨ Adapted section copied to clipboard!");
     }
     setLoading(false);
   };

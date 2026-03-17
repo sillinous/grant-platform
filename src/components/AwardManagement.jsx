@@ -84,7 +84,7 @@ export const AwardManagement = () => {
 
                     <div style={{ marginTop: 16, display: "flex", gap: 8 }}>
                       <HarvestButton grant={g} setSections={setSections} />
-                      <Btn variant="ghost" size="xs" onClick={(e) => { e.stopPropagation(); alert("Compliance Audit log generated for this period."); }}>📋 Compliance Log</Btn>
+                      <Btn variant="ghost" size="xs" onClick={(e) => { e.stopPropagation(); toast("Compliance Audit log generated for this period."); }}>📋 Compliance Log</Btn>
                     </div>
                   </div>
                 )}
@@ -129,10 +129,10 @@ const HarvestButton = ({ grant, setSections }) => {
         harvestedAt: new Date().toISOString()
       }]);
 
-      alert(`Success! "${cleaned.title}" has been harvested into your Section Library as a Gold Standard boilerplate.`);
+      toast(`Success! "${cleaned.title}" has been harvested into your Section Library as a Gold Standard boilerplate.`);
     } catch (e) {
       console.error(e);
-      alert("Failed to harvest. Please check console.");
+      toast("Failed to harvest. Please check console.");
     } finally {
       setLoading(false);
     }

@@ -1,3 +1,4 @@
+import { toast } from '../globals';
 import { useStore } from '../store';
 
 export const ActivityLog = () => {
@@ -26,7 +27,7 @@ export const ActivityLog = () => {
     setVerifying(true);
     setTimeout(() => {
       setVerifying(false);
-      alert("🛡️ Audit Integrity Verified: All 256-bit hashes match the local ledger.");
+      toast("🛡️ Audit Integrity Verified: All 256-bit hashes match the local ledger.");
     }, 1500);
   };
 

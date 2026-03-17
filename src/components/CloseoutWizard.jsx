@@ -43,7 +43,7 @@ export const CloseoutWizard = ({ grants, updateGrant }) => {
 
   const finalizeCloseout = () => {
     updateGrant(activeGrantId, { stage: "archived", closeoutDate: new Date().toISOString(), closeoutReport: report });
-    alert("✅ Grant Successfully Closed Out and Archived.");
+    toast("✅ Grant Successfully Closed Out and Archived.");
     setActiveGrantId("");
     setStep(1);
     setReport(null);

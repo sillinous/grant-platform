@@ -79,8 +79,8 @@ Priorities: high, normal`;
         setNotes(prev => [...formatted, ...prev]);
         logActivity(`Orchestrated ${tasks.length} tasks from RFP analysis.`);
         setRfpText("");
-        alert(`🚀 Orchestrated ${tasks.length} tasks!`);
-      } catch (e) { alert("Failed to parse AI orchestration."); }
+        toast(`🚀 Orchestrated ${tasks.length} tasks!`);
+      } catch (e) { toast("Failed to parse AI orchestration."); }
     }
     setLoading(false);
   };
@@ -211,7 +211,7 @@ Priorities: high, normal`;
                   const r = { id: uid(), partner: "Local Partner Org", type: "Interim Progress", status: "pending", date: new Date().toISOString(), amount: 0 };
                   setSubReports([r, ...subReports]);
                   logActivity("Partner Org submitted Interim Progress Report");
-                  alert("Report Submitted to Prime!");
+                  toast("Report Submitted to Prime!");
                 }}>Upload Report</Btn>
               </div>
             )}

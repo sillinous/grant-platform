@@ -49,7 +49,7 @@ Return a structured professional report.`;
 
     const res = await API.callAI([{ role: "user", content: "Run Strategic Brief." }], sys);
     if (!res.error) setAnalysis({ id: peer.id, text: res.text });
-    else alert(res.error);
+    else toast(res.error);
     setLoading(false);
   };
 

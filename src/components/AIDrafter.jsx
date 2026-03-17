@@ -10,7 +10,7 @@ export const AIDrafter = ({ navigate }) => {
     grants, vaultDocs, draftSnapshots: snapshots, setDraftSnapshots: setSnapshots,
     orgVoicePersona: voicePersona, setOrgVoicePersona: setVoicePersona,
     sectionLibrary: sections, setSectionLibrary: setSections,
-    activeGrantId, workflowBriefs
+    activeGrantId, setActiveGrantId, workflowBriefs
   } = useStore();
   const { activeOrg } = useOrganization();
   const [prompt, setPrompt] = useState("");
@@ -51,7 +51,7 @@ export const AIDrafter = ({ navigate }) => {
   ];
 
   const learnVoice = async () => {
-    if (!vaultDocs || vaultDocs.length === 0) return alert("Add docs to your Vault first to learn your brand voice.");
+    if (!vaultDocs || vaultDocs.length === 0) return toast("Add docs to your Vault first to learn your brand voice.");
     setLoading(true);
     const sample = vaultDocs.map(d => `DOC: ${d.title}\nCONTENT: ${d.content?.slice(0, 400)}`).join("\n\n---\n\n");
     const sys = `You are a Linguistic Brand Architect. Analyze the following document samples from the user's organization.
@@ -64,7 +64,7 @@ Return a 3-sentence "Voice Blueprint" that can be used to guide future AI drafti
       const result = await API.callAI([{ role: "user", content: `Analyze this voice: ${sample}` }], sys);
       if (!result.error) {
         setVoicePersona(result.text);
-        alert("✨ Org Voice Learned! Your drafts will now match your unique brand identity.");
+        toast("✨ Org Voice Learned! Your drafts will now match your unique brand identity.");
       }
       setLoading(false);
     };
@@ -127,7 +127,7 @@ IMPORTANT: You MUST respect the TARGET GRANT COMPLIANCE RULES provided above. If
 
   const autoAssemble = async () => {
     const grant = grants.find(g => g.id === activeGrantId);
-    if (!grant) return alert("Select a grant first to auto-assemble.");
+    if (!grant) return toast("Select a grant first to auto-assemble.");
     setLoading(true);
       setTypingIndex(0);
       setDisplayedOutput("");
@@ -153,8 +153,8 @@ Return ONLY a JSON array of section IDs in the optimal sequence for a draft:
           const assembled = selected.map(s => `## ${s.title}\n\n${s.content}`).join("\n\n---\n\n");
           setOutput(assembled);
           setMeta({ provider: result.provider, model: result.model });
-          alert(`✨ Assembled ${selected.length} sections from your library!`);
-        } catch (e) { alert("Failed to assemble sections."); }
+          toast(`✨ Assembled ${selected.length} sections from your library!`);
+        } catch (e) { toast("Failed to assemble sections."); }
       }
       setLoading(false);
     };
@@ -185,7 +185,7 @@ Return ONLY a JSON array of section IDs in the optimal sequence for a draft:
     if (!result.error) {
       setAudit(result);
     } else {
-      alert("Audit failed: " + result.error);
+      toast("Audit failed: " + result.error);
     }
     setAuditing(false);
   };
@@ -194,7 +194,7 @@ Return ONLY a JSON array of section IDs in the optimal sequence for a draft:
     if (!output) return;
     const snap = { id: uid(), date: new Date().toISOString(), text: output, type: docType, model: meta?.model || "AI" };
       setSnapshots([snap, ...snapshots].slice(0, 20)); // Keep last 20
-      alert("📸 Snapshot saved!");
+      toast("📸 Snapshot saved!");
     };
 
   const saveToLibrary = () => {
@@ -211,7 +211,7 @@ Return ONLY a JSON array of section IDs in the optimal sequence for a draft:
     const updated = [...sections, newSection];
     setSections(updated);
     LS.set("section_library", updated);
-    alert(`✨ Saved to Library as "${title}"`);
+    toast(`✨ Saved to Library as "${title}"`);
   };
 
   return (
@@ -254,10 +254,15 @@ Return ONLY a JSON array of section IDs in the optimal sequence for a draft:
                 ]} style={{ width: "100%" }} />
               </div>
               <div>
-              <label style={{ fontSize: 10, color: T.sub, marginBottom: 4, display: "block" }}>Target Grant (Locked to Studio Context)</label>
-              <div style={{ fontSize: 12, color: T.text, padding: "8px 12px", background: T.panel, border: `1px solid ${T.border}`, borderRadius: 8 }}>
-                {grants.find(G => G.id === activeGrantId)?.title || "General / Unspecified"}
-              </div>
+              <label style={{ fontSize: 10, color: T.sub, marginBottom: 4, display: "block" }}>Target Grant</label>
+              <select
+                value={activeGrantId || ""}
+                onChange={e => setActiveGrantId(e.target.value || null)}
+                style={{ width: "100%", background: T.panel, border: `1px solid ${T.border}`, borderRadius: 8, color: T.text, padding: "8px 10px", fontSize: 12 }}
+              >
+                <option value="">— General / Unspecified —</option>
+                {grants.map(g => <option key={g.id} value={g.id}>{g.title?.slice(0, 48)}</option>)}
+              </select>
               </div>
               <div>
                 <label style={{ fontSize: 10, color: T.sub, marginBottom: 4, display: "block" }}>Tone & Voice</label>
@@ -303,7 +308,7 @@ Return ONLY a JSON array of section IDs in the optimal sequence for a draft:
               <div style={{ display: "flex", gap: 6 }}>
                 <Btn size="sm" variant="success" onClick={saveSnapshot}>📸 Save Snapshot</Btn>
                 <Btn size="sm" variant="ghost" onClick={runAudit} disabled={auditing}>🛡️ Audit</Btn>
-                <Btn size="sm" variant="ghost" onClick={() => navigator.clipboard?.writeText(output)}>📋 Copy</Btn>
+                <Btn size="sm" variant="ghost" onClick={() => { navigator.clipboard?.writeText(output); toast("📋 Copied to clipboard!"); }}>📋 Copy</Btn>
                 <Btn size="sm" variant="ghost" onClick={() => { setOutput(""); setDisplayedOutput(""); }}>🗑️ Clear</Btn>
               </div>
             )}

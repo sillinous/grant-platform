@@ -142,7 +142,7 @@ export const Settings = ({ showToast }) => {
     if (!res.error) {
       updateBusiness(idx, { d: res.text });
     } else {
-      alert(`AI Assist failed: ${res.error}`);
+      toast(`AI Assist failed: ${res.error}`);
     }
     setLoading(false);
   };

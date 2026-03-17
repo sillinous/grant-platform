@@ -13,7 +13,7 @@ export const DocumentAssembler = ({ activeGrantId, navigate }) => {
   const autoDraft = async () => {
     const grant = grants.find(g => g.id === activeGrantId);
     const missing = sections.filter(s => s.included && !s.content);
-    if (missing.length === 0) return alert("No empty included sections to draft!");
+    if (missing.length === 0) return toast("No empty included sections to draft!");
 
     setDrafting(true);
     const context = buildPortfolioContext(grants, vaultDocs, []);
@@ -29,7 +29,7 @@ export const DocumentAssembler = ({ activeGrantId, navigate }) => {
       }
     }
     setDrafting(false);
-    alert(`✨ AI successfully drafted ${missing.length} missing sections!`);
+    toast(`✨ AI successfully drafted ${missing.length} missing sections!`);
   };
 
   const STANDARD_SECTIONS = [

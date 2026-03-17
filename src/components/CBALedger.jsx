@@ -53,7 +53,7 @@ export const CBALedger = ({ onAdd }) => {
                                     <Btn variant="primary" style={{ flex: 1 }}>Contact Liaison</Btn>
                                     <Btn variant="ghost" size="sm" onClick={async () => {
                                         const res = await API.fortuna.syncToLedger();
-                                        alert(`CBA LEDGER SYNC: ${res.synced} transactions processed for ${p.project}.`);
+                                        toast(`CBA LEDGER SYNC: ${res.synced} transactions processed for ${p.project}.`);
                                     }}>🔄 Sync</Btn>
                                     {onAdd && (
                                         <TrackBtn onTrack={() => {

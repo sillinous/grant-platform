@@ -1,3 +1,4 @@
+import { toast } from '../globals';
 import { useStore } from '../store';
 
 export const RFPParser = () => {
@@ -74,7 +75,7 @@ export const RFPParser = () => {
       const updated = [...tasks, ...newTasks];
       setTasks(updated);
       LS.set("tasks", updated);
-      alert(`${newTasks.length} tasks injected into Action Plan.`);
+      toast(`${newTasks.length} tasks injected into Action Plan.`);
     }
   };
 

@@ -127,7 +127,7 @@ Provide the 'Most Strategic Path' to secure a meeting with a Program Officer. Me
                   <button onClick={() => setPathfindResult(null)} style={{ background: "none", border: "none", color: T.mute, cursor: "pointer" }}>✕</button>
                 </div>
                 <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{pathfindResult.text}</div>
-                <Btn size="sm" variant="ghost" style={{ width: "100%", marginTop: 12 }} onClick={() => { navigator.clipboard?.writeText(pathfindResult.text); alert("📋 Path copied!"); }}>📋 Copy Intel</Btn>
+                <Btn size="sm" variant="ghost" style={{ width: "100%", marginTop: 12 }} onClick={() => { navigator.clipboard?.writeText(pathfindResult.text); toast("📋 Path copied!"); }}>📋 Copy Intel</Btn>
               </Card>
             ) : (
               <Card style={{ textAlign: "center", opacity: 0.6 }}>
@@ -229,7 +229,7 @@ Provide the 'Most Strategic Path' to secure a meeting with a Program Officer. Me
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 16, justifyContent: "flex-end" }}>
               <Btn size="sm" variant="ghost" onClick={() => setTeamingResult(null)}>← Select Another Grant</Btn>
-              <Btn size="sm" variant="primary" onClick={() => { navigator.clipboard?.writeText(teamingResult); alert("📋 Strategy copied!"); }}>📋 Copy Strategy</Btn>
+              <Btn size="sm" variant="primary" onClick={() => { navigator.clipboard?.writeText(teamingResult); toast("📋 Strategy copied!"); }}>📋 Copy Strategy</Btn>
             </div>
           </div>
         )}

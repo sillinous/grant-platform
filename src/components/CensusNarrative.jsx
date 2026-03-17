@@ -42,7 +42,7 @@ export const CensusNarrative = () => {
       broadbandAccess: parseFloat(data.S2801_C01_001E) || 0
     };
     saveProfile(p);
-    alert("Meta-Model Calibrated: Local Census data injected into Organizational Profile.");
+    toast("Meta-Model Calibrated: Local Census data injected into Organizational Profile.");
   };
 
   const generateNarrative = (censusData) => {

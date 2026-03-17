@@ -74,7 +74,7 @@ const PostMortemButton = ({ grant }) => {
       // In a real app, we'd call updateGrant. For now, we'll just simulate it if updateGrant was passed as prop.
       // Since it's not passed, we'll just show it locally or use a global update if available via context (not yet).
       // Let's assume for this phase we want to see the UI/logic.
-      alert("AI Post-Mortem Generated:\n\n" + res);
+      toast("AI Post-Mortem Generated:\n\n" + res);
     } catch (e) {
       console.error(e);
     } finally {

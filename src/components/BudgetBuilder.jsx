@@ -1,3 +1,4 @@
+import { toast } from '../globals';
 import { useStore } from '../store';
 
 export const BudgetBuilder = () => {
@@ -105,7 +106,7 @@ export const BudgetBuilder = () => {
       };
       setBudgets({ ...budgets, [selectedGrant]: updated });
       setLoading(false);
-      alert("✅ Financial Sync Complete: Pulled latest transactions from QuickBooks/Xero.");
+      toast("✅ Financial Sync Complete: Pulled latest transactions from QuickBooks/Xero.");
     }, 1200);
   };
 
@@ -140,7 +141,7 @@ Return a professional, structured narrative.`;
       setAiResult(result.text);
       setShowResult(true);
     } else {
-      alert("Error: " + result.error);
+      toast("Error: " + result.error);
     }
     setLoading(false);
   };
@@ -273,7 +274,7 @@ Return a professional, structured narrative.`;
                 `\n"Indirect","${indirectRate}% of direct",1,"lump",${indirectTotal},${indirectTotal},0,"Negotiated rate"` +
                 `\n"TOTAL","",,,${grandTotal},${grandTotal},${costShareTotal},""`;
               navigator.clipboard?.writeText(csv);
-              alert("📊 CSV copied to clipboard!");
+              toast("📊 CSV copied to clipboard!");
             }}>📊 Copy as CSV</Btn>
           </div>
         </div>
@@ -339,7 +340,7 @@ Return a professional, structured narrative.`;
           {aiResult}
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 16, justifyContent: "flex-end" }}>
-          <Btn size="sm" variant="primary" onClick={() => { navigator.clipboard?.writeText(aiResult); alert("📋 Justification copied!"); }}>📋 Copy Content</Btn>
+          <Btn size="sm" variant="primary" onClick={() => { navigator.clipboard?.writeText(aiResult); toast("📋 Justification copied!"); }}>📋 Copy Content</Btn>
           <Btn size="sm" variant="ghost" onClick={() => setShowResult(false)}>Close</Btn>
         </div>
       </Modal>

@@ -69,7 +69,7 @@ export const FunderResearch = () => {
       setResults(mapped.sort((a, b) => b.affinity - a.affinity));
     } catch (e) {
       console.error(e);
-      alert("ProPublica search failed. Falling back to simulation if needed.");
+      toast("ProPublica search failed. Falling back to simulation if needed.");
     }
     setLoading(false);
   };
@@ -121,7 +121,7 @@ Return ONLY JSON:
     const updated = [...grants, newGrant];
     setGrants(updated);
     LS.set("grants", updated);
-    alert(`Grant lead "${funder.name}" added to Pipeline.`);
+    toast(`Grant lead "${funder.name}" added to Pipeline.`);
   };
 
   return (

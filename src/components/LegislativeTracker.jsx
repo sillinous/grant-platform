@@ -46,7 +46,7 @@ export const LegislativeTracker = ({ onAdd: propOnAdd }) => {
     if (!res.error) {
       setSelectedBill({ ...bill, forecast: res.text });
     } else {
-      alert(res.error);
+      toast(res.error);
     }
     setLoading(false);
   };
@@ -137,7 +137,7 @@ export const LegislativeTracker = ({ onAdd: propOnAdd }) => {
             {selectedBill.forecast}
           </div>
           <div style={{ marginTop: 20, paddingTop: 20, borderTop: `1px solid ${T.glassBorder}`, display: "flex", justifyContent: "flex-end", gap: 12 }}>
-            <Btn variant="ghost" onClick={() => alert("Monitoring bill state. You will be notified of major actions.")}>🔔 Watch Action</Btn>
+            <Btn variant="ghost" onClick={() => toast("Monitoring bill state. You will be notified of major actions.")}>🔔 Watch Action</Btn>
             {onAdd && (
               <TrackBtn onTrack={() => onAdd({
                 id: uid(), title: selectedBill.title, agency: "Legislative Forecast",

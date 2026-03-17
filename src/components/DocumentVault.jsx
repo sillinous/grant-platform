@@ -45,7 +45,7 @@ export const DocumentVault = () => {
             }));
         } catch (err) {
             console.error(err);
-            alert("Error parsing file. " + err.message);
+            toast("Error parsing file. " + err.message);
         } finally {
             setParsing(false);
             e.target.value = null;
@@ -62,7 +62,7 @@ export const DocumentVault = () => {
         if (!res.error) {
             updateDoc(selected.id, { content: res.text });
             setSelected({ ...selected, content: res.text });
-            alert("🔒 Zero-Trust Redaction Complete: All identified PII has been masked.");
+            toast("🔒 Zero-Trust Redaction Complete: All identified PII has been masked.");
         }
         setRedacting(false);
     };
