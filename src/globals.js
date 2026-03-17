@@ -128,3 +128,25 @@ export const logActivity = (action, details) => {
 export const toast = (msg, type = 'success') => {
     window.dispatchEvent(new CustomEvent('gp_toast', { detail: { msg, type, id: Date.now() } }));
 };
+
+// ── Watch a grant — adds keywords to match_alert watch terms ──────────────
+export const watchGrant = (grant) => {
+    const key = 'watch_terms';
+    const existing = LS.get(key, []);
+    // Extract 1-3 keywords from the grant
+    const raw = `${grant.agency || ""} ${grant.title || ""} ${grant.category || ""}`;
+    const stopWords = new Set(["the","and","for","with","of","in","a","an","to","from","by","at","on","or","is","are","grant","award","program","project","services","federal","national","department"]);
+    const keywords = raw.toLowerCase()
+        .replace(/[^\w\s]/g, " ")
+        .split(/\s+/)
+        .filter(w => w.length > 4 && !stopWords.has(w))
+        .slice(0, 2);
+    if (keywords.length === 0 && grant.title) keywords.push(grant.title.split(" ").slice(0, 2).join(" ").toLowerCase());
+    const term = keywords.join(" ").trim();
+    if (!term) return;
+    const updated = [...new Set([...existing, term])].slice(0, 20);
+    LS.set(key, updated);
+    toast(`👁 Watching "${term}" — check Match Alerts`);
+    // Dispatch event so MatchAlerts can react without reload
+    window.dispatchEvent(new CustomEvent('gp_watch_added', { detail: { term } }));
+};

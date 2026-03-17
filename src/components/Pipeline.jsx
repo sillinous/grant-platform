@@ -45,10 +45,29 @@ const GrantCard = ({ g, onSelect, onStageChange, onDelete, tasks }) => {
             onMouseEnter={e => e.currentTarget.style.transform = "translateY(-2px)"}
             onMouseLeave={e => e.currentTarget.style.transform = "translateY(0)"}
         >
+            {/* Source + link row */}
+            {(g._source || g.link || g.cfda) && (
+                <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 8, alignItems: "center" }}>
+                    {g._source && (
+                        <span style={{ fontSize: 9, fontWeight: 800, padding: "1px 6px", borderRadius: 6, background: `${g._sourceColor || T.blue}18`, color: g._sourceColor || T.blue, border: `1px solid ${g._sourceColor || T.blue}33` }}>
+                            {g._source}
+                        </span>
+                    )}
+                    {g.cfda && <span style={{ fontSize: 9, color: "#6366f1", fontFamily: "monospace" }}>CFDA {g.cfda}</span>}
+                    {g._score >= 80 && <span style={{ fontSize: 9, color: T.amber, fontWeight: 700 }}>⭐ {g._score}%</span>}
+                    {g.link && (
+                        <a href={g.link} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                            style={{ fontSize: 9, color: g._sourceColor || T.blue, textDecoration: "none", marginLeft: "auto", fontWeight: 700 }}>
+                            View ↗
+                        </a>
+                    )}
+                </div>
+            )}
+
             {/* Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
                 <div style={{ flex: 1, paddingRight: 8 }} onClick={() => onSelect(g)}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: T.text, lineHeight: 1.3, marginBottom: 3 }}>{g.title}</div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: T.text, lineHeight: 1.3, marginBottom: 3 }}>{g.title}</div>
                     <div style={{ fontSize: 11, color: T.mute, fontWeight: 600 }}>{g.agency || "Unknown Agency"}</div>
                 </div>
                 <Badge color={STAGE_MAP[g.stage]?.color} style={{ fontSize: 9, flexShrink: 0 }}>
@@ -57,16 +76,18 @@ const GrantCard = ({ g, onSelect, onStageChange, onDelete, tasks }) => {
             </div>
 
             {/* Amount + deadline */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: T.green, letterSpacing: "-0.02em" }}>
-                    {typeof g.amount === "number" && g.amount > 0 ? fmt(g.amount) : "Amount TBD"}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <div style={{ fontSize: 17, fontWeight: 800, color: T.green, letterSpacing: "-0.02em" }}>
+                    {typeof g.amount === "number" && g.amount > 0
+                        ? g.amount >= 1e6 ? `$${(g.amount/1e6).toFixed(1)}M` : fmt(g.amount)
+                        : "Amount TBD"}
                 </div>
                 <div style={{ fontSize: 10, color: dc, fontWeight: 700 }}>⏰ {deadlineLabel(g.deadline)}</div>
             </div>
 
             {/* Task progress */}
             {myTasks.length > 0 && (
-                <div style={{ marginBottom: 10 }}>
+                <div style={{ marginBottom: 8 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: T.mute, marginBottom: 3 }}>
                         <span>Tasks</span><span>{doneTasks}/{myTasks.length}</span>
                     </div>
@@ -75,7 +96,7 @@ const GrantCard = ({ g, onSelect, onStageChange, onDelete, tasks }) => {
             )}
 
             {/* Badges */}
-            <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 10 }}>
+            <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 8 }}>
                 {g.meta?.riskScore > 30 && <Badge size="xs" color={T.red}>⚠ Risk</Badge>}
                 {g.meta?.alignmentScore >= 70 && <Badge size="xs" color={T.blue}>✓ Aligned</Badge>}
                 {g.compliance?.matchingFundsRequired && <Badge size="xs" color={T.amber}>Match Req</Badge>}

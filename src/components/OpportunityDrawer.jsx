@@ -7,7 +7,7 @@
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { Badge, Btn } from '../ui';
-import { T, PROFILE, uid, fmt } from '../globals';
+import { T, PROFILE, uid, fmt, watchGrant } from '../globals';
 import { API } from '../api';
 import { useStore } from '../store';
 import { X, ExternalLink, FileText, Sparkles, Building2, Hash, Users, Calendar, Tag, Shield, DollarSign, CheckCircle, Clock, Loader, Bookmark } from 'lucide-react';
@@ -708,6 +708,9 @@ Description: ${(g.description||g.synopsis||"").slice(0,800)}`;
                     {link && <a href={link} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}><Btn variant="ghost" size="sm" style={{ display: "flex", alignItems: "center", gap: 4 }}><ExternalLink size={11} /> Open</Btn></a>}
                     <Btn variant="ghost" size="sm" onClick={() => setActiveTab("ai")} style={{ display: "flex", alignItems: "center", gap: 4 }}><span style={{ fontSize: 11 }}>🧠</span> AI</Btn>
                     <Btn variant="ghost" size="sm" onClick={() => setActiveTab("apply")} style={{ display: "flex", alignItems: "center", gap: 4 }}><FileText size={11} /> Apply</Btn>
+                    <Btn variant="ghost" size="sm" onClick={() => watchGrant(g)} style={{ display: "flex", alignItems: "center", gap: 4 }} title="Watch for similar grants in Match Alerts">
+                        👁 Watch
+                    </Btn>
                     <Btn variant={isTracked?"ghost":"primary"} size="sm" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }} onClick={() => !isTracked && onAdd(g)} disabled={isTracked}>
                         {isTracked ? "✓ Tracked" : <><Bookmark size={11} /> Track</>}
                     </Btn>

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Card, Badge, Btn, Tabs, Input, SkeletonCard } from '../ui';
-import { T, uid, PROFILE, fmt, toast} from '../globals';
+import { T, uid, PROFILE, fmt, toast, watchGrant } from '../globals';
 import { API } from '../api';
 import { useStore } from '../store';
 import { Globe, Map, Target, Shield, Cpu, Zap, DollarSign, Bookmark, TrendingUp, Search, CheckCircle, AlertCircle, Loader, Database, ChevronDown, X, ExternalLink, FileText, Sparkles, Clock, Building2, Hash, Users, Calendar, Tag, ChevronRight } from 'lucide-react';
@@ -137,10 +137,15 @@ const GrantResultCard = ({ g, onAdd, isTracked, onOpen }) => {
                         </div>
                     )}
                     {g.deadline === "Rolling" && <div style={{ color: T.mute, fontSize: 10 }}>Rolling</div>}
-                    <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                    <div style={{ display: "flex", gap: 5, marginTop: 6 }}>
                         <Btn variant="ghost" size="sm" style={{ fontSize: 10, padding: "3px 8px" }}
                             onClick={e => { e.stopPropagation(); onOpen(g); }}>
                             Details
+                        </Btn>
+                        <Btn variant="ghost" size="sm" style={{ fontSize: 10, padding: "3px 8px", color: T.mute }}
+                            onClick={e => { e.stopPropagation(); watchGrant(g); }}
+                            title="Watch for similar — adds to Match Alerts">
+                            👁
                         </Btn>
                         <Btn
                             variant={isTracked ? "ghost" : "primary"}

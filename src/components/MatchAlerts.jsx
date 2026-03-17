@@ -34,6 +34,16 @@ export const MatchAlerts = ({ onAdd }) => {
   useEffect(() => { LS.set('match_alerts', alerts); }, [alerts]);
   useEffect(() => { LS.set('watch_terms', watchTerms); }, [watchTerms]);
 
+  // Listen for new watch terms added from Discovery / drawer
+  useEffect(() => {
+    const handler = (e) => {
+        const term = e.detail?.term;
+        if (term) setWatchTerms(prev => [...new Set([...prev, term])].slice(0, 20));
+    };
+    window.addEventListener('gp_watch_added', handler);
+    return () => window.removeEventListener('gp_watch_added', handler);
+  }, []);
+
   // Auto-scan on first open if we have no alerts yet
   useEffect(() => {
     if (alerts.length === 0 && !scanning && !lastScan) {

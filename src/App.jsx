@@ -3,11 +3,37 @@ import { Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-
 import { useStore } from './store';
 import { OrganizationProvider } from './context/OrganizationContext';
 import { T, LS, uid, PROFILE, sanitizeInput } from './globals';
+import { API } from './api';
 import { ContextSwitcher } from './components/ContextSwitcher';
 import { Toast } from './components/Toast';
 import { AIChatBar } from './components/AIChatBar';
 import { CommandPalette } from './components/CommandPalette';
 import { AuthBar } from './components/AuthBar';
+
+// ── AI Status Indicator ─────────────────────────────────────────────────
+const AIStatusBadge = ({ navigate }) => {
+    const [status, setStatus] = useState("checking"); // "checking" | "ok" | "error"
+    useEffect(() => {
+        API.callAI([{ role: "user", content: "ping" }], "Reply with one word: ok")
+            .then(r => setStatus(r?.text?.toLowerCase().includes("ok") || !r?.error ? "ok" : "error"))
+            .catch(() => setStatus("error"));
+    }, []);
+    const cfg = {
+        checking: { color: T.mute,  dot: "#888",     label: "AI…"    },
+        ok:       { color: T.green, dot: T.green,     label: "AI Ready" },
+        error:    { color: T.red,   dot: T.red,       label: "AI Offline" },
+    }[status];
+    return (
+        <button onClick={() => navigate("/settings")} title={status === "error" ? "Configure AI provider in Settings" : `AI: ${status}`}
+            style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 8, border: `1px solid ${cfg.color}33`, background: `${cfg.color}0d`, cursor: "pointer", transition: "all 0.2s" }}
+            onMouseEnter={e => e.currentTarget.style.background = `${cfg.color}18`}
+            onMouseLeave={e => e.currentTarget.style.background = `${cfg.color}0d`}>
+            <div style={{ width: 7, height: 7, borderRadius: "50%", background: cfg.dot, boxShadow: status === "ok" ? `0 0 6px ${T.green}` : "none", flexShrink: 0,
+                animation: status === "checking" ? "pulse 1.2s ease-in-out infinite" : "none" }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: cfg.color }}>{cfg.label}</span>
+        </button>
+    );
+};
 
 // ── Lazy-loaded route components ────────────────────────────────────────
 const ExecutiveDashboard  = lazy(() => import('./components/ExecutiveDashboard').then(m => ({ default: m.ExecutiveDashboard })));
@@ -261,15 +287,18 @@ export const App = () => {
                             {currentNav?.icon} {currentNav?.label || page}
                         </h2>
                     </div>
-                    <button
-                        onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }))}
-                        style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.glassBorder}`, borderRadius: 8, padding: '6px 12px', color: T.mute, cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 8 }}
-                        title="Open Command Palette (Ctrl+K)"
-                    >
-                        <span>🔍</span>
-                        <span>Search</span>
-                        <kbd style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 4, padding: '1px 5px', fontSize: 10 }}>Ctrl+K</kbd>
-                    </button>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <AIStatusBadge navigate={navigate} />
+                        <button
+                            onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }))}
+                            style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.glassBorder}`, borderRadius: 8, padding: '6px 12px', color: T.mute, cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 8 }}
+                            title="Open Command Palette (Ctrl+K)"
+                        >
+                            <span>🔍</span>
+                            <span>Search</span>
+                            <kbd style={{ background: T.bg, border: `1px solid ${T.border}`, borderRadius: 4, padding: '1px 5px', fontSize: 10 }}>Ctrl+K</kbd>
+                        </button>
+                    </div>
                 </header>
 
                 <main style={{ flex: 1, overflowY: "auto", padding: 32 }} className="scrollbar-hide">
