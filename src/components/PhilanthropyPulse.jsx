@@ -11,8 +11,9 @@ export const PhilanthropyPulse = ({ onAdd: propOnAdd }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const profile = LS.get("profile", { tags: ["AI", "Rural", "STEM"] });
-        API.philanthropy.getNewsPulse(profile.tags).then(data => {
+        const profile = LS.get("org_profile", { tags: ["AI", "Rural", "STEM"] });
+        const tags = profile.tags?.length ? profile.tags : (profile.focus || ["AI", "Rural", "STEM"]);
+        API.philanthropy.getNewsPulse(tags).then(data => {
             setNews(data);
             setLoading(false);
         });

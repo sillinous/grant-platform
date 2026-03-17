@@ -1178,7 +1178,7 @@ export const API = {
         } catch { return null; }
     },
 
-    async searchBills(query, congress = 118) {
+    async searchBills(query, congress = 119) {
         const cacheKey = `bills_search_${query}_${congress}`;
         const cached = SimpleCache.get(cacheKey);
         if (cached) return cached;
@@ -1301,14 +1301,18 @@ export const API = {
             return true;
         });
 
+        const profile = LS.get("org_profile", PROFILE);
+        const ranked = deduped.map(r => ({ ...r, _score: scoreResultAgainstProfile(r, profile) }))
+            .sort((a, b) => b._score - a._score);
+
         const result = {
-            results: deduped,
+            results: ranked,
             sources: {
                 statePortal: { count: fromPortal.length, ok: portalResult.status === "fulfilled" },
                 usaSpending: { count: fromSpending.length, ok: spendingResult.status === "fulfilled" },
                 grantsGov: { count: fromGrantsGov.length, ok: grantsGovResult.status === "fulfilled" },
             },
-            total: deduped.length
+            total: ranked.length
         };
 
         SimpleCache.set(cacheKey, result, 300000);
