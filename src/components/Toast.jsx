@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { T } from '../globals';
+import { T, toast} from '../globals';
 import { useStore } from '../store';
 
 // Add a global toast notification system backed by the store

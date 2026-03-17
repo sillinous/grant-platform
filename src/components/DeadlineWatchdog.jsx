@@ -1,3 +1,4 @@
+import { fmtDate, daysUntil } from '../globals';
 import { useStore } from '../store';
 
 export const DeadlineWatchdog = () => {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Badge, Btn, Input, TextArea, Stat } from '../ui';
-import { T, LS, uid, fmtDate } from '../globals';
+import { T, LS, uid, fmtDate, toast} from '../globals';
 import { API } from '../api';
 
 export const CollaborationHub = ({ grants }) => {

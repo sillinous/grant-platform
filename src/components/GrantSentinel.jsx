@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Btn, Badge, Progress, Empty } from '../ui';
-import { T, LS, uid, PROFILE, fmt, saveProfile, getProfileState } from '../globals';
+import { T, LS, uid, PROFILE, fmt, saveProfile, getProfileState, toast} from '../globals';
 import { API } from '../api';
 import { useStore } from '../store';
 

@@ -1,3 +1,4 @@
+import { fmt, fmtDate } from '../globals';
 import { useStore } from '../store';
 
 export const StrategicAdvisor = () => {

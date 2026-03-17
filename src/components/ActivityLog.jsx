@@ -1,4 +1,4 @@
-import { toast } from '../globals';
+import { toast, fmt, fmtDate} from '../globals';
 import { useStore } from '../store';
 
 export const ActivityLog = () => {

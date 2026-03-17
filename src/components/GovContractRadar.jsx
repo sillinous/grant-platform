@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { OpportunityDrawer } from './OpportunityDrawer';
 import { T, PROFILE, uid, fmt, fmtDate } from "../globals";
 import { Card, Btn, Badge, Input, Select, Empty, TrackBtn, SkeletonCard } from "../ui";
 import { API } from "../api";
@@ -41,6 +42,7 @@ export const GovContractRadar = ({ onAdd: propOnAdd }) => {
 
     return (
         <div style={{ animation: "fadeIn 0.4s" }}>
+            {selectedGrant && <OpportunityDrawer grant={selectedGrant} onClose={() => setSelectedGrant(null)} onAdd={onAdd} isTracked={false} />}
             <Card style={{ marginBottom: 16 }}>
                 <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16 }}>
                     <div style={{ fontSize: 24, padding: "8px", background: `${T.blue}11`, borderRadius: "8px" }}>🏛️</div>

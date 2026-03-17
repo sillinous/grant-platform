@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Btn, TextArea, Badge, Progress, Empty, Modal, Tab } from '../ui';
-import { LS, T, uid, fmtDate } from '../globals';
+import { LS, T, uid, fmtDate, toast} from '../globals';
 import { API } from '../api';
 
 export const ComplianceMatrix = ({ grants }) => {

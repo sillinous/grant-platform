@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, Stat, Btn } from '../ui';
-import { T, fmt, pct } from '../globals';
+import { T, fmt, pct, toast} from '../globals';
 
 export const WinLossAnalysis = ({ grants }) => {
   const awarded = grants.filter(g => ["awarded","active","closeout"].includes(g.stage));

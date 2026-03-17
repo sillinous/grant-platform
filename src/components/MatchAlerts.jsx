@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { OpportunityDrawer } from './OpportunityDrawer';
 import { Card, Input, Btn, Stat, Badge, Empty, ScoreRing, ScanProgress, Progress } from '../ui';
 import { LS, T, uid, fmt, fmtDate, PROFILE } from '../globals';
 import { API } from '../api';
@@ -24,6 +25,7 @@ export const MatchAlerts = ({ onAdd }) => {
   const [alerts, setAlerts] = useState(() => LS.get('match_alerts', []));
   const [watchTerms, setWatchTerms] = useState(() => LS.get('watch_terms', getDefaultWatchTerms()));
   const [newTerm, setNewTerm] = useState('');
+  const [selectedGrant, setSelectedGrant] = useState(null);
   const [scanning, setScanning] = useState(false);
   const [activeTerm, setActiveTerm] = useState(null);
   const [scanDone, setScanDone] = useState(false);
@@ -157,6 +159,7 @@ export const MatchAlerts = ({ onAdd }) => {
 
   return (
     <div className="animate-in">
+            {selectedGrant && <OpportunityDrawer grant={selectedGrant} onClose={() => setSelectedGrant(null)} onAdd={onAdd} isTracked={false} />}
       {/* ─── Watch List Config ─── */}
       <Card style={{ marginBottom: 20, borderTop: `3px solid ${T.amber}` }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>

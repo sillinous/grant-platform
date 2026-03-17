@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import netlifyIdentity from 'netlify-identity-widget';
-import { T, LS, PROFILE, saveProfile, DEFAULT_PROFILE } from '../globals';
+import { T, LS, PROFILE, saveProfile, DEFAULT_PROFILE, toast} from '../globals';
 import { Card, Btn, Input, TextArea, Select, Badge, Empty, Modal, MagicBtn } from '../ui';
 import { API } from '../api';
 import { AI_PROVIDERS as AI_PROVIDERS_LIST, getActiveProvider, getProviderKey as getProviderKeyFn, hasAnyKey } from '../ai-config';

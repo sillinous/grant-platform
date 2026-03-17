@@ -67,6 +67,7 @@ export const SynergyEngine = ({ onAdd: propOnAdd }) => {
 
     return (
         <div style={{ padding: 20, animation: "fadeIn 0.4s" }}>
+            {selectedGrant && <OpportunityDrawer grant={selectedGrant} onClose={() => setSelectedGrant(null)} onAdd={onAdd} isTracked={false} />}
             <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16, justifyContent: "space-between" }}>
                 <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                     <div style={{ fontSize: 24, padding: "8px", background: `${T.blue}11`, borderRadius: "8px" }}>🧬</div>

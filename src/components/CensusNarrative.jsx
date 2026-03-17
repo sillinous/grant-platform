@@ -1,7 +1,7 @@
 ﻿import React, { useState } from 'react';
 import { Card, Btn, Select } from '../ui';
 import { API } from '../api';
-import { T, getProfileState, saveProfile } from '../globals';
+import { T, getProfileState, saveProfile, toast} from '../globals';
 
 export const CensusNarrative = () => {
   const [loading, setLoading] = useState(false);
